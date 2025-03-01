@@ -9,14 +9,12 @@ export default tseslint.config({
 		eslint.configs.recommended,
 		...tseslint.configs.strictTypeChecked,
 		...tseslint.configs.stylisticTypeChecked,
-		{
-			languageOptions: {
-				parserOptions: {
-					projectService: true,
-				},
-			}
-		}
 	],
+	languageOptions: {
+		parserOptions: {
+			projectService: true,
+		},
+	},
 	rules: {
 		"no-var": "error",
 		"semi": ["error", "always"],

@@ -4,4 +4,15 @@
 
 ## Setup
 
+
+```bash
+# install bun on windows
+> powershell -c "irm bun.sh/install.ps1|iex"
+
+# install bun on macOS and Linux
+$ curl -fsSL https://bun.sh/install | bash
+
+$ bun install
+```
+
 ## Docker

@@ -8,7 +8,9 @@ import { handleWithValidation } from './validation';
 export class Router {
   private readonly root = new RouterNode();
 
-  constructor(private fallback: Handler = async () => ({ status: 404, body: undefined })) {}
+  constructor(
+    private readonly fallback: Handler = async () => ({ status: 404, body: undefined })
+  ) {}
 
   route<Schema extends RouteSchema = RouteSchema>(route: Route<Schema>) {
     this.root.route(route);
@@ -64,7 +66,7 @@ export class Router {
 export class RouterNode {
   constructor(
     private methods: Partial<Record<Method, Route>> = {},
-    private children: Map<string, RouterNode> = new Map()
+    private readonly children: Map<string, RouterNode> = new Map()
   ) {}
 
   route<Schema extends RouteSchema = RouteSchema>(route: Route<Schema>, path = route.path) {

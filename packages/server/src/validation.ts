@@ -1,33 +1,27 @@
 import { Value } from '@sinclair/typebox/value';
 import type { Handler, RouteSchema, SchemaToRequest } from './routes';
+import { Type, type TSchema } from '@sinclair/typebox';
 
 export function handleWithValidation<Schema extends RouteSchema>(
   schema: Schema,
   handler: Handler<Schema>
 ): Handler {
   return async (request) => {
-    const errors = [];
+    const errors: string[] = [];
 
-    if (schema.request.query) {
-      for (const [key, query] of Object.entries(schema.request.query)) {
-        if (!request.query[key]) {
-          errors.push(`Missing query parameter: ${key}`);
-        }
-        if (!Value.Check(query, request.query[key])) {
-          for (const error of Value.Errors(query, request.query[key])) {
-            errors.push(error.message);
-          }
-        }
-      }
-    }
-
-    if (schema.request.body && !Value.Check(schema.request.body, request.body)) {
-      for (const error of Value.Errors(schema.request.body, request.body)) {
-        errors.push(error.message);
-      }
-    }
+    validate(Type.Object(schema.request.query ?? {}), request.query, errors);
+    validate(schema.request.body, request.body, errors);
 
     if (errors.length > 0) return { status: 400, body: errors };
     return await handler(request as SchemaToRequest<Schema['request']>);
   };
+}
+
+function validate(schema: TSchema | undefined, value: unknown, errors: string[]) {
+  if (!schema) return;
+  if (!Value.Check(schema, value)) {
+    for (const error of Value.Errors(schema, value)) {
+      errors.push(error.message);
+    }
+  }
 }

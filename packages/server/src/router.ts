@@ -6,7 +6,7 @@ import { OpenApiBuilder, type OpenAPIObject } from 'openapi3-ts/oas31';
 import { handleWithValidation } from './validation';
 
 export class Router {
-  private root = new RouterNode();
+  private readonly root = new RouterNode();
 
   constructor(private fallback: Handler = async () => ({ status: 404, body: undefined })) {}
 

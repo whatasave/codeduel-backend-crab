@@ -8,14 +8,15 @@ export function handleWithValidation<Schema extends RouteSchema>(
   return async (request) => {
     const errors = [];
 
-    for (const key in schema.request.query) {
-      if (!request.query[key]) {
-        errors.push(`Missing query parameter: ${key}`);
-      }
-      if (!Value.Check(schema.request.query[key]!, request.query[key])) {
-        const errors = [];
-        for (const error of Value.Errors(schema.request.query[key]!, request.query[key])) {
-          errors.push(error.message);
+    if (schema.request.query) {
+      for (const [key, query] of Object.entries(schema.request.query)) {
+        if (!request.query[key]) {
+          errors.push(`Missing query parameter: ${key}`);
+        }
+        if (!Value.Check(query, request.query[key])) {
+          for (const error of Value.Errors(query, request.query[key])) {
+            errors.push(error.message);
+          }
         }
       }
     }

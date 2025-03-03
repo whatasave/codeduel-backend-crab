@@ -5,7 +5,7 @@ import type { Handler } from '../routes';
 import type { ListenOptions, RunningServer, Server } from '../server';
 
 export class BunServer implements Server {
-  private handler: Handler;
+  private readonly handler: Handler;
 
   constructor(handler: Handler | Router) {
     if (handler instanceof Router) {

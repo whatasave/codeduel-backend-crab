@@ -8,7 +8,7 @@ export type Handler<Schema extends RouteSchema = RouteSchema> = (
 
 export interface Routes<Schema extends RouteSchema = RouteSchema> {
   prefix?: string;
-  routes: (Route<Schema> | Routes)[];
+  routes: (Route<Schema> | Routes<Schema>)[];
 }
 
 export interface Route<Schema extends RouteSchema = RouteSchema> {

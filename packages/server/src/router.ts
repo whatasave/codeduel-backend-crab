@@ -81,8 +81,10 @@ export class RouterNode {
     this.children.set(part, child);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  routes(routes: Routes<any> | Route<any>, prefix = '') {
+  routes<Schema extends RouteSchema = RouteSchema>(
+    routes: Routes<Schema> | Route<Schema>,
+    prefix = ''
+  ) {
     if ('routes' in routes) {
       for (const child of routes.routes) {
         this.routes(child, prefix + (routes.prefix ?? ''));

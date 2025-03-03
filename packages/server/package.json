@@ -1,19 +1,19 @@
 {
-	"name": "@codeduel-backend-crab/server",
-	"type": "module",
-	"exports": {
-		".": {
-			"import": "./src/index.ts",
-			"types": "./dist/index.d.ts"
-		}
-	},
-	"devDependencies": {
-		"@types/bun": "latest"
-	},
-	"peerDependencies": {
-		"typescript": "^5"
-	},
-	"scripts": {
-		"build": "bun build ./src/index.ts --outfile=dist/index.js && tsc --emitDeclarationOnly"
-	}
+  "name": "@codeduel-backend-crab/server",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outfile=dist/index.js && tsc --emitDeclarationOnly"
+  }
 }

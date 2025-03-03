@@ -1,9 +1,17 @@
-![Auto Assign](https://github.com/whatasave/demo-repository/actions/workflows/auto-assign.yml/badge.svg)
-
 ![Docker Build](https://github.com/whatasave/demo-repository/actions/workflows/docker-build.yml/badge.svg)
 
-# Demo repo
+# Codeduel Backend (crab)
 
 ## Setup
+
+```bash
+# install bun on windows
+> powershell -c "irm bun.sh/install.ps1|iex"
+
+# install bun on macOS and Linux
+$ curl -fsSL https://bun.sh/install | bash
+
+$ bun install
+```
 
 ## Docker

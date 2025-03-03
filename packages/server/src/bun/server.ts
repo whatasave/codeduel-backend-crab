@@ -47,24 +47,41 @@ export class BunServer implements Server {
 
   private async getBody(request: Request): Promise<unknown> {
     const contentType = request.headers.get('content-type');
-    if (contentType === 'application/json') return await request.json();
-    if (contentType === 'application/x-www-form-urlencoded') return await request.formData();
-    if (contentType === 'text/plain') return await request.text();
-    return () => request.body;
+
+    switch (contentType) {
+      case 'application/json':
+        return await request.json();
+      case 'application/x-www-form-urlencoded':
+        return await request.formData();
+      case 'text/plain':
+        return await request.text();
+      default:
+        return () => request.body;
+    }
   }
 
   private toResponse(response: ServerResponse) {
-    if (typeof response.body === 'object') {
-      response.headers ??= new Headers();
-      response.headers.set('content-type', 'application/json');
-      return new Response(JSON.stringify(response.body), {
-        status: response.status,
-        headers: response.headers,
-      });
+    const bodyType = typeof response.body;
+
+    switch (bodyType) {
+      case 'string':
+      case 'number':
+      case 'boolean':
+      case 'bigint':
+      case 'object':
+        response.headers ??= new Headers();
+        response.headers.set('content-type', 'application/json');
+        return new Response(JSON.stringify(response.body), {
+          status: response.status,
+          headers: response.headers,
+        });
+      case 'undefined':
+        return new Response(undefined, {
+          status: response.status,
+          headers: response.headers,
+        });
+      default:
+        throw new Error(`Unsupported body type: ${bodyType}`);
     }
-    return new Response(response.body as BodyInit, {
-      status: response.status,
-      headers: response.headers,
-    });
   }
 }

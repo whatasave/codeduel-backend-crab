@@ -1,5 +1,4 @@
-import type { Request } from './request';
-import type { Response } from './response';
+import type { Request, Response } from './types';
 
 export interface ListenOptions {
   host: string;

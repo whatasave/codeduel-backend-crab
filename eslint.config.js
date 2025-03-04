@@ -24,6 +24,7 @@ export default tseslint.config({
       'warn',
       { argsIgnorePattern: '.*', varsIgnorePattern: '^_' },
     ],
+    '@typescript-eslint/no-confusing-void-expression': 'off',
     '@typescript-eslint/no-empty-function': 'off',
     '@typescript-eslint/require-await': 'off',
   },

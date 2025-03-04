@@ -1,7 +1,10 @@
-import type { Method, Request as ServerRequest } from '../request';
-import type { Response as ServerResponse } from '../response';
+import type {
+  Handler,
+  Method,
+  Request as ServerRequest,
+  Response as ServerResponse,
+} from '../types';
 import { Router } from '../router';
-import type { Handler } from '../routes';
 import type { ListenOptions, RunningServer, Server } from '../server';
 
 export class BunServer implements Server {

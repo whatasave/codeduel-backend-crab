@@ -1,99 +1,55 @@
-import { TypeGuard, type Record, Type } from '@sinclair/typebox';
-import type { Method, Request } from './request';
-import type { Response } from './response';
-import type { Handler, Route, Routes, RouteSchema, SchemaToRequest } from './routes';
-import { OpenApiBuilder, type OpenAPIObject } from 'openapi3-ts/oas31';
-import { handleWithValidation } from './validation';
+import { type Record } from '@sinclair/typebox';
+import type { Method, Request, Response, Handler, Route, SchemaToRequest } from './types';
 
 export class Router {
   private readonly root = new RouterNode();
 
-  constructor(
-    private readonly fallback: Handler = async () => ({ status: 404, body: undefined })
-  ) {}
+  constructor(private readonly fallback: Handler = async () => ({ status: 404 })) {}
 
-  route<Schema extends RouteSchema = RouteSchema>(route: Route<Schema>) {
+  route(route: Route) {
     this.root.route(route);
   }
 
-  routes<Schema extends RouteSchema = RouteSchema>(routes: Routes<Schema>) {
-    this.root.routes(routes);
+  group(group: Group): RouterGroup {
+    return {
+      route: (route) => this.route({ ...route, path: join(group.prefix, route.path) }),
+      group: (group) => this.group({ prefix: join(group.prefix, group.prefix) }),
+    };
   }
 
   handle(request: Request): Promise<Response> {
     return this.root.handle(request) ?? this.fallback(request);
   }
 
-  openapi(): OpenAPIObject {
-    const openapi = new OpenApiBuilder();
-    openapi.addResponse('400', {
-      content: { 'application/json': Type.Array(Type.String()) },
-      description: 'Validation errors',
-    });
-    for (const route of this.root.allRoutes()) {
-      const schema = route.schema;
-      openapi.addPath(route.path, {
-        [route.method.toLowerCase()]: {
-          ...(TypeGuard.IsUndefined(schema.request.body) && {
-            requestBody: {
-              content: {
-                'application/json': {
-                  schema: schema.request.body,
-                },
-              },
-            },
-          }),
-          responses: Object.fromEntries(
-            Object.entries(schema.response).map(([status, schema]) => [
-              status,
-              {
-                description: schema.description,
-                content: {
-                  'application/json': {
-                    schema,
-                  },
-                },
-              },
-            ])
-          ),
-        },
-      });
-    }
-    return openapi.rootDoc;
+  allRoutes(): Generator<Route> {
+    return this.root.allRoutes();
   }
 }
 
-export class RouterNode {
+export interface Group {
+  prefix?: string;
+}
+
+export interface RouterGroup {
+  route(route: Route): void;
+  group(group: Group): RouterGroup;
+}
+
+class RouterNode {
   constructor(
     private methods: Partial<Record<Method, Route>> = {},
     private readonly children: Map<string, RouterNode> = new Map()
   ) {}
 
-  route<Schema extends RouteSchema = RouteSchema>(route: Route<Schema>, path = route.path) {
+  route(route: Route, path = route.path) {
     const [part, ...parts] = path.split('/').filter(Boolean);
     if (!part) {
-      this.methods[route.method] = {
-        ...route,
-        handler: handleWithValidation(route.schema, route.handler),
-      };
+      this.methods[route.method] = route;
       return;
     }
     const child = this.children.get(part) ?? new RouterNode();
     child.route(route, parts.join('/'));
     this.children.set(part, child);
-  }
-
-  routes<Schema extends RouteSchema = RouteSchema>(
-    routes: Routes<Schema> | Route<Schema>,
-    prefix = ''
-  ) {
-    if ('routes' in routes) {
-      for (const child of routes.routes) {
-        this.routes(child, prefix + (routes.prefix ?? ''));
-      }
-    } else {
-      this.route({ ...routes, path: routes.path === '/' ? prefix : prefix + routes.path });
-    }
   }
 
   handle(request: Request): Promise<Response> | undefined {
@@ -111,4 +67,8 @@ export class RouterNode {
       yield route;
     }
   }
+}
+
+function join(...parts: (string | undefined)[]) {
+  return parts.filter(Boolean).join('/');
 }

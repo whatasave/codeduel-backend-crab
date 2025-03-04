@@ -17,7 +17,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.34.28",
-    "openapi3-ts": "^4.4.0"
+    "@sinclair/typebox": "^0.34.28"
   }
 }

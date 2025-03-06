@@ -1,6 +1,5 @@
 {
   "name": "@codeduel-backend-crab/api",
-  "module": "src/index.ts",
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest"
@@ -13,6 +12,6 @@
     "typescript": "^5"
   },
   "scripts": {
-    "dev": "bun run ./src/index.ts"
+    "dev": "bun run ./src/main.ts"
   }
 }

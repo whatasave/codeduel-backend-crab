@@ -12,7 +12,7 @@ export function validation<Schema extends RouteSchema>(
     validate(Type.Object(schema.request.query ?? {}), request.query, errors);
     validate(schema.request.body ?? Type.Undefined(), request.body, errors);
 
-    if (errors.length > 0) return { status: 400, body: errors };
+    if (errors.length > 0) return { status: 400, body: { errors } };
     return await handler(request as SchemaToRequest<Schema['request']>);
   };
 }

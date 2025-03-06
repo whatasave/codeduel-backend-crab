@@ -1,4 +1,5 @@
 import type { Static, TSchema, TUndefined } from '@sinclair/typebox';
+import type { PathString } from './router';
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD';
 
@@ -26,7 +27,7 @@ export type Handler<Schema extends RouteSchema = RouteSchema> = (
 
 export interface Route {
   method: Method;
-  path: string;
+  path: PathString;
   handler: Handler;
 }
 

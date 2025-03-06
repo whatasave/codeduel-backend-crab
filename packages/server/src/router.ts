@@ -13,7 +13,7 @@ export class Router {
   group(group: Group): RouterGroup {
     return {
       route: (route) => this.route({ ...route, path: join(group.prefix, route.path) }),
-      group: (group) => this.group({ prefix: join(group.prefix, group.prefix) }),
+      group: (childGroup) => this.group({ prefix: join(group.prefix, childGroup.prefix) }),
     };
   }
 
@@ -26,8 +26,10 @@ export class Router {
   }
 }
 
+export type PathString = `/${string}`;
+
 export interface Group {
-  prefix?: string;
+  prefix?: PathString;
 }
 
 export interface RouterGroup {
@@ -48,7 +50,7 @@ class RouterNode {
       return;
     }
     const child = this.children.get(part) ?? new RouterNode();
-    child.route(route, parts.join('/'));
+    child.route(route, join(...parts));
     this.children.set(part, child);
   }
 
@@ -56,7 +58,7 @@ class RouterNode {
     const [part, ...parts] = request.path.split('/').filter(Boolean);
     if (!part) return this.methods[request.method]?.handler(request as SchemaToRequest<never>);
     const child = this.children.get(part);
-    return child?.handle({ ...request, path: parts.join('/') });
+    return child?.handle({ ...request, path: join(...parts) });
   }
 
   *allRoutes(): Generator<Route> {
@@ -69,6 +71,8 @@ class RouterNode {
   }
 }
 
-function join(...parts: (string | undefined)[]) {
-  return parts.filter(Boolean).join('/');
+function join(...parts: (string | undefined)[]): PathString {
+  const joinedPath = '/' + parts.filter(Boolean).join('/');
+  const timedPath = joinedPath.replace(/\/{2,}/g, '/');
+  return timedPath as PathString;
 }

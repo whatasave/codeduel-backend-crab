@@ -1,4 +1,4 @@
-import { Type, type Static } from '@sinclair/typebox';
+import { Type, Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 
 const Config = Type.Object({

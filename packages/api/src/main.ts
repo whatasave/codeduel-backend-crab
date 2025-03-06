@@ -3,9 +3,9 @@ import { Router } from '../../server/src/router';
 import { RootController } from './route/controller';
 import { loadConfigFromEnv } from './config';
 
-const { config, message } = loadConfigFromEnv();
+const { config, error } = loadConfigFromEnv();
 if (!config) {
-  console.error(`Invalid environment: ${message}`);
+  console.error(`Invalid environment: ${error}`);
   process.exit(1);
 }
 

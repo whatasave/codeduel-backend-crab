@@ -9,18 +9,18 @@ const Config = Type.Object({
 export type Config = Static<typeof Config>;
 
 export function loadConfigFromEnv():
-  | { config: Config; message?: undefined }
-  | { config?: undefined; message: string } {
+  | { config: Config; error: undefined }
+  | { config: undefined; error: string } {
   const config = {
     host: process.env.HOST ?? 'localhost',
     port: process.env.PORT ?? '0',
   };
 
   try {
-    return { config: Value.Parse(Config, config) };
+    return { config: Value.Parse(Config, config), error: undefined };
   } catch (error) {
     if (error instanceof AssertError && error.error) {
-      return { message: `${error.error.path}: ${error.error.message}` };
+      return { config: undefined, error: `${error.error.path}: ${error.error.message}` };
     }
     throw error;
   }

@@ -3,17 +3,16 @@ import type { PathString } from './router';
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD';
 
-export type Request<
+export interface Request<
   Query extends Record<string, unknown> = Record<string, unknown>,
   Body = unknown,
-> = Expand<
-  {
-    method: Method;
-    path: string;
-    headers?: Headers;
-  } & (Query extends undefined ? { query?: Query } : { query: Query }) &
-    (Body extends undefined ? { body?: Body } : { body: Body })
->;
+> {
+  method: Method;
+  path: string;
+  query: Query;
+  body: Body;
+  headers?: Headers;
+}
 
 export type Response<Status extends number = number, Body = unknown> = MakeUndefinedOptional<{
   status: Status;

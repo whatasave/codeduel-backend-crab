@@ -16,4 +16,4 @@ rootController.setup(router.group({ prefix: '/v1' }));
 
 const server = new BunServer(router);
 const running = server.listen({ host: config.host, port: config.port });
-console.log(`Server is running on http://${running.host}:${running.port}`);
+console.log(`Server is running on ${running.url}`);

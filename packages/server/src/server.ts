@@ -11,5 +11,7 @@ export interface Server {
 }
 
 export interface RunningServer {
+  host: string;
+  port: number;
   stop(): Promise<void>;
 }

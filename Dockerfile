@@ -2,8 +2,9 @@ FROM oven/bun:latest
 
 WORKDIR /app
 
-COPY package.json bun.lock ./
-RUN bun install --production
+COPY package.json ./
+
+RUN bun install --production --no-frozen-lockfile
 
 COPY . .
 
@@ -13,6 +14,8 @@ RUN adduser --disabled-password --gecos "" user && chown -R user:user /app
 
 USER user
 
+WORKDIR /app/packages/api
+
 EXPOSE 80
 
-CMD ["bun", "-F=@codeduel-backend-crab/api", "run", "start"]
+CMD ["bun", "run", "dev"]

@@ -18,5 +18,9 @@
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.28"
+  },
+  "scripts": {
+    "prettier:check": "prettier --check .",
+    "prettier:fix": "prettier --write ."
   }
 }

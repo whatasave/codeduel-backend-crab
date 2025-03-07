@@ -6,7 +6,8 @@
   },
   "dependencies": {
     "@codeduel-backend-crab/database": "workspace:*",
-    "@codeduel-backend-crab/server": "workspace:*"
+    "@codeduel-backend-crab/server": "workspace:*",
+    "openapi3-ts": "^4.4.0"
   },
   "peerDependencies": {
     "typescript": "^5"

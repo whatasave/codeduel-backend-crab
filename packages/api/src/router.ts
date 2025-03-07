@@ -83,3 +83,9 @@ export class BackendRouter {
     return this.router.handle(request);
   }
 }
+
+export function route<Schema extends RouteSchema>(
+  route: BackendRoute<Schema>
+): BackendRoute<Schema> {
+  return route;
+}

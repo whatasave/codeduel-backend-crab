@@ -71,7 +71,7 @@ class RouterNode {
   }
 }
 
-function join(...parts: (string | undefined)[]): PathString {
+export function join(...parts: (string | undefined)[]): PathString {
   const joinedPath = '/' + parts.filter(Boolean).join('/');
   const timedPath = joinedPath.replace(/\/{2,}/g, '/');
   return timedPath as PathString;

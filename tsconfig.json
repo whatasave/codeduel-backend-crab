@@ -14,6 +14,12 @@
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+
+    "paths": {
+      "@codeduel-backend-crab/server/*": ["./packages/server/src/*"]
+    },
+
+    "outDir": "dist",
   }
 }

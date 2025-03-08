@@ -14,12 +14,13 @@
     "typescript-eslint": "8.25.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.8.2"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.28"
   },
   "scripts": {
+    "build": "bun run --filter @codeduel-backend-crab/api build",
     "prettier:check": "prettier --check .",
     "prettier:fix": "prettier --write ."
   }

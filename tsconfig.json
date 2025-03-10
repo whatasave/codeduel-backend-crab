@@ -20,6 +20,6 @@
       "@codeduel-backend-crab/server/*": ["./packages/server/src/*"]
     },
 
-    "outDir": "dist",
+    "outDir": "dist"
   }
 }

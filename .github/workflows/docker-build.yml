@@ -1,8 +1,8 @@
-name: Docker Build & Push
+name: Docker Publish
 on:
   push:
     tags:
-      - 'docker-action'
+      - 'docker-publish'
     branches:
       - release
 jobs:

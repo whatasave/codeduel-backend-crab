@@ -29,4 +29,4 @@ USER user
 
 EXPOSE 80
 
-CMD ["bun", "run", "docker:start"]
+CMD ["bun", "run", "/app/dist/main.js"]

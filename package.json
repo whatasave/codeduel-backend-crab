@@ -20,8 +20,8 @@
     "@sinclair/typebox": "^0.34.28"
   },
   "scripts": {
-    "docker:build": "bun run --filter @codeduel-backend-crab/api build",
-    "docker:start": "bun run ./dist/main.js",
+    "build": "bun run --cwd ./packages/api build",
+    "start": "bun run --cwd ./packages/api start",
     "prettier:check": "prettier --check .",
     "prettier:fix": "prettier --write ."
   }

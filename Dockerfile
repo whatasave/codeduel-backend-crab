@@ -26,7 +26,6 @@ ENV HOST=0.0.0.0
 ENV PORT=80
 
 USER user
-
 EXPOSE 80
 
 CMD ["bun", "run", "/app/dist/main.js"]

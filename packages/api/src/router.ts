@@ -53,7 +53,7 @@ export class BackendRouter {
     });
   }
 
-  route<Schema extends RouteSchema>(route: BackendRoute<Schema>) {
+  route<Schema extends RouteSchema>(route: BackendRoute<Schema>): void {
     this.router.route({ ...route, handler: validation(route.schema, route.handler) });
     this.openApiBuilder.addPath(route.path, {
       [route.method.toLowerCase()]: {

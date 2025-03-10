@@ -1,8 +1,8 @@
 import { defineConfig } from 'kysely-ctl';
-import { database, loadDatabaseOptionsFromEnv } from './src';
+import { createDatabase, loadConfig } from './src';
 
 export default defineConfig({
-  kysely: database(loadDatabaseOptionsFromEnv()),
+  kysely: createDatabase(loadConfig()),
   migrations: {
     migrationFolder: 'migrations',
   },

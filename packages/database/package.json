@@ -18,6 +18,7 @@
     "reset": "kysely migrate:rollback --all && kysely migrate:latest && bun generate"
   },
   "dependencies": {
+    "@sinclair/typebox": "^0.34.29",
     "kysely": "^0.27.6",
     "pg": "^8.13.3"
   }

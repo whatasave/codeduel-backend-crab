@@ -7,7 +7,7 @@ export class RootController {
 
   private readonly healthController = new HealthController(this.healthService);
 
-  setup(group: RouterGroup) {
+  setup(group: RouterGroup): void {
     this.healthController.setup(group.group({ prefix: '/health' }));
   }
 }

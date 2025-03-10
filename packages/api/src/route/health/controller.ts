@@ -1,10 +1,10 @@
-import type { Request, RouterGroup } from '@codeduel-backend-crab/server';
+import type { Request, Response, RouterGroup } from '@codeduel-backend-crab/server';
 import type { HealthService } from './service';
 
 export class HealthController {
   constructor(private readonly HealthService: HealthService) {}
 
-  setup(group: RouterGroup) {
+  setup(group: RouterGroup): void {
     group.route({
       method: 'GET',
       path: '/liveness',
@@ -18,14 +18,14 @@ export class HealthController {
     });
   }
 
-  async livenessCheck(_: Request) {
+  async livenessCheck(_: Request): Promise<Response> {
     return {
       status: 200,
       body: this.HealthService.livenessCheck(),
     };
   }
 
-  async readinessCheck(_: Request) {
+  async readinessCheck(_: Request): Promise<Response> {
     return {
       status: 200,
       body: this.HealthService.readinessCheck(),

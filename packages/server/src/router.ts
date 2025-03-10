@@ -6,7 +6,7 @@ export class Router {
 
   constructor(private readonly fallback: Handler = async () => ({ status: 404 })) {}
 
-  route(route: Route) {
+  route(route: Route): void {
     this.root.route(route);
   }
 
@@ -43,7 +43,7 @@ class RouterNode {
     private readonly children: Map<string, RouterNode> = new Map()
   ) {}
 
-  route(route: Route, path = route.path) {
+  route(route: Route, path = route.path): void {
     const [part, ...parts] = path.split('/').filter(Boolean);
     if (!part) {
       this.methods[route.method] = route;

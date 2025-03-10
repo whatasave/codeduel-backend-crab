@@ -66,7 +66,7 @@ export class BunServer implements Server {
     }
   }
 
-  private toResponse(response: ServerResponse) {
+  private toResponse(response: ServerResponse): Response {
     const bodyType = typeof response.body;
 
     switch (bodyType) {

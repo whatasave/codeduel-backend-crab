@@ -5,6 +5,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config({
   files: ['**/*.ts'],
+  ignores: ['packages/database/src/database.ts'],
   extends: [
     eslint.configs.recommended,
     ...tseslint.configs.strictTypeChecked,

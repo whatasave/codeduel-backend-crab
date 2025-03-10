@@ -10,6 +10,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
+    "outDir": "dist",
 
     "strict": true,
     "skipLibCheck": true,
@@ -18,8 +19,6 @@
 
     "paths": {
       "@codeduel-backend-crab/server/*": ["./packages/server/src/*"]
-    },
-
-    "outDir": "dist"
+    }
   }
 }

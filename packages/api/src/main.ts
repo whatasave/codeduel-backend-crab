@@ -1,9 +1,9 @@
 import { BunServer } from '@codeduel-backend-crab/server/bun';
 import { Router } from '../../server/src/router';
 import { RootController } from './route/controller';
-import { loadConfigFromEnv } from './config';
+import { safeLoadConfig } from './config';
 
-const { config, error } = loadConfigFromEnv();
+const { config, error } = safeLoadConfig();
 if (!config) {
   console.error(`Invalid environment: ${error}`);
   process.exit(1);

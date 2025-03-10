@@ -12,13 +12,11 @@ RUN bun run docker:build
 FROM oven/bun:latest AS production
 
 WORKDIR /app
-
 RUN adduser --disabled-password --gecos "" user && chown -R user:user /app
 
 COPY --from=build /app/packages/api/dist ./dist
 COPY --from=build /app/package.json ./
 COPY --from=build /app/bun.lock ./
-
 RUN bun install --production --no-frozen-lockfile
 
 ENV NODE_ENV=production

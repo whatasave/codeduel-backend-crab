@@ -15,3 +15,13 @@ $ bun install
 ```
 
 ## Docker
+
+```bash
+# build
+docker build -t codeduel-be .
+
+# run
+$ docker run -p 3000:80 codeduel-be
+
+# go to http://localhost:3000/v1/health/liveness
+```

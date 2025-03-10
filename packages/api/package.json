@@ -12,6 +12,8 @@
     "typescript": "^5"
   },
   "scripts": {
-    "dev": "bun run ./src/main.ts"
+    "dev": "bun run ./src/main.ts",
+    "build": "bun build ./src/main.ts --outdir ./dist",
+    "start": "bun run dist/main.js"
   }
 }

@@ -17,7 +17,7 @@ export function validation<Schema extends RouteSchema>(
   };
 }
 
-function validate(schema: TSchema, value: unknown, errors: string[]) {
+function validate(schema: TSchema, value: unknown, errors: string[]): void {
   if (!Value.Check(schema, value)) {
     for (const error of Value.Errors(schema, value)) {
       errors.push(error.message);

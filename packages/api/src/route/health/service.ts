@@ -1,11 +1,11 @@
 import { LivenessStatus, ReadinessStatus } from './types';
 
 export class HealthService {
-  livenessCheck() {
+  livenessCheck(): { status: LivenessStatus } {
     return { status: LivenessStatus.OK };
   }
 
-  readinessCheck() {
+  readinessCheck(): { status: ReadinessStatus } {
     return { status: ReadinessStatus.READY };
   }
 }

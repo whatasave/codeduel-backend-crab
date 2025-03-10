@@ -1,27 +1,42 @@
 import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 
-const Config = Type.Object({
-  host: Type.String(),
-  port: Type.Number({ minimum: 0, maximum: 65535 }),
+export type Config = Static<typeof Config>;
+export const Config = Type.Object({
+  host: Type.String({ default: 'localhost' }),
+  port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
 });
 
-export type Config = Static<typeof Config>;
-
-export function loadConfigFromEnv():
-  | { config: Config; error: undefined }
-  | { config: undefined; error: string } {
+export function loadConfig(): Config {
+  const env = process.env;
   const config = {
-    host: process.env.HOST ?? 'localhost',
-    port: process.env.PORT ?? '0',
+    host: env.HOST,
+    port: env.PORT,
   };
 
   try {
-    return { config: Value.Parse(Config, config), error: undefined };
+    return Value.Parse(Config, config);
   } catch (error) {
-    if (error instanceof AssertError && error.error) {
-      return { config: undefined, error: `${error.error.path}: ${error.error.message}` };
+    if (error instanceof AssertError) {
+      const errors = Array.from(error.Errors())
+        .map((e) => `\t${e.path}: ${e.message}`)
+        .join('\n');
+      throw new Error(`Invalid environment:\n${errors}`);
     }
     throw error;
+  }
+}
+
+export function safeLoadConfig():
+  | { config: Config; error?: never }
+  | { config?: never; error: string } {
+  try {
+    return { config: loadConfig() };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    } else {
+      return { error: String(error) };
+    }
   }
 }

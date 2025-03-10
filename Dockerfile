@@ -22,6 +22,8 @@ COPY --from=build /app/bun.lock ./
 RUN bun install --production --no-frozen-lockfile
 
 ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=80
 
 USER user
 

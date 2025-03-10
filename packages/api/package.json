@@ -13,7 +13,7 @@
   },
   "scripts": {
     "dev": "bun run ./src/main.ts",
-    "build": "bun run tsc",
+    "build": "bun build ./src/main.ts --outdir ./dist",
     "start": "bun run dist/main.js"
   }
 }

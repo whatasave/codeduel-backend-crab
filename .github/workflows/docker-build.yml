@@ -1,6 +1,8 @@
 name: Docker Build
 on:
   push:
+    tags:
+      - 'docker-action'
     branches:
       - release
 jobs:

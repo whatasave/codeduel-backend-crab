@@ -27,6 +27,7 @@ export type Handler<Schema extends RouteSchema = RouteSchema> = (
 export interface Route {
   method: Method;
   path: PathString;
+  schema?: RouteSchema;
   handler: Handler;
 }
 

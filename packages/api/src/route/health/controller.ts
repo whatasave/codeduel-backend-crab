@@ -1,12 +1,13 @@
 import type { HealthService } from './service';
-import { route, type BackendRouterGroup } from '../../router';
 import { Type } from '@sinclair/typebox';
 import { LivenessStatus, ReadinessStatus } from './data';
+import { route } from '@codeduel-backend-crab/server';
+import type { RouterGroup } from '@codeduel-backend-crab/server';
 
 export class HealthController {
   constructor(private readonly HealthService: HealthService) {}
 
-  setup(group: BackendRouterGroup): void {
+  setup(group: RouterGroup): void {
     group.route(this.livenessCheck);
     group.route(this.readinessCheck);
   }

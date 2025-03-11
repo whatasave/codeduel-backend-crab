@@ -1,4 +1,4 @@
-import type { RouterGroup } from '@codeduel-backend-crab/server/router';
+import type { RouterGroup } from '@codeduel-backend-crab/server';
 import { HealthController } from './health/controller';
 import { HealthService } from './health/service';
 

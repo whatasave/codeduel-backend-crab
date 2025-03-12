@@ -1,5 +1,15 @@
-import { type Record } from '@sinclair/typebox';
-import type { Method, Request, Response, Handler, Route, SchemaToRequest } from './types';
+import { Type, type Record } from '@sinclair/typebox';
+import type {
+  Method,
+  Request,
+  Response,
+  Handler,
+  Route,
+  SchemaToRequest,
+  RouteSchema,
+} from './types';
+import { validation } from './validation';
+import { OpenApiBuilder, type OpenAPIObject } from 'openapi3-ts/oas31';
 
 export class Router {
   private readonly root = new RouterNode();
@@ -24,6 +34,54 @@ export class Router {
   allRoutes(): Generator<Route> {
     return this.root.allRoutes();
   }
+
+  openapi(): OpenAPIObject {
+    const builder = new OpenApiBuilder();
+    builder.addResponse('400', {
+      description: 'Validation error',
+      content: {
+        'application/json': {
+          schema: Type.Object({
+            errors: Type.Array(Type.String()),
+          }),
+        },
+      },
+    });
+
+    for (const route of this.allRoutes()) {
+      if (!route.schema) continue;
+      builder.addPath(route.path, {
+        [route.method.toLowerCase()]: {
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: route.schema.request.body ?? Type.Undefined(),
+              },
+            },
+          },
+          parameters: {
+            ...this.mapValues(route.schema.request.query ?? {}, (schema) => ({
+              in: 'query',
+              schema,
+            })),
+          },
+          responses: this.mapValues(route.schema.response, (schema) => ({
+            content: {
+              'application/json': {
+                schema,
+              },
+            },
+          })),
+        },
+      });
+    }
+
+    return builder.getSpec();
+  }
+
+  private mapValues<T, U>(obj: Record<string, T>, fn: (value: T) => U): Record<string, U> {
+    return Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, fn(value)]));
+  }
 }
 
 export type PathString = `/${string}`;
@@ -43,15 +101,16 @@ class RouterNode {
     private readonly children: Map<string, RouterNode> = new Map()
   ) {}
 
-  route(route: Route, path = route.path): void {
+  route(route: Route, path = route.path): Route {
     const [part, ...parts] = path.split('/').filter(Boolean);
     if (!part) {
       this.methods[route.method] = route;
-      return;
+      return route;
     }
     const child = this.children.get(part) ?? new RouterNode();
-    child.route(route, join(...parts));
+    const addedRoute = child.route(route, join(...parts));
     this.children.set(part, child);
+    return addedRoute;
   }
 
   handle(request: Request): Promise<Response> | undefined {
@@ -71,7 +130,18 @@ class RouterNode {
   }
 }
 
-function join(...parts: (string | undefined)[]): PathString {
+export function route(route: { method: Method; path: PathString; handler: Handler }): Route;
+export function route<Schema extends RouteSchema>(route: {
+  method: Method;
+  path: PathString;
+  schema: Schema;
+  handler: Handler<Schema>;
+}): Route;
+export function route(route: Route): Route {
+  return route.schema ? { ...route, handler: validation(route.schema, route.handler) } : route;
+}
+
+export function join(...parts: (string | undefined)[]): PathString {
   const joinedPath = '/' + parts.filter(Boolean).join('/');
   const timedPath = joinedPath.replace(/\/{2,}/g, '/');
   return timedPath as PathString;

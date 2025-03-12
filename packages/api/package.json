@@ -6,7 +6,8 @@
   },
   "dependencies": {
     "@codeduel-backend-crab/database": "workspace:*",
-    "@codeduel-backend-crab/server": "workspace:*"
+    "@codeduel-backend-crab/server": "workspace:*",
+    "@sinclair/typebox": "^0.34.29"
   },
   "peerDependencies": {
     "typescript": "^5"

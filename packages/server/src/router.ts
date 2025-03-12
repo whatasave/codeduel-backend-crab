@@ -104,14 +104,8 @@ class RouterNode {
   route(route: Route, path = route.path): Route {
     const [part, ...parts] = path.split('/').filter(Boolean);
     if (!part) {
-      const validatedRoute: Route = route.schema
-        ? {
-            ...route,
-            handler: validation(route.schema, route.handler),
-          }
-        : route;
-      this.methods[route.method] = validatedRoute;
-      return validatedRoute;
+      this.methods[route.method] = route;
+      return route;
     }
     const child = this.children.get(part) ?? new RouterNode();
     const addedRoute = child.route(route, join(...parts));
@@ -144,7 +138,7 @@ export function route<Schema extends RouteSchema>(route: {
   handler: Handler<Schema>;
 }): Route;
 export function route(route: Route): Route {
-  return route;
+  return route.schema ? { ...route, handler: validation(route.schema, route.handler) } : route;
 }
 
 export function join(...parts: (string | undefined)[]): PathString {

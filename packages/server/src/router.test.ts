@@ -1,5 +1,6 @@
 import { test, beforeEach, describe, expect } from 'bun:test';
 import { Router } from './router';
+import { Type } from '@sinclair/typebox';
 
 describe('Router', () => {
   let router: Router;
@@ -93,5 +94,34 @@ describe('Router', () => {
     expect(routes.some((r) => r.path === '/b' && r.method === 'POST')).toBe(true);
     expect(routes.some((r) => r.path === '/a/a' && r.method === 'GET')).toBe(true);
     expect(routes.some((r) => r.path === '/a/b' && r.method === 'POST')).toBe(true);
+  });
+
+  test('should generate OpenAPI schema', () => {
+    router.route({
+      method: 'GET',
+      path: '/test',
+      schema: {
+        request: {
+          query: {
+            param: Type.String(),
+          },
+        },
+        response: {
+          200: Type.Object({
+            status: Type.Number(),
+          }),
+        },
+      },
+      handler: async () => ({ status: 200 }),
+    });
+
+    const openapi = router.openapi();
+    if (!openapi.paths) throw new Error('OpenAPI schema is empty');
+    expect(openapi.paths['/test']).toBeDefined();
+    if (!openapi.paths['/test']) throw new Error('OpenAPI schema is empty');
+    expect(openapi.paths['/test'].get).toBeDefined();
+    if (!openapi.paths['/test'].get) throw new Error('OpenAPI schema is empty');
+    expect(openapi.paths['/test'].get.parameters).toHaveLength(1);
+    expect(openapi.paths['/test'].get.responses).toBeDefined();
   });
 });

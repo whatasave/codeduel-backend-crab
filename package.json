@@ -2,7 +2,7 @@
   "name": "codeduel-backend-crab",
   "devDependencies": {
     "@eslint/js": "9.21.0",
-    "@types/bun": "latest",
+    "@types/bun": "1.2.4",
     "editorconfig": "^2.0.1",
     "eslint": "9.21.0",
     "prettier": "3.5.2",

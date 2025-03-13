@@ -1,14 +1,5 @@
 import { Type, type Record } from '@sinclair/typebox';
-import type {
-  Method,
-  Request,
-  Response,
-  Handler,
-  Route,
-  SchemaToRequest,
-  RouteSchema,
-} from './types';
-import { validation } from './validation';
+import type { Method, Request, Response, Handler, Route, SchemaToRequest } from './types';
 import { OpenApiBuilder, type OpenAPIObject } from 'openapi3-ts/oas31';
 
 export class Router {
@@ -128,17 +119,6 @@ class RouterNode {
       yield route;
     }
   }
-}
-
-export function route(route: { method: Method; path: PathString; handler: Handler }): Route;
-export function route<Schema extends RouteSchema>(route: {
-  method: Method;
-  path: PathString;
-  schema: Schema;
-  handler: Handler<Schema>;
-}): Route;
-export function route(route: Route): Route {
-  return route.schema ? { ...route, handler: validation(route.schema, route.handler) } : route;
 }
 
 export function join(...parts: (string | undefined)[]): PathString {

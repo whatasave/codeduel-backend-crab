@@ -1,6 +1,7 @@
 import { Value } from '@sinclair/typebox/value';
-import type { Handler, RouteSchema, SchemaToRequest } from '../types';
+import type { Handler, Method, Route, RouteSchema, SchemaToRequest } from '../types';
 import { Type, type TSchema } from '@sinclair/typebox';
+import type { PathString } from '../router';
 
 export function validation<Schema extends RouteSchema>(
   schema: Schema,
@@ -23,4 +24,13 @@ function validate(schema: TSchema, value: unknown, errors: string[]): void {
       errors.push(error.message);
     }
   }
+}
+
+export function validated<Schema extends RouteSchema>(route: {
+  method: Method;
+  path: PathString;
+  schema: Schema;
+  handler: Handler<Schema>;
+}): Route {
+  return { ...route, handler: validation(route.schema, route.handler) };
 }

@@ -53,7 +53,7 @@ export function loadConfig(): Config {
   } catch (error) {
     if (error instanceof AssertError) {
       const errors = Array.from(error.Errors())
-        .map((e) => `\t${e.path}: ${e.message}`)
+        .map((e) => `\t${e.path}: ${e.message}, Received: ${String(e.value)}`)
         .join('\n');
       throw new Error(`Invalid environment:\n${errors}`);
     }

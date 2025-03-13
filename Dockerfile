@@ -7,7 +7,7 @@ RUN bun install --no-frozen-lockfile
 
 COPY packages ./packages
 COPY tsconfig.json ./
-RUN bun run docker:build
+RUN bun run build
 
 FROM oven/bun:latest AS production
 

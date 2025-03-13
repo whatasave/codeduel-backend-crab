@@ -3,7 +3,7 @@ import { Value, AssertError } from '@sinclair/typebox/value';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
-  host: Type.String({}),
+  host: Type.String({ default: 'localhost' }),
   port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
 });
 

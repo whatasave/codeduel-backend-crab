@@ -5,7 +5,7 @@ import { safeLoadConfig } from './config';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
-  console.error(`Invalid environment: ${error}`);
+  console.error(error);
   process.exit(1);
 }
 

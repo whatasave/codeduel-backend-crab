@@ -1,4 +1,4 @@
-FROM oven/bun:latest AS build
+FROM oven/bun:1.2.4 AS build
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY packages/server/tsconfig.json ./packages/server/
 COPY tsconfig.json ./
 RUN bun run build
 
-FROM oven/bun:latest AS production
+FROM oven/bun:1.2.4 AS production
 
 WORKDIR /app
 RUN adduser --disabled-password --gecos "" user && chown -R user:user /app

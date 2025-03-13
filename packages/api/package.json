@@ -1,0 +1,20 @@
+{
+  "name": "@codeduel-backend-crab/api",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "dependencies": {
+    "@codeduel-backend-crab/database": "workspace:*",
+    "@codeduel-backend-crab/server": "workspace:*",
+    "@sinclair/typebox": "^0.34.29"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "dev": "bun run ./src/main.ts",
+    "build": "bun build ./src/main.ts --outdir ./dist",
+    "start": "bun run dist/main.js"
+  }
+}

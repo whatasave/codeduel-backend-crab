@@ -1,0 +1,26 @@
+{
+  "name": "codeduel-backend-crab",
+  "devDependencies": {
+    "@eslint/js": "9.21.0",
+    "@types/bun": "1.2.4",
+    "editorconfig": "^2.0.1",
+    "eslint": "9.21.0",
+    "prettier": "3.5.2",
+    "typescript-eslint": "8.25.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.8.2"
+  },
+  "private": true,
+  "scripts": {
+    "build": "bun run --cwd ./packages/api build",
+    "start": "bun run --cwd ./packages/api start",
+    "prettier:check": "prettier --check .",
+    "prettier:fix": "prettier --write .",
+    "lint": "eslint ."
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ]
+}

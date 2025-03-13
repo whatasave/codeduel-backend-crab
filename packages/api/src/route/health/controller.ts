@@ -23,9 +23,7 @@ export class HealthController {
         }),
       },
     },
-    handler: async () => {
-      return ok({ status: this.HealthService.livenessCheck() });
-    },
+    handler: async () => ok({ status: this.HealthService.livenessCheck() }),
   });
 
   readinessCheck = validated({
@@ -39,8 +37,6 @@ export class HealthController {
         }),
       },
     },
-    handler: async () => {
-      return ok({ status: this.HealthService.readinessCheck() });
-    },
+    handler: async () => ok({ status: this.HealthService.readinessCheck() }),
   });
 }

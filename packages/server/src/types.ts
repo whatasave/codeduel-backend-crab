@@ -14,11 +14,17 @@ export interface Request<
   headers?: Headers;
 }
 
-export type Response<Status extends number = number, Body = unknown> = MakeUndefinedOptional<{
-  status: Status;
-  body: Body;
-  headers?: Headers;
-}>;
+export type Response<Status extends number = number, Body = unknown> = undefined extends Body
+  ? {
+      status: Status;
+      body?: Body;
+      headers?: Headers;
+    }
+  : {
+      status: Status;
+      body: Body;
+      headers?: Headers;
+    };
 
 export type Handler<Schema extends RouteSchema = RouteSchema> = (
   request: SchemaToRequest<Expand<Schema['request']>>
@@ -60,11 +66,5 @@ export type SchemaToResponse<Schema extends Record<number, TSchema>> = {
 }[keyof Schema];
 
 type UndefinedTo<E, T> = T extends T ? (undefined extends T ? E : T) : never;
-
-type MakeUndefinedOptional<T> = {
-  [K in keyof T as undefined extends T[K] ? K : never]?: T[K];
-} & {
-  [K in keyof T as undefined extends T[K] ? never : K]: T[K];
-};
 
 type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;

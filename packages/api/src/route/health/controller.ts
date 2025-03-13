@@ -1,7 +1,7 @@
 import type { HealthService } from './service';
 import { Type } from '@sinclair/typebox';
 import { LivenessStatus, ReadinessStatus } from './data';
-import { route } from '@codeduel-backend-crab/server';
+import { validated } from '@codeduel-backend-crab/server/validation';
 import type { RouterGroup } from '@codeduel-backend-crab/server';
 
 export class HealthController {
@@ -12,7 +12,7 @@ export class HealthController {
     group.route(this.readinessCheck);
   }
 
-  livenessCheck = route({
+  livenessCheck = validated({
     method: 'GET',
     path: '/liveness',
     schema: {
@@ -31,7 +31,7 @@ export class HealthController {
     },
   });
 
-  readinessCheck = route({
+  readinessCheck = validated({
     method: 'GET',
     path: '/readiness',
     schema: {

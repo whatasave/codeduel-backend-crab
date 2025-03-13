@@ -3,7 +3,7 @@ import { Value, AssertError } from '@sinclair/typebox/value';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
-  host: Type.String({ default: 'localhost' }),
+  host: Type.String({}),
   port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
 });
 
@@ -19,7 +19,7 @@ export function loadConfig(): Config {
   } catch (error) {
     if (error instanceof AssertError) {
       const errors = Array.from(error.Errors())
-        .map((e) => `\t${e.path}: ${e.message}`)
+        .map((e) => `\t${e.path}: ${e.message}, Received: ${String(e.value)}`)
         .join('\n');
       throw new Error(`Invalid environment:\n${errors}`);
     }

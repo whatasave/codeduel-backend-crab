@@ -2,7 +2,7 @@ import type { HealthService } from './service';
 import { Type } from '@sinclair/typebox';
 import { LivenessStatus, ReadinessStatus } from './data';
 import { validated } from '@codeduel-backend-crab/server/validation';
-import type { RouterGroup } from '@codeduel-backend-crab/server';
+import { ok, type RouterGroup } from '@codeduel-backend-crab/server';
 
 export class HealthController {
   constructor(private readonly HealthService: HealthService) {}
@@ -23,12 +23,7 @@ export class HealthController {
         }),
       },
     },
-    handler: async () => {
-      return {
-        status: 200,
-        body: { status: this.HealthService.livenessCheck() },
-      } as const;
-    },
+    handler: async () => ok({ status: this.HealthService.livenessCheck() }),
   });
 
   readinessCheck = validated({
@@ -42,11 +37,6 @@ export class HealthController {
         }),
       },
     },
-    handler: async () => {
-      return {
-        status: 200,
-        body: { status: this.HealthService.readinessCheck() },
-      } as const;
-    },
+    handler: async () => ok({ status: this.HealthService.readinessCheck() }),
   });
 }

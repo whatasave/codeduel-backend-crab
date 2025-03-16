@@ -19,3 +19,7 @@ export function use(...middlewares: ((route: Route) => Route)[]) {
     });
   };
 }
+
+export function applyMiddlewares(route: Route, middlewares: Middleware[]): Route {
+  return middlewares.reduce((acc, middleware) => middleware(acc), route);
+}

@@ -1,6 +1,7 @@
 import { Type, type Record } from '@sinclair/typebox';
 import type { Method, Request, Response, Handler, Route, SchemaToRequest } from './types';
 import { OpenApiBuilder, type OpenAPIObject } from 'openapi3-ts/oas31';
+import { applyMiddlewares, type Middleware } from './middleware';
 
 export class Router {
   private readonly root = new RouterNode();
@@ -13,8 +14,18 @@ export class Router {
 
   group(group: Group): RouterGroup {
     return {
-      route: (route) => this.route({ ...route, path: join(group.prefix, route.path) }),
-      group: (childGroup) => this.group({ prefix: join(group.prefix, childGroup.prefix) }),
+      route: (route) =>
+        this.route(
+          applyMiddlewares(
+            { ...route, path: join(group.prefix, route.path) },
+            group.middlewares ?? []
+          )
+        ),
+      group: (childGroup) =>
+        this.group({
+          prefix: join(group.prefix, childGroup.prefix),
+          middlewares: [...(childGroup.middlewares ?? []), ...(group.middlewares ?? [])],
+        }),
     };
   }
 
@@ -79,6 +90,7 @@ export type PathString = `/${string}`;
 
 export interface Group {
   prefix?: PathString;
+  middlewares?: Middleware[];
 }
 
 export interface RouterGroup {

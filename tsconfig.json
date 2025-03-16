@@ -12,6 +12,7 @@
     "noEmit": true,
     "outDir": "dist",
 
+    "experimentalDecorators": true,
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,

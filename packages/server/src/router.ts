@@ -43,19 +43,20 @@ export class Router {
       if (!route.schema) continue;
       builder.addPath(route.path, {
         [route.method.toLowerCase()]: {
-          requestBody: {
-            content: {
-              'application/json': {
-                schema: route.schema.request.body ?? Type.Undefined(),
+          ...(route.schema.request.body && {
+            requestBody: {
+              content: {
+                'application/json': {
+                  schema: route.schema.request.body,
+                },
               },
             },
-          },
-          parameters: {
-            ...this.mapValues(route.schema.request.query ?? {}, (schema) => ({
-              in: 'query',
-              schema,
-            })),
-          },
+          }),
+          parameters: Object.entries(route.schema.request.query ?? {}).map(([name, schema]) => ({
+            name,
+            in: 'query',
+            schema,
+          })),
           responses: this.mapValues(route.schema.response, (schema) => ({
             content: {
               'application/json': {

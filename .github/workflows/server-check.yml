@@ -1,0 +1,27 @@
+name: Server Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'packages/server/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Install dependencies
+        run: bun install
+        working-directory: packages/server
+
+      - name: Run tests
+        run: bun test
+        working-directory: packages/server

@@ -1,5 +1,5 @@
 import { Type, type Record } from '@sinclair/typebox';
-import type { Method, Request, Response, Handler, Route, SchemaToRequest } from './types';
+import type { Method, Request, Response, Handler, Route } from './types';
 import { OpenApiBuilder, type OpenAPIObject } from 'openapi3-ts/oas31';
 import { applyMiddlewares, type Middleware } from './middleware';
 
@@ -51,7 +51,7 @@ export class Router {
     });
 
     for (const route of this.allRoutes()) {
-      if (!route.schema) continue;
+      if (!route.schema || !route.path || !route.method) continue;
       builder.addPath(route.path, {
         [route.method.toLowerCase()]: {
           requestBody: {
@@ -101,26 +101,57 @@ export interface RouterGroup {
 class RouterNode {
   constructor(
     private methods: Partial<Record<Method, Route>> = {},
+    private allPaths: Partial<Record<Method, Route>> = {},
+    private allMethods: Route | undefined = undefined,
+    private fallback: Route | undefined = undefined,
     private readonly children: Map<string, RouterNode> = new Map()
   ) {}
 
-  route(route: Route, path = route.path): Route {
-    const [part, ...parts] = path.split('/').filter(Boolean);
-    if (!part) {
-      this.methods[route.method] = route;
-      return route;
+  route(route: Route, path: PathString | undefined = route.path): void {
+    if (route.path === undefined) {
+      if (route.method === undefined) {
+        this.fallback = route;
+      } else {
+        this.allPaths[route.method] = route;
+      }
+      return;
     }
+
+    if (!path || path === '/') {
+      if (route.method === undefined) {
+        this.allMethods = route;
+      } else {
+        this.methods[route.method] = route;
+      }
+      return;
+    }
+
+    const [part, parts] = split(path);
+    if (!part) throw new Error('Should not happen');
     const child = this.children.get(part) ?? new RouterNode();
-    const addedRoute = child.route(route, join(...parts));
+    child.route(route, parts);
     this.children.set(part, child);
-    return addedRoute;
   }
 
-  handle(request: Request): Promise<Response> | undefined {
-    const [part, ...parts] = request.path.split('/').filter(Boolean);
-    if (!part) return this.methods[request.method]?.handler(request as SchemaToRequest<never>);
+  handle(
+    request: Request,
+    path: PathString | undefined = request.path as PathString
+  ): Promise<Response> | undefined {
+    const [part, parts] = split(path);
+    if (!part || part === '/') {
+      const route =
+        this.methods[request.method] ??
+        this.allMethods ??
+        this.allPaths[request.method] ??
+        this.fallback;
+      return route?.handler(request);
+    }
     const child = this.children.get(part);
-    return child?.handle({ ...request, path: join(...parts) });
+    return (
+      child?.handle(request, parts) ??
+      this.allPaths[request.method]?.handler(request) ??
+      this.fallback?.handler(request)
+    );
   }
 
   *allRoutes(): Generator<Route> {
@@ -137,4 +168,10 @@ export function join(...parts: (string | undefined)[]): PathString {
   const joinedPath = '/' + parts.filter(Boolean).join('/');
   const timedPath = joinedPath.replace(/\/{2,}/g, '/');
   return timedPath as PathString;
+}
+
+export function split(path: PathString): [string, PathString] {
+  const indexOfSlash = path.indexOf('/', 1);
+  if (indexOfSlash === -1) return [path.slice(1), '/'];
+  return [path.slice(1, indexOfSlash), path.slice(indexOfSlash) as PathString];
 }

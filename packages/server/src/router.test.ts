@@ -83,6 +83,34 @@ describe('Router', () => {
     expect(response.status).toBe(200);
   });
 
+  test('should handle routes without path', async () => {
+    router.route({
+      method: 'GET',
+      handler: async () => ({ status: 200 }),
+    });
+    const response = await router.handle({
+      method: 'GET',
+      path: '/hello/world',
+      query: {},
+      body: undefined,
+    });
+    expect(response.status).toBe(200);
+  });
+
+  test('should handle routes without method', async () => {
+    router.route({
+      path: '/test',
+      handler: async () => ({ status: 200 }),
+    });
+    const response = await router.handle({
+      method: 'POST',
+      path: '/test',
+      query: {},
+      body: undefined,
+    });
+    expect(response.status).toBe(200);
+  });
+
   test('should return all registered routes', () => {
     router.route({ method: 'GET', path: '/a', handler: async () => ({ status: 200 }) });
     router.route({ method: 'POST', path: '/b', handler: async () => ({ status: 201 }) });

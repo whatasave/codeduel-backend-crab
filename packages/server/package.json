@@ -4,7 +4,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./bun": "./src/bun/index.ts",
-    "./validation": "./src/validation/index.ts"
+    "./validation": "./src/validation/index.ts",
+    "./cors": "./src/cors/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"

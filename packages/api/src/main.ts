@@ -35,23 +35,3 @@ router.route({
 const server = new BunServer((request) => router.handle(request));
 const running = server.listen({ host: config.host, port: config.port });
 console.log(`Server is running on ${running.url}`);
-
-router.route({
-  method: 'GET',
-  path: '/redoc',
-  handler: async () =>
-    ok(
-      `<!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<!-- Important: rapi-doc uses utf8 characters -->
-		<script type="module" src="https://unpkg.com/rapidoc/dist/rapidoc-min.js"></script>
-	</head>
-	<body>
-		<rapi-doc spec-url="${new URL('/openapi', running.url)}"> </rapi-doc>
-	</body>
-</html>`,
-      { 'content-type': 'text/html' }
-    ),
-});

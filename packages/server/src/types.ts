@@ -5,11 +5,13 @@ export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | '
 
 export interface Request<
   Query extends Record<string, unknown> = Record<string, unknown>,
+  Params extends Record<string, string> = Record<string, string>,
   Body = unknown,
 > {
   method: Method;
   path: string;
   query: Query;
+  params: Params;
   body: Body;
   headers?: Headers;
 }
@@ -26,8 +28,11 @@ export type Response<Status extends number = number, Body = unknown> = undefined
       headers?: Headers;
     };
 
-export type Handler<Schema extends RouteSchema = RouteSchema> = (
-  request: SchemaToRequest<Expand<Schema['request']>>
+export type Handler<
+  Schema extends RouteSchema = RouteSchema,
+  Params extends Record<string, string> = Record<string, string>,
+> = (
+  request: SchemaToRequest<Expand<Schema['request']>, Params>
 ) => Promise<SchemaToResponse<Expand<Schema['response']>>>;
 
 export interface Route {
@@ -49,13 +54,31 @@ export interface RequestSchema {
 
 export type ResponseSchema = Record<number, TSchema>;
 
-export type SchemaToRequest<Schema extends RequestSchema> = Request<
+export type PathToParams<Path extends PathString> = Expand<
+  Path extends PathString
+    ? Path extends `/${infer Param}/${infer Rest}`
+      ? Param extends `:${infer ParamName}`
+        ? Record<ParamName, string> & PathToParams<`/${Rest}`>
+        : PathToParams<`/${Rest}`>
+      : Path extends `/${infer Param}`
+        ? Param extends `:${infer ParamName}`
+          ? Record<ParamName, string>
+          : Record<string, never>
+        : Record<string, never>
+    : never
+>;
+
+export type SchemaToRequest<
+  Schema extends RequestSchema,
+  Params extends Record<string, string> = Record<string, string>,
+> = Request<
   UndefinedTo<Record<string, never>, Schema['query']> extends infer Query extends Record<
     string,
     TSchema
   >
     ? { [Key in keyof Query]: Static<Query[Key]> }
     : never,
+  Params,
   Static<UndefinedTo<TUndefined, Schema['body']>>
 >;
 

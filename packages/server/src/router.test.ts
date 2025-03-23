@@ -16,6 +16,7 @@ describe('Router', () => {
       method: 'GET',
       path: '/unknown',
       query: {},
+      params: {},
       body: undefined,
     });
     expect(response.status).toBe(404);
@@ -31,6 +32,7 @@ describe('Router', () => {
       method: 'GET',
       path: '/test',
       query: {},
+      params: {},
       body: undefined,
     });
     expect(response.status).toBe(200);
@@ -47,6 +49,7 @@ describe('Router', () => {
       method: 'GET',
       path: '/only-post',
       query: {},
+      params: {},
       body: undefined,
     });
     expect(response.status).toBe(404);
@@ -62,6 +65,7 @@ describe('Router', () => {
       method: 'GET',
       path: '/nested/path',
       query: {},
+      params: {},
       body: undefined,
     });
     expect(response.status).toBe(200);
@@ -78,6 +82,7 @@ describe('Router', () => {
       method: 'GET',
       path: '/api/test',
       query: {},
+      params: {},
       body: undefined,
     });
     expect(response.status).toBe(200);
@@ -92,6 +97,7 @@ describe('Router', () => {
       method: 'GET',
       path: '/hello/world',
       query: {},
+      params: {},
       body: undefined,
     });
     expect(response.status).toBe(200);
@@ -106,6 +112,7 @@ describe('Router', () => {
       method: 'POST',
       path: '/test',
       query: {},
+      params: {},
       body: undefined,
     });
     expect(response.status).toBe(200);
@@ -182,29 +189,70 @@ describe('Router', () => {
       method: 'GET',
       path: '/test',
       query: {},
+      params: {},
       body: undefined,
     });
     const response2 = await router.handle({
       method: 'GET',
       path: '/api/test',
       query: {},
+      params: {},
       body: undefined,
     });
     const response3 = await router.handle({
       method: 'GET',
       path: '/api/nested/test',
       query: {},
+      params: {},
       body: undefined,
     });
     const response4 = await router.handle({
       method: 'GET',
       path: '/api/nested/middy/test',
       query: {},
+      params: {},
       body: undefined,
     });
     expect(response1.body).toBe(2);
     expect(response2.body).toBe(4);
     expect(response3.body).toBe(4);
     expect(response4.body).toBe(8);
+  });
+
+  test('path parameters should work', async () => {
+    router.route({
+      method: 'GET',
+      path: '/test/:id/test',
+      handler: async (request) => ({ status: 200, body: request.path }),
+    });
+    const response = await router.handle({
+      method: 'GET',
+      path: '/test/123/test',
+      query: {},
+      params: {},
+      body: undefined,
+    });
+    expect(response.body).toEqual('/test/123/test');
+  });
+
+  test('specific path should take precedence over path parameters', async () => {
+    router.route({
+      method: 'GET',
+      path: '/test/:id/test',
+      handler: async () => ({ status: 200, body: 'generic' }),
+    });
+    router.route({
+      method: 'GET',
+      path: '/test/123/test',
+      handler: async () => ({ status: 200, body: 'specific' }),
+    });
+    const response = await router.handle({
+      method: 'GET',
+      path: '/test/123/test',
+      query: {},
+      params: {},
+      body: undefined,
+    });
+    expect(response.body).toBe('specific');
   });
 });

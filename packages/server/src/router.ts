@@ -63,11 +63,18 @@ export class Router {
               },
             },
           }),
-          parameters: Object.entries(route.schema.request.query ?? {}).map(([name, schema]) => ({
-            name,
-            in: 'query',
-            schema,
-          })),
+          parameters: [
+            ...parameters(route.path).map((name) => ({
+              name,
+              in: 'path',
+              schema: Type.String(),
+            })),
+            ...Object.entries(route.schema.request.query ?? {}).map(([name, schema]) => ({
+              name,
+              in: 'query',
+              schema,
+            })),
+          ],
           responses: this.mapValues(route.schema.response, (schema) => ({
             content: {
               'application/json': {
@@ -105,7 +112,8 @@ class RouterNode {
     private allPaths: Partial<Record<Method, Route>> = {},
     private allMethods: Route | undefined = undefined,
     private fallback: Route | undefined = undefined,
-    private readonly children: Map<string, RouterNode> = new Map()
+    private readonly children: Map<string, RouterNode> = new Map(),
+    private parameter: string | undefined = undefined
   ) {}
 
   route(route: Route, path: PathString | undefined = route.path): void {
@@ -129,6 +137,7 @@ class RouterNode {
 
     const [part, parts] = split(path);
     if (!part) throw new Error('Should not happen');
+    if (part.startsWith(':')) this.parameter = part.slice(1);
     const child = this.children.get(part) ?? new RouterNode();
     child.route(route, parts);
     this.children.set(part, child);
@@ -147,7 +156,8 @@ class RouterNode {
         this.fallback;
       return route?.handler(request);
     }
-    const child = this.children.get(part);
+    let child = this.children.get(part);
+    if (this.parameter) child ??= this.children.get(`:${this.parameter}`);
     return (
       child?.handle(request, parts) ??
       this.allPaths[request.method]?.handler(request) ??
@@ -175,4 +185,11 @@ export function split(path: PathString): [string, PathString] {
   const indexOfSlash = path.indexOf('/', 1);
   if (indexOfSlash === -1) return [path.slice(1), '/'];
   return [path.slice(1, indexOfSlash), path.slice(indexOfSlash) as PathString];
+}
+
+export function parameters(path: PathString): string[] {
+  return path
+    .split('/')
+    .filter((part) => part.startsWith(':'))
+    .map((part) => part.slice(1));
 }

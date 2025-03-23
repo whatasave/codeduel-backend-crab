@@ -223,7 +223,7 @@ describe('Router', () => {
     router.route({
       method: 'GET',
       path: '/test/:id/test',
-      handler: async (request) => ({ status: 200, body: request.path }),
+      handler: async (request) => ({ status: 200, body: request.params.id }),
     });
     const response = await router.handle({
       method: 'GET',
@@ -232,7 +232,7 @@ describe('Router', () => {
       params: {},
       body: undefined,
     });
-    expect(response.body).toEqual('/test/123/test');
+    expect(response.body).toEqual('123');
   });
 
   test('specific path should take precedence over path parameters', async () => {

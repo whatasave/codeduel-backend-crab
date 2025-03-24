@@ -64,10 +64,10 @@ export class Router {
             },
           }),
           parameters: [
-            ...parameters(route.path).map((name) => ({
+            ...Object.entries(route.schema.request.params ?? {}).map(([name, schema]) => ({
               name,
               in: 'path',
-              schema: Type.String(),
+              schema,
             })),
             ...Object.entries(route.schema.request.query ?? {}).map(([name, schema]) => ({
               name,
@@ -145,7 +145,8 @@ class RouterNode {
 
   handle(
     request: Request,
-    path: PathString | undefined = request.path as PathString
+    path: PathString | undefined = request.path as PathString,
+    params: Record<string, string> = {}
   ): Promise<Response> | undefined {
     const [part, parts] = split(path);
     if (!part || part === '/') {
@@ -154,12 +155,15 @@ class RouterNode {
         this.allMethods ??
         this.allPaths[request.method] ??
         this.fallback;
-      return route?.handler(request);
+      return route?.handler({ ...request, params });
     }
     let child = this.children.get(part);
-    if (this.parameter) child ??= this.children.get(`:${this.parameter}`);
+    if (this.parameter) {
+      child ??= this.children.get(`:${this.parameter}`);
+      if (child) params[this.parameter] = part;
+    }
     return (
-      child?.handle(request, parts) ??
+      child?.handle(request, parts, params) ??
       this.allPaths[request.method]?.handler(request) ??
       this.fallback?.handler(request)
     );

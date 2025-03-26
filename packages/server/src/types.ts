@@ -31,8 +31,8 @@ export type Handler<Schema extends RouteSchema = RouteSchema> = (
 ) => Promise<SchemaToResponse<Expand<Schema['response']>>>;
 
 export interface Route {
-  method: Method;
-  path: PathString;
+  method?: Method;
+  path?: PathString;
   schema?: RouteSchema;
   handler: Handler;
 }

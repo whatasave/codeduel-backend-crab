@@ -37,7 +37,6 @@ function validate<Schema extends TSchema>(
         errors.push(message);
       }
     }
-    return undefined;
   }
 }
 

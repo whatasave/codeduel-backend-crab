@@ -35,6 +35,7 @@ describe('middleware', () => {
       path: '/test',
       query: {},
       body: {},
+      params: {},
     });
     expect(response).toEqual({ status: 200, body: 9 });
   });

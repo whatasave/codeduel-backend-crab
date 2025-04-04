@@ -12,9 +12,12 @@ export function validation<Schema extends RouteSchema<Params>, Params extends st
 
     const params = validate(Type.Object(schema.request.params ?? {}), request.params, errors);
     const query = validate(Type.Object(schema.request.query ?? {}), request.query, errors);
-    const body = validate(schema.request.body ?? Type.Undefined(), request.body, errors);
+    const body = schema.request.body && validate(schema.request.body, request.body, errors);
 
-    if (!params || !query || !body) return { status: 400, body: { errors } };
+    if (!params || !query || (schema.request.body && !body)) {
+      return { status: 400, body: { errors } };
+    }
+
     return await handler({
       ...request,
       body,

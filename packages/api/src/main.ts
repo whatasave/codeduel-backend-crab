@@ -1,5 +1,5 @@
 import { BunServer } from '@codeduel-backend-crab/server/bun';
-import { ok, Router } from '@codeduel-backend-crab/server';
+import { movedPermanently, ok, Router } from '@codeduel-backend-crab/server';
 import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
 import { Cors } from '@codeduel-backend-crab/server/cors';
@@ -26,10 +26,20 @@ const controller = new RootController();
 controller.setup(root.group({ prefix: '/v1' }));
 
 const openapi = router.openapi();
-router.route({
+root.route({
   method: 'GET',
   path: '/openapi',
   handler: async () => ok(openapi),
+});
+
+root.route({
+  method: 'GET',
+  path: '/',
+  handler: async () =>
+    movedPermanently('Redirecting to /v1/redoc', {
+      Location: '/v1/redoc',
+      'Content-Type': 'text/plain',
+    }),
 });
 
 const server = new BunServer((request) => router.handle(request));

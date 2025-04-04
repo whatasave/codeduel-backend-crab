@@ -190,10 +190,3 @@ export function split(path: PathString): [string, PathString] {
   if (indexOfSlash === -1) return [path.slice(1), '/'];
   return [path.slice(1, indexOfSlash), path.slice(indexOfSlash) as PathString];
 }
-
-export function parameters(path: PathString): string[] {
-  return path
-    .split('/')
-    .filter((part) => part.startsWith(':'))
-    .map((part) => part.slice(1));
-}

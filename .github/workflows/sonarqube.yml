@@ -1,7 +1,6 @@
 name: SonarQube Check
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
 
 jobs:
   sonarqube:

@@ -48,6 +48,7 @@ export class BunServer implements Server {
       query: Object.fromEntries(url.searchParams),
       body: this.getBody(request),
       headers: request.headers,
+      params: {},
     };
   }
 

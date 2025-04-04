@@ -1,3 +1,4 @@
+import { CorsOptions } from '@codeduel-backend-crab/server/cors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 
@@ -5,6 +6,7 @@ export type Config = Static<typeof Config>;
 export const Config = Type.Object({
   host: Type.String({ default: 'localhost' }),
   port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
+  cors: Type.Optional(CorsOptions),
 });
 
 export function loadConfig(): Config {
@@ -12,6 +14,14 @@ export function loadConfig(): Config {
   const config = {
     host: env.HOST,
     port: env.PORT,
+    cors: env.CORS_ALLOWED_ORIGINS
+      ? {
+          allowedOrigins: env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),
+          allowedMethods: env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
+          allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
+          allowCredentials: env.CORS_ALLOW_CREDENTIALS === 'true',
+        }
+      : undefined,
   };
 
   try {

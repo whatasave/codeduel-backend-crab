@@ -25,7 +25,8 @@ export function response<Status extends number, Body>(
 
 function responseFunction<Status extends number>(
   status: Status
-): (<T>(body: T) => Response<Status, T>) & ((body?: undefined) => Response<Status, undefined>) {
+): (<T>(body: T, headers?: HeadersLike) => Response<Status, T>) &
+  ((body?: undefined) => Response<Status, undefined>) {
   return <T>(body: T, headers?: HeadersLike) => response(status, body, headers);
 }
 

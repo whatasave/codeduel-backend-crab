@@ -74,13 +74,21 @@ export class BunServer implements Server {
       case 'number':
       case 'boolean':
       case 'bigint':
-      case 'object':
+      case 'object': {
         response.headers ??= new Headers();
-        response.headers.set('content-type', 'application/json');
-        return new Response(JSON.stringify(response.body), {
+        const contentType = response.headers.get('content-type');
+        if (!contentType) {
+          response.headers.set('content-type', 'application/json');
+          return new Response(JSON.stringify(response.body), {
+            status: response.status,
+            headers: response.headers,
+          });
+        }
+        return new Response(response.body as BodyInit | null, {
           status: response.status,
           headers: response.headers,
         });
+      }
       case 'undefined':
         return new Response(undefined, {
           status: response.status,

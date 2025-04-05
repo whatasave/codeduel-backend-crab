@@ -9,8 +9,17 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
+export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+
 export interface Users {
+  avatar: string | null;
+  backgroundImage: string | null;
+  biography: string | null;
+  createdAt: Generated<Timestamp>;
   id: Generated<number>;
+  name: string | null;
+  updatedAt: Generated<Timestamp>;
+  username: string;
 }
 
 export interface DB {

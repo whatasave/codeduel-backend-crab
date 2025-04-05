@@ -3,12 +3,15 @@ import { movedPermanently, ok, Router } from '@codeduel-backend-crab/server';
 import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
 import { Cors } from '@codeduel-backend-crab/server/cors';
+// import { createDatabase } from '@codeduel-backend-crab/database';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
   console.error(error);
   process.exit(1);
 }
+
+// const database = createDatabase(config.database);
 
 const router = new Router();
 

@@ -37,7 +37,7 @@ export type Response<Status extends number = number, Body = unknown> = undefined
 
 export type Handler<Schema extends RouteSchema = RouteSchema> = (
   request: SchemaToRequest<Expand<Schema['request']>>
-) => Promise<SchemaToResponse<Expand<Schema['response']>>>;
+) => Promise<SchemaToResponse<Expand<Schema['response']>> | Response<500>>;
 
 export interface Route {
   method?: Method;

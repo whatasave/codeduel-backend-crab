@@ -13,12 +13,12 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Users {
   avatar: string | null;
-  backgroundImage: string | null;
+  background_image: string | null;
   biography: string | null;
-  createdAt: Generated<Timestamp>;
+  created_at: Generated<Timestamp | null>;
   id: Generated<number>;
   name: string | null;
-  updatedAt: Generated<Timestamp>;
+  updated_at: Generated<Timestamp | null>;
   username: string;
 }
 

@@ -1,10 +1,14 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, type Selectable, type Insertable, type Updateable } from 'kysely';
 import { Pool } from 'pg';
 import type { DB } from './database';
 import { Type, type Static } from '@sinclair/typebox';
 import { AssertError, Value } from '@sinclair/typebox/value';
 
 export type Database = Kysely<DB>;
+
+export type Select<T extends keyof DB> = Selectable<DB[T]>;
+export type Insert<T extends keyof DB> = Insertable<DB[T]>;
+export type Update<T extends keyof DB> = Updateable<DB[T]>;
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({

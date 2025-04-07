@@ -1,4 +1,4 @@
-import { type Database } from '@codeduel-backend-crab/database';
+import { type Database, type Select } from '@codeduel-backend-crab/database';
 import type { CreateUser, User } from './data';
 
 export class UserRepository {
@@ -7,18 +7,7 @@ export class UserRepository {
   public async findAll(): Promise<User[]> {
     const users = await this.database.selectFrom('users').selectAll().execute();
 
-    return users.map((user) => {
-      return {
-        id: user.id,
-        username: user.username,
-        name: user.name ?? undefined,
-        updatedAt: user.updated_at.toISOString(),
-        avatar: user.avatar ?? undefined,
-        backgroundImage: user.background_image ?? undefined,
-        biography: user.biography ?? undefined,
-        createdAt: user.created_at.toISOString(),
-      } satisfies User;
-    });
+    return users.map(this.selectToUser.bind(this));
   }
 
   public async findByUsername(username: User['username']): Promise<User | undefined> {
@@ -30,16 +19,7 @@ export class UserRepository {
 
     if (!user) return undefined;
 
-    return {
-      id: user.id,
-      username: user.username,
-      name: user.name ?? undefined,
-      updatedAt: user.updated_at.toISOString(),
-      avatar: user.avatar ?? undefined,
-      backgroundImage: user.background_image ?? undefined,
-      biography: user.biography ?? undefined,
-      createdAt: user.created_at.toISOString(),
-    } satisfies User;
+    return this.selectToUser(user);
   }
 
   public async findById(id: User['id']): Promise<User | undefined> {
@@ -51,16 +31,7 @@ export class UserRepository {
 
     if (!user) return undefined;
 
-    return {
-      id: user.id,
-      username: user.username,
-      name: user.name ?? undefined,
-      updatedAt: user.updated_at.toISOString(),
-      avatar: user.avatar ?? undefined,
-      backgroundImage: user.background_image ?? undefined,
-      biography: user.biography ?? undefined,
-      createdAt: user.created_at.toISOString(),
-    } satisfies User;
+    return this.selectToUser(user);
   }
 
   public async create(user: CreateUser): Promise<User | undefined> {
@@ -78,15 +49,19 @@ export class UserRepository {
 
     if (!newUser) return undefined;
 
+    return this.selectToUser(newUser);
+  }
+
+  private selectToUser(user: Select<'users'>): User {
     return {
-      id: newUser.id,
-      username: newUser.username,
-      name: newUser.name ?? undefined,
-      updatedAt: newUser.updated_at.toISOString(),
-      avatar: newUser.avatar ?? undefined,
-      backgroundImage: newUser.background_image ?? undefined,
-      biography: newUser.biography ?? undefined,
-      createdAt: newUser.created_at.toISOString(),
-    } satisfies User;
+      id: user.id,
+      username: user.username,
+      name: user.name ?? undefined,
+      updatedAt: user.updated_at.toISOString(),
+      avatar: user.avatar ?? undefined,
+      backgroundImage: user.background_image ?? undefined,
+      biography: user.biography ?? undefined,
+      createdAt: user.created_at.toISOString(),
+    };
   }
 }

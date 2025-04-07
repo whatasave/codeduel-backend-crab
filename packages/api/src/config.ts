@@ -1,12 +1,14 @@
 import { CorsOptions } from '@codeduel-backend-crab/server/cors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
+import { Config as DBConfig } from '@codeduel-backend-crab/database';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
   host: Type.String({ default: 'localhost' }),
   port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
   cors: Type.Optional(CorsOptions),
+  database: DBConfig,
 });
 
 export function loadConfig(): Config {
@@ -22,6 +24,15 @@ export function loadConfig(): Config {
           allowCredentials: env.CORS_ALLOW_CREDENTIALS === 'true',
         }
       : undefined,
+    database: {
+      host: env.DATABASE_HOST,
+      port: env.DATABASE_PORT,
+      database: env.DATABASE_NAME,
+      user: env.DATABASE_USER,
+      password: env.DATABASE_PASSWORD,
+      ssl: env.DATABASE_SSL === 'true',
+      maxConnections: env.DATABASE_MAX_CONNECTIONS,
+    },
   };
 
   try {

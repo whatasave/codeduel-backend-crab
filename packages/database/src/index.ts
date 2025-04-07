@@ -1,10 +1,14 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, type Selectable, type Insertable, type Updateable } from 'kysely';
 import { Pool } from 'pg';
 import type { DB } from './database';
 import { Type, type Static } from '@sinclair/typebox';
 import { AssertError, Value } from '@sinclair/typebox/value';
 
 export type Database = Kysely<DB>;
+
+export type Select<T extends keyof DB> = Selectable<DB[T]>;
+export type Insert<T extends keyof DB> = Insertable<DB[T]>;
+export type Update<T extends keyof DB> = Updateable<DB[T]>;
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -13,6 +17,7 @@ export const Config = Type.Object({
   database: Type.Optional(Type.String()),
   user: Type.Optional(Type.String()),
   password: Type.Optional(Type.String()),
+  ssl: Type.Optional(Type.Boolean()),
   maxConnections: Type.Optional(Type.Number({ minimum: 1, default: 10 })),
 });
 
@@ -22,6 +27,7 @@ export function createDatabase({
   database,
   user,
   password,
+  ssl,
   maxConnections,
 }: Config): Database {
   const dialect = new PostgresDialect({
@@ -31,6 +37,7 @@ export function createDatabase({
       user,
       port,
       password,
+      ssl,
       max: maxConnections,
     }),
   });

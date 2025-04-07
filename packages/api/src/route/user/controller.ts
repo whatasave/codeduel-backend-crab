@@ -1,8 +1,8 @@
-import { badRequest, created, notFound, ok, type RouterGroup } from '@codeduel-backend-crab/server';
+import { internalServerError, notFound, ok, type RouterGroup } from '@codeduel-backend-crab/server';
 import { Type } from '@sinclair/typebox';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { UserService } from './service';
-import { CreateUser, User } from './data';
+import { User } from './data';
 
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -11,7 +11,6 @@ export class UserController {
     group.route(this.findById);
     group.route(this.findByUsername);
     group.route(this.getProfile);
-    group.route(this.createUser);
   }
 
   findByUsername = validated({
@@ -65,36 +64,10 @@ export class UserController {
     path: '/profile',
     schema: {
       request: {},
-      response: {
-        400: Type.Object({
-          error: Type.String(),
-        }),
-      },
+      response: {},
     },
     handler: async () => {
-      return badRequest({ error: 'Path not implemented' });
-    },
-  });
-
-  createUser = validated({
-    method: 'POST',
-    path: '/',
-    schema: {
-      request: {
-        body: CreateUser,
-      },
-      response: {
-        201: User,
-        400: Type.Object({
-          error: Type.String(),
-        }),
-      },
-    },
-    handler: async ({ body }) => {
-      const user: CreateUser = body;
-      const newUser = await this.userService.create(user);
-      if (!newUser) return badRequest({ error: 'User already exists' });
-      return created(newUser);
+      return internalServerError({ error: 'Path not implemented' });
     },
   });
 }

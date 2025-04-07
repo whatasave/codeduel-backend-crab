@@ -36,9 +36,11 @@ function validate<Schema extends TSchema>(
     return Value.Parse(schema, value);
   } catch (error) {
     if (error instanceof AssertError) {
-      for (const { message } of error.Errors()) {
-        errors.push(message);
-      }
+      errors.push(
+        ...Array.from(error.Errors()).map(
+          (e) => `${e.path}: ${e.message}, Received: ${String(e.value)}`
+        )
+      );
     }
   }
 }

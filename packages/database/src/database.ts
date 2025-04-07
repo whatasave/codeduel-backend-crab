@@ -15,10 +15,10 @@ export interface Users {
   avatar: string | null;
   background_image: string | null;
   biography: string | null;
-  created_at: Generated<Timestamp | null>;
+  created_at: Generated<Timestamp>;
   id: Generated<number>;
   name: string | null;
-  updated_at: Generated<Timestamp | null>;
+  updated_at: Generated<Timestamp>;
   username: string;
 }
 

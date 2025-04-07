@@ -3,7 +3,7 @@ import { movedPermanently, ok, Router } from '@codeduel-backend-crab/server';
 import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
 import { Cors } from '@codeduel-backend-crab/server/cors';
-// import { createDatabase } from '@codeduel-backend-crab/database';
+import { createDatabase } from '@codeduel-backend-crab/database';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
@@ -11,10 +11,8 @@ if (!config) {
   process.exit(1);
 }
 
-// const database = createDatabase(config.database);
-
+const database = createDatabase(config.database);
 const router = new Router();
-
 const middlewares = [];
 
 const cors = config.cors && new Cors(config.cors);
@@ -25,7 +23,7 @@ if (cors) {
 
 const root = router.group({ middlewares });
 
-const controller = new RootController();
+const controller = new RootController(database);
 controller.setup(root.group({ prefix: '/v1' }));
 
 const openapi = router.openapi();

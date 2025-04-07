@@ -1,4 +1,3 @@
-import type { DB2 } from '@codeduel-backend-crab/database';
 import { Type, type Static } from '@sinclair/typebox';
 
 export type User = Static<typeof User>;

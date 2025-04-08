@@ -2,6 +2,7 @@ import { CorsOptions } from '@codeduel-backend-crab/server/cors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 import { Config as DBConfig } from '@codeduel-backend-crab/database';
+import { Config as AuthConfig } from './route/auth/config';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -10,6 +11,7 @@ export const Config = Type.Object({
   descriptiveErrors: Type.Boolean(),
   cors: Type.Optional(CorsOptions),
   database: DBConfig,
+  auth: AuthConfig,
 });
 
 export function loadConfig(): Config {
@@ -34,6 +36,13 @@ export function loadConfig(): Config {
       password: env.DATABASE_PASSWORD,
       ssl: env.DATABASE_SSL === 'true',
       maxConnections: env.DATABASE_MAX_CONNECTIONS,
+    },
+    auth: {
+      github: {
+        clientId: env.GITHUB_CLIENT_ID,
+        clientSecret: env.GITHUB_CLIENT_SECRET,
+        redirectUri: env.GITHUB_REDIRECT_URI,
+      },
     },
   };
 

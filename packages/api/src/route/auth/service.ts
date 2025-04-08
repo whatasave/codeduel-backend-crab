@@ -7,10 +7,10 @@ export class AuthService {
   public async create(newProvider: CreateAuth): Promise<Auth | undefined> {
     return await this.authRepository.create(newProvider);
   }
-  public async getByProvider(
+  public async byProvider(
     provider: Auth['provider'],
     providerId: Auth['providerId']
   ): Promise<Auth | undefined> {
-    return await this.authRepository.getByProvider(provider, providerId);
+    return await this.authRepository.byProvider(provider, providerId);
   }
 }

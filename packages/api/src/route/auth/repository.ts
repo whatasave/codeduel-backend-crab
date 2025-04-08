@@ -26,7 +26,7 @@ export class AuthRepository {
     };
   }
 
-  public async getByProvider(
+  public async byProvider(
     provider: Auth['provider'],
     providerId: Auth['providerId']
   ): Promise<Auth | undefined> {

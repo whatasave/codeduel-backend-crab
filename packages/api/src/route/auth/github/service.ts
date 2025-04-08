@@ -38,12 +38,12 @@ export class GithubService {
     return newUser;
   }
 
-  public async findById(providerId: Auth['providerId']): Promise<Auth | undefined> {
-    return await this.authService.getByProvider(GithubService.PROVIDER, providerId);
+  public async byId(providerId: Auth['providerId']): Promise<Auth | undefined> {
+    return await this.authService.byProvider(GithubService.PROVIDER, providerId);
   }
 
   public async userByProvider(providerId: Auth['providerId']): Promise<User | undefined> {
-    const auth = await this.findById(providerId);
+    const auth = await this.byId(providerId);
     if (!auth) return undefined;
 
     const authUser = await this.userService.findById(auth.userId);
@@ -52,7 +52,7 @@ export class GithubService {
     return authUser;
   }
 
-  public async getAccessToken(code: string, state: string): Promise<GithubAccessToken | undefined> {
+  public async accessToken(code: string, state: string): Promise<GithubAccessToken | undefined> {
     try {
       const response = await fetch('https://github.com/login/oauth/access_token', {
         method: 'POST',
@@ -76,7 +76,7 @@ export class GithubService {
     }
   }
 
-  public async getUserData(accessToken: string): Promise<GithubUserData | undefined> {
+  public async userData(accessToken: string): Promise<GithubUserData | undefined> {
     try {
       const response = await fetch('https://api.github.com/user', {
         method: 'GET',

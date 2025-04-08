@@ -50,4 +50,8 @@ export class AuthRepository {
       updatedAt: user.updated_at.toISOString(),
     };
   }
+
+  public async delete(userId: Auth['userId']): Promise<void> {
+    await this.database.deleteFrom('auth').where('user_id', '=', userId).execute();
+  }
 }

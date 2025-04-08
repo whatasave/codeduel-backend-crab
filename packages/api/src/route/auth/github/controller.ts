@@ -1,6 +1,12 @@
-import { internalServerError, type RouterGroup } from '@codeduel-backend-crab/server';
+import {
+  internalServerError,
+  temporaryRedirect,
+  type RouterGroup,
+} from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { GithubService } from './service';
+import { randomUUIDv7 } from 'bun';
+import { Type } from '@sinclair/typebox';
 
 export class GithubController {
   constructor(private readonly githubService: GithubService) {}
@@ -15,10 +21,21 @@ export class GithubController {
     path: '/',
     schema: {
       request: {},
-      response: {},
+      response: {
+        307: Type.Object({}),
+      },
     },
     handler: async () => {
-      return internalServerError({ error: 'Path not implemented' });
+      const state = randomUUIDv7();
+      const cookie = this.githubService.createCookie(state);
+      const redirectUrl = this.githubService.getAuthorizationUrl(state);
+
+      return temporaryRedirect({
+        headers: {
+          'Set-Cookie': cookie,
+          Location: redirectUrl,
+        },
+      });
     },
   });
 
@@ -26,11 +43,47 @@ export class GithubController {
     method: 'GET',
     path: '/callback',
     schema: {
-      request: {},
+      request: {
+        query: {
+          code: Type.String(),
+          state: Type.String(),
+        },
+      },
       response: {},
     },
-    handler: async () => {
-      return internalServerError({ error: 'Path not implemented' });
+    handler: async ({ query }) => {
+      const { code, state } = query;
+
+      if (!code || !state) {
+        return internalServerError({ message: 'Missing code or state' });
+      }
+      const cookieState = this.githubService.getState(state);
+
+      if (state !== cookieState) {
+        return internalServerError({ message: 'Invalid state' });
+      }
+
+      const token = await this.githubService.accessToken(code, state);
+      if (!token) {
+        return internalServerError({ message: 'Failed to get access token' });
+      }
+
+      const user = await this.githubService.userData(token.accessToken);
+      if (!user) {
+        return internalServerError({ message: 'Failed to get user data' });
+      }
+
+      const authUser =
+        (await this.githubService.userByProvider(user.id)) ??
+        (await this.githubService.create(user));
+
+      const tokens = await this.githubService.tokens(authUser);
+
+      return temporaryRedirect({
+        headers: {
+          Location: this.githubService.getRedirectUrl(authUser),
+        },
+      });
     },
   });
 }

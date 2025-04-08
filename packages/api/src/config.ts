@@ -42,6 +42,17 @@ export function loadConfig(): Config {
         clientId: env.GITHUB_CLIENT_ID,
         clientSecret: env.GITHUB_CLIENT_SECRET,
         redirectUri: env.GITHUB_REDIRECT_URI,
+        stateCookie: {
+          name: env.GITHUB_STATE_COOKIE_NAME,
+          maxAge: env.GITHUB_STATE_COOKIE_MAX_AGE
+            ? parseInt(env.GITHUB_STATE_COOKIE_MAX_AGE, 10)
+            : undefined,
+          domain: env.GITHUB_STATE_COOKIE_DOMAIN,
+          path: env.GITHUB_STATE_COOKIE_PATH,
+          httpOnly: env.GITHUB_STATE_COOKIE_HTTP_ONLY === 'true',
+          secure: env.GITHUB_STATE_COOKIE_SECURE === 'true',
+          sameSite: env.GITHUB_STATE_COOKIE_SAME_SITE,
+        },
       },
     },
   };

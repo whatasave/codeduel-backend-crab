@@ -16,3 +16,10 @@ export const CreateAuth = Type.Object({
   provider: Auth.properties.provider,
   providerId: Auth.properties.providerId,
 });
+
+export type Tokens = Static<typeof Tokens>;
+export const Tokens = Type.Object({
+  accessToken: Type.String(),
+  refreshToken: Type.String(),
+  expiresIn: Type.Number(),
+});

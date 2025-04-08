@@ -4,13 +4,13 @@ import type { CreateUser, User } from './data';
 export class UserRepository {
   constructor(private readonly database: Database) {}
 
-  public async findAll(): Promise<User[]> {
+  async findAll(): Promise<User[]> {
     const users = await this.database.selectFrom('users').selectAll().execute();
 
     return users.map(this.selectToUser.bind(this));
   }
 
-  public async findByUsername(username: User['username']): Promise<User | undefined> {
+  async findByUsername(username: User['username']): Promise<User | undefined> {
     const user = await this.database
       .selectFrom('users')
       .selectAll()
@@ -22,7 +22,7 @@ export class UserRepository {
     return this.selectToUser(user);
   }
 
-  public async findById(id: User['id']): Promise<User | undefined> {
+  async findById(id: User['id']): Promise<User | undefined> {
     const user = await this.database
       .selectFrom('users')
       .selectAll()
@@ -34,7 +34,7 @@ export class UserRepository {
     return this.selectToUser(user);
   }
 
-  public async create(user: CreateUser): Promise<User | undefined> {
+  async create(user: CreateUser): Promise<User | undefined> {
     const [newUser] = await this.database
       .insertInto('users')
       .values({

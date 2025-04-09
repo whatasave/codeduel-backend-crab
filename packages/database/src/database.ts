@@ -11,7 +11,25 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-export interface Users {
+export interface Challenge {
+  content: string;
+  created_at: Generated<Timestamp>;
+  description: string;
+  id: Generated<number>;
+  owner_id: number;
+  title: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface TestCase {
+  challenge_id: number;
+  hidden: boolean;
+  id: Generated<number>;
+  input: string;
+  output: string;
+}
+
+export interface User {
   avatar: string | null;
   background_image: string | null;
   biography: string | null;
@@ -23,5 +41,7 @@ export interface Users {
 }
 
 export interface DB {
-  users: Users;
+  challenge: Challenge;
+  test_case: TestCase;
+  user: User;
 }

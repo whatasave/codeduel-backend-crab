@@ -5,14 +5,14 @@ export class UserRepository {
   constructor(private readonly database: Database) {}
 
   async findAll(): Promise<User[]> {
-    const users = await this.database.selectFrom('users').selectAll().execute();
+    const users = await this.database.selectFrom('user').selectAll().execute();
 
     return users.map(this.selectToUser.bind(this));
   }
 
   async findByUsername(username: User['username']): Promise<User | undefined> {
     const user = await this.database
-      .selectFrom('users')
+      .selectFrom('user')
       .selectAll()
       .where('username', '=', username)
       .executeTakeFirst();
@@ -24,7 +24,7 @@ export class UserRepository {
 
   async findById(id: User['id']): Promise<User | undefined> {
     const user = await this.database
-      .selectFrom('users')
+      .selectFrom('user')
       .selectAll()
       .where('id', '=', id)
       .executeTakeFirst();
@@ -36,7 +36,7 @@ export class UserRepository {
 
   async create(user: CreateUser): Promise<User | undefined> {
     const [newUser] = await this.database
-      .insertInto('users')
+      .insertInto('user')
       .values({
         username: user.username,
         name: user.name,
@@ -52,7 +52,7 @@ export class UserRepository {
     return this.selectToUser(newUser);
   }
 
-  private selectToUser(user: Select<'users'>): User {
+  private selectToUser(user: Select<'user'>): User {
     return {
       id: user.id,
       username: user.username,

@@ -20,6 +20,7 @@ export default tseslint.config({
     'no-var': 'error',
     semi: ['error', 'always'],
     quotes: ['error', 'single'],
+    '@typescript-eslint/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
     '@typescript-eslint/explicit-function-return-type': ['error', { allowExpressions: true }],
     '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],

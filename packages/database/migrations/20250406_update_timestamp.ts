@@ -16,12 +16,16 @@ export async function down(db: Kysely<unknown>): Promise<void> {
   await sql`DROP FUNCTION IF EXISTS update_timestamp();`.execute(db);
 }
 
-export async function createUpdateTimestampTrigger(
-  db: Kysely<unknown>,
-  tableName: string
-): Promise<void> {
+export function updateTimestampTrigger(tableName: string): [typeof up, typeof down] {
+  return [
+    (db: Kysely<unknown>) => createUpdateTimestampTrigger(db, tableName),
+    (db: Kysely<unknown>) => dropUpdateTimestampTrigger(db, tableName),
+  ];
+}
+
+async function createUpdateTimestampTrigger(db: Kysely<unknown>, tableName: string): Promise<void> {
   await sql`
-      DROP TRIGGER IF EXISTS update_user_timestamp ON ${sql.table(tableName)};
+      DROP TRIGGER IF EXISTS update_${sql.table(tableName)}_timestamp ON ${sql.table(tableName)};
       CREATE TRIGGER update_user_timestamp
       BEFORE UPDATE ON ${sql.table(tableName)}
       FOR EACH ROW
@@ -29,9 +33,8 @@ export async function createUpdateTimestampTrigger(
     `.execute(db);
 }
 
-export async function dropUpdateTimestampTrigger(
-  db: Kysely<unknown>,
-  tableName: string
-): Promise<void> {
-  await sql`DROP TRIGGER IF EXISTS update_user_timestamp ON ${sql.table(tableName)};`.execute(db);
+async function dropUpdateTimestampTrigger(db: Kysely<unknown>, tableName: string): Promise<void> {
+  await sql`DROP TRIGGER IF EXISTS update_${sql.table(tableName)}_timestamp ON ${sql.table(tableName)};`.execute(
+    db
+  );
 }

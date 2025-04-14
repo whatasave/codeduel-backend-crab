@@ -1,11 +1,10 @@
 import { sql, type Kysely } from 'kysely';
 import { USER_TABLE_NAME } from './20250407_user';
-import {
-  createUpdateTimestampTrigger,
-  dropUpdateTimestampTrigger,
-} from './20250406_update_timestamp';
+import { updateTimestampTrigger } from './20250406_update_timestamp';
 
 export const CHALLENGE_TABLE_NAME = 'challenge';
+
+const [createTrigger, dropTrigger] = updateTimestampTrigger(CHALLENGE_TABLE_NAME);
 
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
@@ -20,10 +19,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('updated_at', 'timestamp', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
     .execute();
 
-  await createUpdateTimestampTrigger(db, CHALLENGE_TABLE_NAME);
+  await createTrigger(db);
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
+  await dropTrigger(db);
   await db.schema.dropTable(CHALLENGE_TABLE_NAME).ifExists().execute();
-  await dropUpdateTimestampTrigger(db, CHALLENGE_TABLE_NAME);
 }

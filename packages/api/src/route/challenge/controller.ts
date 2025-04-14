@@ -15,15 +15,15 @@ export class ChallengeController {
   constructor(private readonly challengeService: ChallengeService) {}
 
   setup(group: RouterGroup): void {
-    group.route(this.findById);
-    group.route(this.findAll);
+    group.route(this.byId);
+    group.route(this.all);
     group.route(this.create);
     group.route(this.update);
     group.route(this.delete);
-    group.route(this.findRandom);
+    group.route(this.random);
   }
 
-  findById = validated({
+  byId = validated({
     method: 'GET',
     path: '/:id',
     schema: {
@@ -43,7 +43,7 @@ export class ChallengeController {
     },
   });
 
-  findAll = validated({
+  all = validated({
     method: 'GET',
     path: '/',
     schema: {
@@ -115,7 +115,7 @@ export class ChallengeController {
     },
   });
 
-  findRandom = validated({
+  random = validated({
     method: 'GET',
     path: '/random',
     schema: {

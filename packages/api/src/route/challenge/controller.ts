@@ -121,7 +121,7 @@ export class ChallengeController {
     schema: {
       request: {},
       response: {
-        200: Challenge,
+        200: ChallengeDetailed,
         404: Type.Undefined(),
       },
     },

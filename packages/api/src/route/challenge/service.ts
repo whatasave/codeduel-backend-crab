@@ -24,7 +24,7 @@ export class ChallengeService {
     return await this.challengeRepository.delete(id);
   }
 
-  async findRandom(): Promise<Challenge | undefined> {
+  async findRandom(): Promise<ChallengeDetailed | undefined> {
     return await this.challengeRepository.findRandom();
   }
 }

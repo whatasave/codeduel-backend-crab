@@ -15,7 +15,7 @@ export class ChallengeRepository {
   async findById(id: Challenge['id']): Promise<ChallengeDetailed | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
-      .innerJoin('test_case', 'test_case.challenge_id', 'challenge.id')
+      .leftJoin('test_case', 'test_case.challenge_id', 'challenge.id')
       .select((eb) => [
         'challenge.id',
         'challenge.owner_id',
@@ -27,8 +27,8 @@ export class ChallengeRepository {
         eb.fn
           .jsonAgg(
             jsonBuildObject({
-              input: eb.ref('test_case.input'),
-              output: eb.ref('test_case.output'),
+              input: eb.ref('test_case.input').$notNull(),
+              output: eb.ref('test_case.output').$notNull(),
             })
           )
           .as('test_cases'),
@@ -83,7 +83,7 @@ export class ChallengeRepository {
   async findRandom(): Promise<ChallengeDetailed | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
-      .innerJoin('test_case', 'test_case.challenge_id', 'challenge.id')
+      .leftJoin('test_case', 'test_case.challenge_id', 'challenge.id')
       .select((eb) => [
         'challenge.id',
         'challenge.owner_id',
@@ -95,8 +95,8 @@ export class ChallengeRepository {
         eb.fn
           .jsonAgg(
             jsonBuildObject({
-              input: eb.ref('test_case.input'),
-              output: eb.ref('test_case.output'),
+              input: eb.ref('test_case.input').$notNull(),
+              output: eb.ref('test_case.output').$notNull(),
             })
           )
           .as('test_cases'),

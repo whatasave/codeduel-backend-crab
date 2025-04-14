@@ -25,11 +25,14 @@ export class ChallengeRepository {
         'challenge.created_at',
         'challenge.updated_at',
         eb.fn
-          .jsonAgg(
-            jsonBuildObject({
-              input: eb.ref('test_case.input').$notNull(),
-              output: eb.ref('test_case.output').$notNull(),
-            })
+          .coalesce(
+            eb.fn.jsonAgg(
+              jsonBuildObject({
+                input: eb.ref('test_case.input').$notNull(),
+                output: eb.ref('test_case.output').$notNull(),
+              })
+            ),
+            sql`'[]'::json`
           )
           .as('test_cases'),
       ])
@@ -93,11 +96,14 @@ export class ChallengeRepository {
         'challenge.created_at',
         'challenge.updated_at',
         eb.fn
-          .jsonAgg(
-            jsonBuildObject({
-              input: eb.ref('test_case.input').$notNull(),
-              output: eb.ref('test_case.output').$notNull(),
-            })
+          .coalesce(
+            eb.fn.jsonAgg(
+              jsonBuildObject({
+                input: eb.ref('test_case.input').$notNull(),
+                output: eb.ref('test_case.output').$notNull(),
+              })
+            ),
+            sql`'[]'::json`
           )
           .as('test_cases'),
       ])

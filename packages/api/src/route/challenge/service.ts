@@ -4,12 +4,12 @@ import type { ChallengeRepository } from './repository';
 export class ChallengeService {
   constructor(private readonly challengeRepository: ChallengeRepository) {}
 
-  async findById(id: Challenge['id']): Promise<ChallengeDetailed | undefined> {
-    return await this.challengeRepository.findById(id);
+  async byId(id: Challenge['id']): Promise<ChallengeDetailed | undefined> {
+    return await this.challengeRepository.byId(id);
   }
 
-  async findAll(): Promise<Challenge[]> {
-    return await this.challengeRepository.findAll();
+  async all(): Promise<Challenge[]> {
+    return await this.challengeRepository.all();
   }
 
   async create(challenge: CreateChallenge): Promise<Challenge | undefined> {
@@ -24,7 +24,7 @@ export class ChallengeService {
     return await this.challengeRepository.delete(id);
   }
 
-  async findRandom(): Promise<ChallengeDetailed | undefined> {
-    return await this.challengeRepository.findRandom();
+  async random(): Promise<ChallengeDetailed | undefined> {
+    return await this.challengeRepository.random();
   }
 }

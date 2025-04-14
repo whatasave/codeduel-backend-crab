@@ -37,7 +37,7 @@ export class ChallengeController {
     },
     handler: async ({ params }) => {
       const { id } = params;
-      const challenge = await this.challengeService.findById(id);
+      const challenge = await this.challengeService.byId(id);
       if (!challenge) return notFound();
       return ok(challenge);
     },
@@ -53,7 +53,7 @@ export class ChallengeController {
       },
     },
     handler: async () => {
-      return ok(await this.challengeService.findAll());
+      return ok(await this.challengeService.all());
     },
   });
 
@@ -126,7 +126,7 @@ export class ChallengeController {
       },
     },
     handler: async () => {
-      const challenge = await this.challengeService.findRandom();
+      const challenge = await this.challengeService.random();
       if (!challenge) return notFound();
       return ok(challenge);
     },

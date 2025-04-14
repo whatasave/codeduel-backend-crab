@@ -12,7 +12,7 @@ import { sql } from 'kysely';
 export class ChallengeRepository {
   constructor(private readonly database: Database) {}
 
-  async findById(id: Challenge['id']): Promise<ChallengeDetailed | undefined> {
+  async byId(id: Challenge['id']): Promise<ChallengeDetailed | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
       .leftJoin('test_case', 'test_case.challenge_id', 'challenge.id')
@@ -39,7 +39,7 @@ export class ChallengeRepository {
     return challenge && this.selectToChallengeDetailed(challenge);
   }
 
-  async findAll(): Promise<Challenge[]> {
+  async all(): Promise<Challenge[]> {
     const challenges = await this.database.selectFrom('challenge').selectAll().execute();
     return challenges.map(this.selectToChallenge.bind(this));
   }
@@ -80,7 +80,7 @@ export class ChallengeRepository {
     return result.numDeletedRows > 0;
   }
 
-  async findRandom(): Promise<ChallengeDetailed | undefined> {
+  async random(): Promise<ChallengeDetailed | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
       .leftJoin('test_case', 'test_case.challenge_id', 'challenge.id')

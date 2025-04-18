@@ -31,11 +31,9 @@ export class GithubController {
       const cookie = this.githubService.createCookie(state);
       const redirectUrl = this.githubService.getAuthorizationUrl(state);
 
-      return temporaryRedirect({
-        headers: {
-          'Set-Cookie': cookie,
-          Location: redirectUrl,
-        },
+      return temporaryRedirect(undefined, {
+        'Set-Cookie': cookie,
+        Location: redirectUrl,
       });
     },
   });
@@ -81,11 +79,9 @@ export class GithubController {
       const cookieRefreshToken = this.githubService.createCookie(tokens.refreshToken);
       const cookieExpiresIn = this.githubService.createCookie(tokens.expiresIn.toString());
 
-      return permanentRedirect({
-        headers: {
-          Location: 'http://localhost',
-          'Set-Cookie': [cookieAccessToken, cookieRefreshToken, cookieExpiresIn].join(','),
-        },
+      return permanentRedirect(undefined, {
+        Location: 'http://localhost',
+        'Set-Cookie': [cookieAccessToken, cookieRefreshToken, cookieExpiresIn].join(','),
       });
     },
   });

@@ -6,22 +6,22 @@ import jwt from 'jsonwebtoken';
 export class AuthService {
   constructor(private readonly authRepository: AuthRepository) {}
 
-  public async create(newProvider: CreateAuth): Promise<Auth | undefined> {
+  async create(newProvider: CreateAuth): Promise<Auth | undefined> {
     return await this.authRepository.create(newProvider);
   }
 
-  public async byProvider(
+  async byProvider(
     provider: Auth['provider'],
     providerId: Auth['providerId']
   ): Promise<Auth | undefined> {
     return await this.authRepository.byProvider(provider, providerId);
   }
 
-  public async delete(userId: Auth['userId']): Promise<void> {
+  async delete(userId: Auth['userId']): Promise<void> {
     await this.authRepository.delete(userId);
   }
 
-  public async accessToken(user: User): Promise<Auth | undefined> {
+  async accessToken(user: User): Promise<Auth | undefined> {
     // return await this.authRepository.byProvider(user.provider, user.providerId);
     const token = jwt.sign(
       {
@@ -46,11 +46,11 @@ export class AuthService {
     return undefined;
   }
 
-  public async refreshToken(user: User): Promise<Auth | undefined> {
+  async refreshToken(user: User): Promise<Auth | undefined> {
     return undefined;
   }
 
-  public async verifyToken(token: string): Promise<Auth | undefined> {
+  async verifyToken(token: string): Promise<Auth | undefined> {
     return undefined;
   }
 }

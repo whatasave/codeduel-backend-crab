@@ -4,7 +4,7 @@ import type { Auth, CreateAuth } from './data';
 export class AuthRepository {
   constructor(private readonly database: Database) {}
 
-  public async create(newProvider: CreateAuth): Promise<Auth | undefined> {
+  async create(newProvider: CreateAuth): Promise<Auth | undefined> {
     const [auth] = await this.database
       .insertInto('auth')
       .values({
@@ -26,7 +26,7 @@ export class AuthRepository {
     };
   }
 
-  public async byProvider(
+  async byProvider(
     provider: Auth['provider'],
     providerId: Auth['providerId']
   ): Promise<Auth | undefined> {
@@ -51,7 +51,7 @@ export class AuthRepository {
     };
   }
 
-  public async delete(userId: Auth['userId']): Promise<void> {
+  async delete(userId: Auth['userId']): Promise<void> {
     await this.database.deleteFrom('auth').where('user_id', '=', userId).execute();
   }
 }

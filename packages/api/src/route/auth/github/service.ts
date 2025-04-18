@@ -14,7 +14,7 @@ export class GithubService {
     private readonly config: Config
   ) {}
 
-  public async create(user: GithubUserData): Promise<User | undefined> {
+  async create(user: GithubUserData): Promise<User | undefined> {
     const newUser = await this.userService.create({
       username: user.login,
       name: user.name ?? user.login,
@@ -38,11 +38,11 @@ export class GithubService {
     return newUser;
   }
 
-  public async byId(providerId: Auth['providerId']): Promise<Auth | undefined> {
+  async byId(providerId: Auth['providerId']): Promise<Auth | undefined> {
     return await this.authService.byProvider(GithubService.PROVIDER, providerId);
   }
 
-  public async userByProvider(providerId: Auth['providerId']): Promise<User | undefined> {
+  async userByProvider(providerId: Auth['providerId']): Promise<User | undefined> {
     const auth = await this.byId(providerId);
     if (!auth) return undefined;
 
@@ -52,7 +52,7 @@ export class GithubService {
     return authUser;
   }
 
-  public async accessToken(code: string, state: string): Promise<GithubAccessToken | undefined> {
+  async accessToken(code: string, state: string): Promise<GithubAccessToken | undefined> {
     try {
       const response = await fetch('https://github.com/login/oauth/access_token', {
         method: 'POST',
@@ -76,7 +76,7 @@ export class GithubService {
     }
   }
 
-  public async userData(accessToken: string): Promise<GithubUserData | undefined> {
+  async userData(accessToken: string): Promise<GithubUserData | undefined> {
     try {
       const response = await fetch('https://api.github.com/user', {
         method: 'GET',
@@ -94,7 +94,7 @@ export class GithubService {
     }
   }
 
-  public async tokens(user: User): Promise<Tokens | undefined> {
+  async tokens(user: User): Promise<Tokens | undefined> {
     // const auth = await this.authService.byUser(user.id, GithubService.PROVIDER);
     // if (!auth) return undefined;
     // const token = await this.authService.tokenByUser(user.id, GithubService.PROVIDER);
@@ -112,7 +112,7 @@ export class GithubService {
     return undefined;
   }
 
-  public createCookie(state: string): string {
+  createCookie(state: string): string {
     const cookieOptions = this.config.stateCookie;
     const cookie = [
       `${cookieOptions.name}=${state}`,
@@ -127,7 +127,7 @@ export class GithubService {
     return cookie.join('; ');
   }
 
-  public getState(cookie: string): string | undefined {
+  getState(cookie: string): string | undefined {
     if (!cookie.includes(this.config.stateCookie.name)) return undefined;
     const parsedCookies = cookie.split('; ').reduce((acc, curr) => {
       const [key, value] = curr.split('=');
@@ -138,7 +138,7 @@ export class GithubService {
     return parsedCookies[this.config.stateCookie.name];
   }
 
-  public getAuthorizationUrl(state: string): string {
+  getAuthorizationUrl(state: string): string {
     const base = 'https://github.com/login/oauth/authorize';
 
     const query = new URLSearchParams({

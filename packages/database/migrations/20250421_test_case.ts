@@ -1,5 +1,5 @@
 import type { Kysely } from 'kysely';
-import { CHALLENGE_TABLE_NAME } from './20250408_challenge';
+import { CHALLENGE_TABLE_NAME } from './20250421_challenge';
 
 export const TEST_CASE_TABLE_NAME = 'test_case';
 

@@ -25,8 +25,8 @@ export function updateTimestampTrigger(tableName: string): [typeof up, typeof do
 
 async function createUpdateTimestampTrigger(db: Kysely<unknown>, tableName: string): Promise<void> {
   await sql`
-      DROP TRIGGER IF EXISTS update_${sql.table(tableName)}_timestamp ON ${sql.table(tableName)};
-      CREATE TRIGGER update_${sql.table(tableName)}_timestamp
+      DROP TRIGGER IF EXISTS update_${tableName}_timestamp ON ${sql.table(tableName)};
+      CREATE TRIGGER update_${tableName}_timestamp
       BEFORE UPDATE ON ${sql.table(tableName)}
       FOR EACH ROW
       EXECUTE FUNCTION update_timestamp();
@@ -34,7 +34,7 @@ async function createUpdateTimestampTrigger(db: Kysely<unknown>, tableName: stri
 }
 
 async function dropUpdateTimestampTrigger(db: Kysely<unknown>, tableName: string): Promise<void> {
-  await sql`DROP TRIGGER IF EXISTS update_${sql.table(tableName)}_timestamp ON ${sql.table(tableName)};`.execute(
+  await sql`DROP TRIGGER IF EXISTS update_${tableName}_timestamp ON ${sql.table(tableName)};`.execute(
     db
   );
 }

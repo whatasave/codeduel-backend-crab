@@ -1,5 +1,5 @@
 import { sql, type Kysely } from 'kysely';
-import { updateTimestampTrigger } from './20250406_update_timestamp';
+import { updateTimestampTrigger } from './20250421_update_timestamp';
 
 export const USER_TABLE_NAME = 'user';
 

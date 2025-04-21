@@ -29,5 +29,5 @@ $ docker run -p 3000:80 codeduel-be
 ### Start a PostgreSQL
 
 ```bash
-$ docker run --name cd-postgres -e POSTGRES_PASSWORD=codeduel -e POSTGRES_USER=codeduel -p 5432:5432 -d postgres
+$ docker run --name cd-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_USER=user -e POSTGRES_DB=codeduel -p 5432:5432 -d postgres
 ```

@@ -1,17 +1,14 @@
 import { sql, type Kysely } from 'kysely';
-import { USER_TABLE_NAME } from './20250421_user';
-import { updateTimestampTrigger } from './20250421_update_timestamp';
+import { TABLE, updateTimestampTrigger } from '../utils.ts';
 
-export const CHALLENGE_TABLE_NAME = 'challenge';
-
-const [createTrigger, dropTrigger] = updateTimestampTrigger(CHALLENGE_TABLE_NAME);
+const [createTrigger, dropTrigger] = updateTimestampTrigger(TABLE.CHALLENGE);
 
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
-    .createTable(CHALLENGE_TABLE_NAME)
+    .createTable(TABLE.CHALLENGE)
     .ifNotExists()
     .addColumn('id', 'serial', (col) => col.primaryKey())
-    .addColumn('owner_id', 'integer', (col) => col.notNull().references(`${USER_TABLE_NAME}.id`))
+    .addColumn('owner_id', 'integer', (col) => col.notNull().references(`${TABLE.USER}.id`))
     .addColumn('title', 'varchar(255)', (col) => col.notNull())
     .addColumn('description', 'text', (col) => col.notNull())
     .addColumn('content', 'text', (col) => col.notNull())
@@ -19,10 +16,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('updated_at', 'timestamp', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
     .execute();
 
-  await createTrigger(db);
+  await createTrigger().execute(db);
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  await dropTrigger(db);
-  await db.schema.dropTable(CHALLENGE_TABLE_NAME).ifExists().execute();
+  await db.schema.dropTable(TABLE.CHALLENGE).ifExists().execute();
+  await dropTrigger().execute(db);
 }

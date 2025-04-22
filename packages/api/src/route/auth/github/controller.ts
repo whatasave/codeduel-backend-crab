@@ -35,10 +35,6 @@ export class GithubController {
       const cookie = this.githubService.createCookie(state);
       const redirectUrl = this.githubService.getAuthorizationUrl(state);
 
-      console.log('Generated state: \n\t', state);
-      console.log('Generated cookie: \n\t', cookie);
-      console.log('Redirecting to GitHub for authorization: \n\t', redirectUrl);
-
       return temporaryRedirect(undefined, {
         'Set-Cookie': cookie,
         Location: redirectUrl,
@@ -80,7 +76,6 @@ export class GithubController {
       if (!authUser) return internalServerError({ message: 'Failed to get user' });
 
       const tokens = await this.authService.tokens(authUser);
-      console.log('Tokens: \n\t', tokens);
 
       if (!tokens) return internalServerError({ message: 'Failed to get tokens' });
       const cookieAccessToken = this.githubService.createCookie(tokens.accessToken);
@@ -88,7 +83,6 @@ export class GithubController {
       // const cookieExpiresIn = this.githubService.createCookie(tokens.expiresIn.toString());
 
       const setCookie = [cookieAccessToken, cookieRefreshToken].join(',');
-      console.log('Set-Cookie: \n\t', setCookie);
 
       return permanentRedirect(undefined, {
         Location: 'http://127.0.0.1:5000',

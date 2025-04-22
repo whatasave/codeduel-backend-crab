@@ -40,7 +40,7 @@ export class AuthService {
       {
         iss: this.config.jwt.issuer,
         aud: this.config.jwt.audience,
-        exp: this.config.accessToken.expiresIn,
+        exp: Math.floor(Date.now() / 1000) + this.config.accessToken.expiresIn,
         sub: user.id,
 
         username: user.username,
@@ -58,7 +58,7 @@ export class AuthService {
       {
         iss: this.config.jwt.issuer,
         aud: this.config.jwt.audience,
-        exp: this.config.refreshToken.expiresIn,
+        exp: Math.floor(Date.now() / 1000) + this.config.refreshToken.expiresIn,
         sub: user.id,
       },
       this.config.jwt.secret,

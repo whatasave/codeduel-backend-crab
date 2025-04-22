@@ -18,7 +18,7 @@ export class GithubService {
     const newUser = await this.userService.create({
       username: user.login,
       name: user.name ?? user.login,
-      avatar: user.avatarUrl ?? undefined,
+      avatar: user.avatar_url ?? undefined,
       biography: user.bio ?? undefined,
     });
 
@@ -94,24 +94,6 @@ export class GithubService {
     }
   }
 
-  async tokens(user: User): Promise<Tokens | undefined> {
-    // const auth = await this.authService.byUser(user.id, GithubService.PROVIDER);
-    // if (!auth) return undefined;
-    // const token = await this.authService.tokenByUser(user.id, GithubService.PROVIDER);
-    // if (!token) return undefined;
-    // const refreshToken = await this.authService.refreshTokenByUser(user.id, GithubService.PROVIDER);
-    // if (!refreshToken) return undefined;
-    // const expiresIn = await this.authService.expiresInByUser(user.id, GithubService.PROVIDER);
-    // if (!expiresIn) return undefined;
-    // return {
-    //   accessToken: token.accessToken,
-    //   refreshToken: refreshToken.refreshToken,
-    //   expiresIn: expiresIn.expiresIn,
-    // };
-
-    return undefined;
-  }
-
   createCookie(state: string): string {
     const cookieOptions = this.config.stateCookie;
     const cookie = [
@@ -122,15 +104,15 @@ export class GithubService {
       cookieOptions.httpOnly && 'HttpOnly',
       cookieOptions.secure && 'Secure',
       cookieOptions.sameSite && `SameSite=${cookieOptions.sameSite}`,
-      'Path=',
     ].filter(Boolean);
     return cookie.join('; ');
   }
 
   getState(cookie: string): string | undefined {
     if (!cookie.includes(this.config.stateCookie.name)) return undefined;
-    const parsedCookies = cookie.split('; ').reduce((acc, curr) => {
+    const parsedCookies = cookie.split('; ').reduce<Record<string, string>>((acc, curr) => {
       const [key, value] = curr.split('=');
+      if (!key || !value) return acc;
       acc[key] = value;
       return acc;
     }, {});

@@ -19,4 +19,8 @@ export class UserService {
   async create(user: CreateUser): Promise<User | undefined> {
     return await this.userRepository.create(user);
   }
+
+  async delete(id: User['id']): Promise<void> {
+    return await this.userRepository.delete(id);
+  }
 }

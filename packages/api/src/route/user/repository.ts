@@ -52,6 +52,10 @@ export class UserRepository {
     return this.selectToUser(newUser);
   }
 
+  async delete(id: User['id']): Promise<void> {
+    await this.database.deleteFrom('user').where('id', '=', id).execute();
+  }
+
   private selectToUser(user: Select<'user'>): User {
     return {
       id: user.id,

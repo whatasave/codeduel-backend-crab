@@ -7,7 +7,6 @@ export const Config = Type.Object({
   redirectUri: Type.String(),
   stateCookie: Type.Object({
     name: Type.String(),
-    maxAge: Type.Number(),
     domain: Type.String(),
     path: Type.String({
       default: '/auth/github/callback',

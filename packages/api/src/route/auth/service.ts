@@ -44,7 +44,7 @@ export class AuthService {
         sub: user.id,
 
         username: user.username,
-        // perm: user.permissions,
+        // perm: user.permissions, // TODO: add permissions
       },
       this.config.jwt.secret,
       { algorithm: 'HS256' }

@@ -6,14 +6,13 @@ export const Config = Type.Object({
   github: GithubConfig,
   jwt: Type.Object({
     secret: Type.String(),
-    expiresIn: Type.String(),
     issuer: Type.String(),
     audience: Type.String(),
   }),
   accessToken: Type.Object({
-    expiresIn: Type.String(),
+    expiresIn: Type.Number(),
   }),
   refreshToken: Type.Object({
-    expiresIn: Type.String(),
+    expiresIn: Type.Number(),
   }),
 });

@@ -44,9 +44,6 @@ export function loadConfig(): Config {
         redirectUri: env.GITHUB_REDIRECT_URI,
         stateCookie: {
           name: env.GITHUB_STATE_COOKIE_NAME,
-          maxAge: env.GITHUB_STATE_COOKIE_MAX_AGE
-            ? parseInt(env.GITHUB_STATE_COOKIE_MAX_AGE, 10)
-            : undefined,
           domain: env.GITHUB_STATE_COOKIE_DOMAIN,
           path: env.GITHUB_STATE_COOKIE_PATH,
           httpOnly: env.GITHUB_STATE_COOKIE_HTTP_ONLY === 'true',
@@ -56,15 +53,16 @@ export function loadConfig(): Config {
       },
       jwt: {
         secret: env.JWT_SECRET,
-        expiresIn: env.JWT_EXPIRES_IN,
         issuer: env.JWT_ISSUER,
         audience: env.JWT_AUDIENCE,
       },
       accessToken: {
-        expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
+        expiresIn: env.ACCESS_TOKEN_EXPIRES_IN ? parseInt(env.ACCESS_TOKEN_EXPIRES_IN) : 60, // 1 minute
       },
       refreshToken: {
-        expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
+        expiresIn: env.REFRESH_TOKEN_EXPIRES_IN
+          ? parseInt(env.REFRESH_TOKEN_EXPIRES_IN)
+          : 60 * 60 * 24 * 30, // 30 days
       },
     },
   };

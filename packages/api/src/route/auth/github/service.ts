@@ -1,6 +1,6 @@
 import type { User } from '../../user/data';
 import type { UserService } from '../../user/service';
-import type { Auth, Tokens } from '../data';
+import type { Auth } from '../data';
 import type { AuthService } from '../service';
 import type { Config } from './config';
 import type { GithubAccessToken, GithubUserData } from './data';
@@ -98,7 +98,7 @@ export class GithubService {
     const cookieOptions = this.config.stateCookie;
     const cookie = [
       `${cookieOptions.name}=${state}`,
-      cookieOptions.maxAge && `Max-Age=${cookieOptions.maxAge}`,
+      'Max-Age=600',
       cookieOptions.domain && `Domain=${cookieOptions.domain}`,
       cookieOptions.path && `Path=${cookieOptions.path}`,
       cookieOptions.httpOnly && 'HttpOnly',

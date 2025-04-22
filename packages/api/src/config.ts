@@ -54,6 +54,18 @@ export function loadConfig(): Config {
           sameSite: env.GITHUB_STATE_COOKIE_SAME_SITE,
         },
       },
+      jwt: {
+        secret: env.JWT_SECRET,
+        expiresIn: env.JWT_EXPIRES_IN,
+        issuer: env.JWT_ISSUER,
+        audience: env.JWT_AUDIENCE,
+      },
+      accessToken: {
+        expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
+      },
+      refreshToken: {
+        expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
+      },
     },
   };
 

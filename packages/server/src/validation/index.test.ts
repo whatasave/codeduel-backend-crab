@@ -21,6 +21,7 @@ describe('validation middleware', () => {
       query: { name: 'John' },
       body: { age: 30 },
       params: {},
+      headers: new Headers(),
     });
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ age: 30 });
@@ -33,6 +34,7 @@ describe('validation middleware', () => {
       query: { name: {} },
       body: { age: 30 },
       params: {},
+      headers: new Headers(),
     });
     expect(response.status).toBe(400);
     expect(hasErrors(response.body)).toBe(true);
@@ -56,6 +58,7 @@ describe('validation middleware', () => {
       query: { name: 'John' },
       body: { age: 30 },
       params: { id: 'not a number' },
+      headers: new Headers(),
     });
     expect(response.status).toBe(400);
     expect(hasErrors(response.body)).toBe(true);
@@ -68,6 +71,7 @@ describe('validation middleware', () => {
       query: { name: 'John' },
       body: { age: 'not a number' },
       params: {},
+      headers: new Headers(),
     });
     expect(response.status).toBe(400);
     expect(hasErrors(response.body)).toBe(true);
@@ -80,6 +84,7 @@ describe('validation middleware', () => {
       query: { name: 'John' },
       body: undefined,
       params: {},
+      headers: new Headers(),
     });
     expect(response.status).toBe(400);
     expect(hasErrors(response.body)).toBe(true);

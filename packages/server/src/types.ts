@@ -20,7 +20,7 @@ export interface Request<
   query: Query;
   params: Params;
   body: Body;
-  headers?: Headers;
+  headers: Headers;
 }
 
 export type Response<Status extends number = number, Body = unknown> = undefined extends Body

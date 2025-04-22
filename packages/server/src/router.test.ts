@@ -18,6 +18,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.status).toBe(404);
   });
@@ -34,6 +35,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.status).toBe(200);
     expect(response.body).toBe('OK');
@@ -51,6 +53,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.status).toBe(404);
   });
@@ -67,6 +70,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.status).toBe(200);
   });
@@ -84,6 +88,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.status).toBe(200);
   });
@@ -99,6 +104,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.status).toBe(200);
   });
@@ -114,6 +120,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.status).toBe(200);
   });
@@ -191,6 +198,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     const response2 = await router.handle({
       method: 'GET',
@@ -198,6 +206,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     const response3 = await router.handle({
       method: 'GET',
@@ -205,6 +214,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     const response4 = await router.handle({
       method: 'GET',
@@ -212,6 +222,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response1.body).toBe(2);
     expect(response2.body).toBe(4);
@@ -231,6 +242,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.body).toEqual('123');
   });
@@ -252,6 +264,7 @@ describe('Router', () => {
       query: {},
       params: {},
       body: undefined,
+      headers: new Headers(),
     });
     expect(response.body).toBe('specific');
   });

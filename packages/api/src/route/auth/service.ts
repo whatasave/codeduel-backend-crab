@@ -1,10 +1,14 @@
 import type { User } from '../user/data';
+import type { Config } from './config';
 import type { Auth, CreateAuth } from './data';
 import type { AuthRepository } from './repository';
 import jwt from 'jsonwebtoken';
 
 export class AuthService {
-  constructor(private readonly authRepository: AuthRepository) {}
+  constructor(
+    private readonly authRepository: AuthRepository,
+    private readonly config: Config
+  ) {}
 
   async create(newProvider: CreateAuth): Promise<Auth | undefined> {
     return await this.authRepository.create(newProvider);
@@ -21,36 +25,65 @@ export class AuthService {
     await this.authRepository.delete(userId);
   }
 
-  async accessToken(user: User): Promise<Auth | undefined> {
-    // return await this.authRepository.byProvider(user.provider, user.providerId);
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        provider: user.provider,
-        providerId: user.providerId,
-        issuer: process.env.JWT_ISSUER,
-        audience: process.env.JWT_AUDIENCE,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60,
-        data: 'foobar',
-      },
-      process.env.JWT_SECRET,
-      {
-        algorithm: 'RS256',
-        expiresIn: '1h',
-      },
-      function (err, token) {
-        console.log(token);
-      }
-    );
+  async tokens(user: User): Promise<{ accessToken: string; refreshToken: string } | undefined> {
+    const accessToken = await this.accessToken(user);
+    if (!accessToken) return undefined;
 
-    return undefined;
+    const refreshToken = await this.refreshToken(user);
+    if (!refreshToken) return undefined;
+
+    return { accessToken, refreshToken };
   }
 
-  async refreshToken(user: User): Promise<Auth | undefined> {
-    return undefined;
+  async accessToken(user: User): Promise<string | undefined> {
+    const token = jwt.sign(
+      {
+        iss: this.config.jwt.issuer,
+        aud: this.config.jwt.audience,
+        exp: this.config.accessToken.expiresIn,
+        sub: user.id,
+
+        username: user.username,
+        // perm: user.permissions,
+      },
+      this.config.jwt.secret,
+      { algorithm: 'HS256' }
+    );
+
+    return token;
+  }
+
+  async refreshToken(user: User): Promise<string | undefined> {
+    const token = jwt.sign(
+      {
+        iss: this.config.jwt.issuer,
+        aud: this.config.jwt.audience,
+        exp: this.config.refreshToken.expiresIn,
+        sub: user.id,
+      },
+      this.config.jwt.secret,
+      { algorithm: 'HS256' }
+    );
+
+    return token;
   }
 
   async verifyToken(token: string): Promise<Auth | undefined> {
-    return undefined;
+    try {
+      const decoded = jwt.verify(token, this.config.jwt.secret, {
+        algorithms: ['HS256'],
+      }) as Auth;
+
+      return decoded;
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        console.error('Token expired');
+      } else if (error instanceof jwt.JsonWebTokenError) {
+        console.error('Invalid token');
+      } else {
+        console.error('Token verification error', error);
+      }
+      return undefined;
+    }
   }
 }

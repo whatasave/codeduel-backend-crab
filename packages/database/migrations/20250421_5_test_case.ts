@@ -1,13 +1,15 @@
 import type { Kysely } from 'kysely';
-import { TABLE } from '../utils';
+import { CHALLENGE_TABLE_NAME } from './20250421_4_challenge';
+
+const TEST_CASE_TABLE_NAME = 'test_case';
 
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
-    .createTable(TABLE.TEST_CASE)
+    .createTable(TEST_CASE_TABLE_NAME)
     .ifNotExists()
     .addColumn('id', 'serial', (col) => col.primaryKey())
     .addColumn('challenge_id', 'integer', (col) =>
-      col.notNull().references(`${TABLE.CHALLENGE}.id`)
+      col.notNull().references(`${CHALLENGE_TABLE_NAME}.id`)
     )
     .addColumn('input', 'text', (col) => col.notNull())
     .addColumn('output', 'text', (col) => col.notNull())
@@ -17,5 +19,5 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  await db.schema.dropTable(TABLE.TEST_CASE).ifExists().execute();
+  await db.schema.dropTable(TEST_CASE_TABLE_NAME).ifExists().execute();
 }

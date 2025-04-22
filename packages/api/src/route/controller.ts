@@ -38,7 +38,7 @@ export class RootController {
     this.healthService = new HealthService();
     this.userService = new UserService(this.userRepository);
     this.challengeService = new ChallengeService(this.challengeRepository);
-    this.authService = new AuthService(this.authRepository);
+    this.authService = new AuthService(this.authRepository, config.auth);
 
     this.redocController = new RedocController();
     this.healthController = new HealthController(this.healthService);

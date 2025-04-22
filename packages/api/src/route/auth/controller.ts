@@ -16,7 +16,7 @@ export class AuthController {
     private readonly config: Config
   ) {
     this.githubService = new GithubService(this.authService, this.userService, this.config.github);
-    this.githubController = new GithubController(this.githubService);
+    this.githubController = new GithubController(this.githubService, this.authService);
   }
 
   setup(group: RouterGroup): void {

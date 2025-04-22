@@ -23,13 +23,15 @@ export class GithubController {
     schema: {
       request: {},
       response: {
-        307: Type.Object({}),
+        307: Type.Undefined(),
       },
     },
     handler: async () => {
       const state = randomUUIDv7();
       const cookie = this.githubService.createCookie(state);
       const redirectUrl = this.githubService.getAuthorizationUrl(state);
+
+      console.log('Redirecting to GitHub for authorization:', redirectUrl);
 
       return temporaryRedirect(undefined, {
         'Set-Cookie': cookie,
@@ -49,7 +51,7 @@ export class GithubController {
         },
       },
       response: {
-        308: Type.Object({}),
+        308: Type.Undefined(),
       },
     },
     handler: async ({ query }) => {

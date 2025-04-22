@@ -26,7 +26,7 @@ if (cors) {
 
 const root = router.group({ middlewares });
 
-const controller = new RootController(database);
+const controller = new RootController(database, config);
 controller.setup(root.group({ prefix: '/v1' }));
 
 const openapi = router.openapi();

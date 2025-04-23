@@ -36,6 +36,7 @@ describe('middleware', () => {
       query: {},
       body: {},
       params: {},
+      headers: new Headers(),
     });
     expect(response).toEqual({ status: 200, body: 9 });
   });

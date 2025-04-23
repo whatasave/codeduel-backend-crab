@@ -40,6 +40,7 @@ export type Authentication = Static<typeof Authentication>;
 export const Authentication = Type.Object({
   tokens: Tokens,
   cookies: AuthCookies,
+  // redirect: Type.String(),
 });
 
 export type JwtAccessToken = Static<typeof JwtAccessToken>;

@@ -14,14 +14,14 @@ export const CookieOptions = Type.Object({
   }),
 });
 
-export function createCookie(name: string, value: string, options: CookieOptions): string {
+export function createCookie(name: string, value: string, options: Partial<CookieOptions>): string {
   const cookieOptions = [
     options.domain && `Domain=${options.domain}`,
-    `Path=${options.path || '/'}`,
+    `Path=${options.path ?? '/'}`,
     options.maxAge && `Max-Age=${options.maxAge}`,
     options.httpOnly && 'HttpOnly',
     options.secure && 'Secure',
-    `SameSite=${options.sameSite || 'Lax'}`,
+    `SameSite=${options.sameSite ?? 'Lax'}`,
   ];
 
   const filteredOptions = cookieOptions.filter(Boolean);

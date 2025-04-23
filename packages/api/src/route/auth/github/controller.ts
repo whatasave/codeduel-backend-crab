@@ -8,13 +8,9 @@ import { validated } from '@codeduel-backend-crab/server/validation';
 import type { GithubService } from './service';
 import { randomUUIDv7 } from 'bun';
 import { Type } from '@sinclair/typebox';
-import type { AuthService } from '../service';
 
 export class GithubController {
-  constructor(
-    private readonly githubService: GithubService,
-    private readonly authService: AuthService
-  ) {}
+  constructor(private readonly githubService: GithubService) {}
 
   setup(group: RouterGroup): void {
     group.route(this.login);
@@ -25,18 +21,24 @@ export class GithubController {
     method: 'GET',
     path: '/',
     schema: {
-      request: {},
+      request: {
+        query: {
+          redirect: Type.Optional(Type.String()),
+        },
+      },
       response: {
         307: Type.Undefined(),
       },
     },
-    handler: async () => {
+    handler: async ({ query, headers }) => {
+      const { redirect } = query;
       const state = randomUUIDv7();
       const cookie = this.githubService.createStateCookie(state);
+      const redirectCookie = this.githubService.createRedirectCookie(redirect);
       const redirectUrl = this.githubService.getAuthorizationUrl(state);
 
       return temporaryRedirect(undefined, {
-        'Set-Cookie': cookie,
+        'Set-Cookie': [cookie, redirectCookie],
         Location: redirectUrl,
       });
     },
@@ -74,9 +76,13 @@ export class GithubController {
       if (!authentication) return internalServerError({ message: 'Failed to authenticate' });
 
       const cookies = authentication.cookies;
+      console.log('Cookies:', cookies);
+
+      const redirect = this.githubService.getRedirect(headers?.get('cookie') ?? '');
+      console.log('Redirect:', redirect);
 
       return permanentRedirect(undefined, {
-        Location: 'http://127.0.0.1:5000/auth/token',
+        ...(redirect && { Location: redirect }),
         'Set-Cookie': [cookies.access, cookies.refresh],
       });
     },

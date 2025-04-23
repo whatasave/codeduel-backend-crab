@@ -90,6 +90,16 @@ export class GithubService {
     return createCookie(this.config.stateCookie.name, state, this.config.stateCookie);
   }
 
+  createRedirectCookie(redirect: string): string {
+    return createCookie('redirect', redirect, {
+      maxAge: 60,
+    });
+  }
+
+  getRedirect(cookie: string): string | undefined {
+    return getCookieValueByName(cookie, 'redirect');
+  }
+
   getState(cookie: string): string | undefined {
     return getCookieValueByName(cookie, this.config.stateCookie.name);
   }

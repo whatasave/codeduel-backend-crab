@@ -35,7 +35,7 @@ export class Cors {
     ...route,
     handler: async (request) => {
       const response = await route.handler(request);
-      const origin = request.headers?.get('Origin');
+      const origin = request.headers.get('Origin');
       if (!origin) return response;
       if (this.allowedOrigins[0] !== '*' && !this.allowedOrigins.includes(origin)) {
         return response;
@@ -56,7 +56,7 @@ export class Cors {
   preflight: Route = {
     method: 'OPTIONS',
     handler: async (request) => {
-      const origin = request.headers?.get('Origin');
+      const origin = request.headers.get('Origin');
       const headers = new Headers();
       if (origin && (this.allowedOrigins[0] === '*' || this.allowedOrigins.includes(origin))) {
         headers.set('Access-Control-Allow-Origin', origin);

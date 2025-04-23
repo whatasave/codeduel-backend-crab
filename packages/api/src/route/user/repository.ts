@@ -35,17 +35,21 @@ export class UserRepository {
   }
 
   async create(user: CreateUser): Promise<User | undefined> {
+    console.log('Creating user', user);
     const [newUser] = await this.database
       .insertInto('user')
-      .values({
-        username: user.username,
-        name: user.name,
-        avatar: user.avatar,
-        background_image: user.backgroundImage,
-        biography: user.biography,
+      .values(user)
+      .onConflict((qb) => {
+        const updatedUser = {
+          ...user,
+          username: user.username + '_' + Date.now().toString(),
+        };
+        console.log('Updating user', updatedUser);
+        return qb.column('username').doUpdateSet(updatedUser);
       })
       .returningAll()
       .execute();
+    console.log('Created user', newUser);
 
     if (!newUser) return undefined;
 

@@ -82,7 +82,7 @@ export class GithubController {
       console.log('Redirect:', redirect);
 
       return permanentRedirect(undefined, {
-        ...(redirect && { Location: redirect }),
+        ...(!redirect && { Location: redirect }),
         'Set-Cookie': [cookies.access, cookies.refresh],
       });
     },

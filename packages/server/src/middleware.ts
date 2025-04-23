@@ -21,5 +21,5 @@ export function use(...middlewares: Middleware[]) {
 }
 
 export function applyMiddlewares(route: Route, middlewares: Middleware[]): Route {
-  return middlewares.reduce((acc, middleware) => middleware(acc), route);
+  return middlewares.reduceRight((acc, middleware) => middleware(acc), route);
 }

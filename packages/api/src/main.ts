@@ -1,9 +1,10 @@
 import { BunServer } from '@codeduel-backend-crab/server/bun';
-import { movedPermanently, ok, Router } from '@codeduel-backend-crab/server';
+import { movedPermanently, ok, Router, type Middleware } from '@codeduel-backend-crab/server';
 import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
 import { Cors } from '@codeduel-backend-crab/server/cors';
 import { createDatabase } from '@codeduel-backend-crab/database';
+import { defaultErrorHandler, descriptiveErrorHandler } from './errors';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
@@ -13,7 +14,9 @@ if (!config) {
 
 const database = createDatabase(config.database);
 const router = new Router();
-const middlewares = [];
+const middlewares: Middleware[] = [];
+
+middlewares.push(config.descriptiveErrors ? descriptiveErrorHandler : defaultErrorHandler);
 
 const cors = config.cors && new Cors(config.cors);
 if (cors) {

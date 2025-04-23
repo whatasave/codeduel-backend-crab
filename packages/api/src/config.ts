@@ -7,6 +7,7 @@ export type Config = Static<typeof Config>;
 export const Config = Type.Object({
   host: Type.String({ default: 'localhost' }),
   port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
+  descriptiveErrors: Type.Boolean(),
   cors: Type.Optional(CorsOptions),
   database: DBConfig,
 });
@@ -16,6 +17,7 @@ export function loadConfig(): Config {
   const config = {
     host: env.HOST,
     port: env.PORT,
+    descriptiveErrors: env.DESCRIPTIVE_ERRORS,
     cors: env.CORS_ALLOWED_ORIGINS
       ? {
           allowedOrigins: env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),

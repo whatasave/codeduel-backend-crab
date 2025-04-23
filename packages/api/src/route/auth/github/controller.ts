@@ -78,12 +78,10 @@ export class GithubController {
       const cookies = authentication.cookies;
       const redirect = this.githubService.getRedirect(headers.get('cookie') ?? '');
 
-      const respHeader = {
+      return permanentRedirect(undefined, {
         ...(redirect !== undefined && { Location: redirect }),
         'Set-Cookie': [cookies.access, cookies.refresh],
-      };
-
-      return permanentRedirect(undefined, respHeader);
+      });
     },
   });
 }

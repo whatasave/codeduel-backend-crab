@@ -62,7 +62,7 @@ export class GithubController {
       const { code, state } = query;
 
       if (!code || !state) return internalServerError({ message: 'Missing code or state' });
-      const cookieState = this.githubService.getState(headers?.get('cookie') ?? '');
+      const cookieState = this.githubService.getState(headers.get('cookie') ?? '');
 
       if (state !== cookieState) return internalServerError({ message: 'Invalid state' });
 
@@ -76,7 +76,7 @@ export class GithubController {
       if (!authentication) return internalServerError({ message: 'Failed to authenticate' });
 
       const cookies = authentication.cookies;
-      const redirect = this.githubService.getRedirect(headers?.get('cookie') ?? '');
+      const redirect = this.githubService.getRedirect(headers.get('cookie') ?? '');
 
       const respHeader = {
         ...(redirect !== undefined && { Location: redirect }),

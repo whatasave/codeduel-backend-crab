@@ -1,8 +1,8 @@
 import {
-  internalServerError,
+  type RouterGroup,
   temporaryRedirect,
   permanentRedirect,
-  type RouterGroup,
+  badRequest,
 } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { GithubService } from './service';
@@ -30,12 +30,12 @@ export class GithubController {
         307: Type.Undefined(),
       },
     },
-    handler: async ({ query, headers }) => {
+    handler: async ({ query }) => {
       const { redirect } = query;
       const state = randomUUIDv7();
       const cookie = this.githubService.createStateCookie(state);
       const redirectCookie = redirect && this.githubService.createRedirectCookie(redirect);
-      const redirectUrl = this.githubService.getAuthorizationUrl(state);
+      const redirectUrl = this.githubService.authorizationUrl(state);
 
       return temporaryRedirect(undefined, {
         'Set-Cookie': [cookie, redirectCookie],
@@ -56,27 +56,24 @@ export class GithubController {
       },
       response: {
         308: Type.Undefined(),
+        400: Type.Object({
+          message: Type.String(),
+        }),
       },
     },
     handler: async ({ query, headers }) => {
       const { code, state } = query;
 
-      if (!code || !state) return internalServerError({ message: 'Missing code or state' });
-      const cookieState = this.githubService.getState(headers.get('cookie') ?? '');
-
-      if (state !== cookieState) return internalServerError({ message: 'Invalid state' });
+      const cookieState = this.githubService.stateCookie(headers.get('cookie') ?? '');
+      if (state !== cookieState) return badRequest({ message: 'Invalid or Missing state' });
 
       const githubToken = await this.githubService.accessToken(code, state);
-      if (!githubToken) return internalServerError({ message: 'Failed to get access token' });
-
       const githubUser = await this.githubService.userData(githubToken.access_token);
-      if (!githubUser) return internalServerError({ message: 'Failed to get user data' });
 
       const authentication = await this.githubService.authenticate(githubUser);
-      if (!authentication) return internalServerError({ message: 'Failed to authenticate' });
 
       const cookies = authentication.cookies;
-      const redirect = this.githubService.getRedirect(headers.get('cookie') ?? '');
+      const redirect = this.githubService.redirectCookie(headers.get('cookie') ?? '');
 
       return permanentRedirect(undefined, {
         ...(redirect !== undefined && { Location: redirect }),

@@ -1,44 +1,58 @@
-import { type Database, type Select } from '@codeduel-backend-crab/database';
-import type { Auth, CreateAuth } from './data';
+import type { Database, Select } from '@codeduel-backend-crab/database';
+import type { Auth, Provider } from './data';
+import type { CreateUser, User } from '../user/data';
+import { UserRepository } from '../user/repository';
 
 export class AuthRepository {
   constructor(private readonly database: Database) {}
 
-  async create(newProvider: CreateAuth): Promise<Auth | undefined> {
-    const [auth] = await this.database
-      .insertInto('auth')
-      .values({
-        user_id: newProvider.userId,
-        provider: newProvider.provider,
-        provider_id: newProvider.providerId,
-      })
-      .returningAll()
-      .execute();
+  async create(user: CreateUser, provider: Provider): Promise<[Auth, User]> {
+    const authUser = await this.database.transaction().execute(async (tx) => {
+      const userRepo = new UserRepository(tx);
 
-    if (!auth) return undefined;
+      const newUser = await userRepo.create(user);
+      if (!newUser) throw new Error('Failed to create user');
 
-    return {
-      userId: auth.user_id,
-      provider: auth.provider,
-      providerId: auth.provider_id,
-      createdAt: auth.created_at.toISOString(),
-      updatedAt: auth.updated_at.toISOString(),
-    };
+      const newAuth = await tx
+        .insertInto('auth')
+        .values({
+          user_id: newUser.id,
+          provider: provider.name,
+          provider_id: provider.userId,
+        })
+        .returningAll()
+        .executeTakeFirst();
+
+      if (!newAuth) throw new Error('Failed to create auth');
+
+      return [this.selectToAuth(newAuth), newUser] as [Auth, User];
+    });
+
+    return authUser;
   }
 
-  async byProvider(
-    provider: Auth['provider'],
-    providerId: Auth['providerId']
-  ): Promise<Auth | undefined> {
-    const auth = await this.database
-      .selectFrom('auth')
-      .selectAll()
-      .where('provider', '=', provider)
-      .where('provider_id', '=', providerId)
-      .executeTakeFirst();
+  async createIfNotExists(user: CreateUser, provider: Provider): Promise<[Auth, User]> {
+    const authUser = await this.database.transaction().execute(async (tx) => {
+      const userRepo = new UserRepository(tx);
 
-    if (!auth) return undefined;
-    return this.selectToAuth(auth);
+      const existingAuth = await tx
+        .selectFrom('auth')
+        .selectAll()
+        .where('provider', '=', provider.name)
+        .where('provider_id', '=', provider.userId)
+        .executeTakeFirst();
+
+      if (existingAuth) {
+        const existingUser = await userRepo.findById(existingAuth.user_id);
+        if (!existingUser) throw new Error('Failed to find user');
+
+        return [this.selectToAuth(existingAuth), existingUser] as [Auth, User];
+      }
+
+      return this.create(user, provider);
+    });
+
+    return authUser;
   }
 
   private selectToAuth(user: Select<'auth'>): Auth {
@@ -49,9 +63,5 @@ export class AuthRepository {
       createdAt: user.created_at.toISOString(),
       updatedAt: user.updated_at.toISOString(),
     };
-  }
-
-  async delete(userId: Auth['userId']): Promise<void> {
-    await this.database.deleteFrom('auth').where('user_id', '=', userId).execute();
   }
 }

@@ -1,7 +1,5 @@
 import { createCookie, getCookieValueByName } from '../../../utils/cookie';
-import type { CreateUser, User } from '../../user/data';
-import type { UserService } from '../../user/service';
-import type { Auth, Authentication, Provider } from '../data';
+import type { Authentication } from '../data';
 import type { AuthService } from '../service';
 import type { Config } from './config';
 import type { GithubAccessToken, GithubUserData } from './data';
@@ -11,113 +9,80 @@ export class GithubService {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly userService: UserService,
     private readonly config: Config
   ) {}
 
-  async authenticate(githubUser: GithubUserData): Promise<Authentication | undefined> {
-    const user: CreateUser = {
-      username: githubUser.login,
-      name: githubUser.name ?? githubUser.login,
-      avatar: githubUser.avatar_url,
-    };
-
-    const provider: Provider = {
-      name: GithubService.PROVIDER,
-      userId: githubUser.id,
-    };
-
-    return await this.authService.authenticate(user, provider);
+  async authenticate(githubUser: GithubUserData): Promise<Authentication> {
+    return await this.authService.authenticate(
+      {
+        username: githubUser.login,
+        name: githubUser.name ?? githubUser.login,
+        avatar: githubUser.avatar_url,
+      },
+      {
+        name: GithubService.PROVIDER,
+        userId: githubUser.id,
+      }
+    );
   }
 
-  async byId(providerId: Auth['providerId']): Promise<Auth | undefined> {
-    return await this.authService.byProvider(GithubService.PROVIDER, providerId);
+  async accessToken(code: string, state: string): Promise<GithubAccessToken> {
+    const response = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'User-Agent': 'codeduel.it/1.0',
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: this.config.clientId,
+        client_secret: this.config.clientSecret,
+        code,
+        state,
+      }),
+    });
+    return (await response.json()) as unknown as GithubAccessToken;
   }
 
-  async userByProvider(providerId: Auth['providerId']): Promise<User | undefined> {
-    const auth = await this.byId(providerId);
-    if (!auth) return undefined;
-
-    const authUser = await this.userService.findById(auth.userId);
-    if (!authUser) return undefined;
-
-    return authUser;
+  async userData(accessToken: string): Promise<GithubUserData> {
+    const response = await fetch('https://api.github.com/user', {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'codeduel.it/1.0',
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    return (await response.json()) as unknown as GithubUserData;
   }
 
-  async accessToken(code: string, state: string): Promise<GithubAccessToken | undefined> {
-    try {
-      const response = await fetch('https://github.com/login/oauth/access_token', {
-        method: 'POST',
-        headers: {
-          'User-Agent': 'codeduel.it/1.0',
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
-          code,
-          state,
-        }),
-      });
-      const data = (await response.json()) as unknown as GithubAccessToken;
-      return data;
-    } catch (e) {
-      console.error('[ERROR]', e);
-      return undefined;
-    }
-  }
+  authorizationUrl(state: string): string {
+    const url = new URL('https://github.com/login/oauth/authorize');
 
-  async userData(accessToken: string): Promise<GithubUserData | undefined> {
-    try {
-      const response = await fetch('https://api.github.com/user', {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'codeduel.it/1.0',
-          Accept: 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const data = (await response.json()) as unknown as GithubUserData;
-      return data;
-    } catch (e) {
-      console.error('[ERROR]', e);
-      return undefined;
-    }
+    url.search = new URLSearchParams({
+      client_id: this.config.clientId,
+      redirect_uri: this.config.redirectUri,
+      scope: 'read:user,user:email',
+      state,
+      allow_signup: 'false',
+    }).toString();
+
+    return url.toString();
   }
 
   createStateCookie(state: string): string {
     return createCookie(this.config.stateCookie.name, state, this.config.stateCookie);
   }
 
-  createRedirectCookie(redirect: string): string {
-    return createCookie('redirect', redirect, {
-      maxAge: 60,
-    });
-  }
-
-  getRedirect(cookie: string): string | undefined {
-    return getCookieValueByName(cookie, 'redirect');
-  }
-
-  getState(cookie: string): string | undefined {
+  stateCookie(cookie: string): string | undefined {
     return getCookieValueByName(cookie, this.config.stateCookie.name);
   }
 
-  getAuthorizationUrl(state: string): string {
-    const base = 'https://github.com/login/oauth/authorize';
+  createRedirectCookie(redirect: string): string {
+    return createCookie('redirect', redirect, { maxAge: 60 });
+  }
 
-    const query = new URLSearchParams({
-      client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
-      scope: 'read:user,user:email',
-      state,
-      allow_signup: 'false',
-    });
-
-    const url = new URL(base);
-    url.search = query.toString();
-
-    return url.toString();
+  redirectCookie(cookie: string): string | undefined {
+    return getCookieValueByName(cookie, 'redirect');
   }
 }

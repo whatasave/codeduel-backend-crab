@@ -3,7 +3,6 @@ import { validated } from '@codeduel-backend-crab/server/validation';
 import type { AuthService } from './service';
 import { GithubController } from './github/controller';
 import { GithubService } from './github/service';
-import type { UserService } from '../user/service';
 import type { Config } from './config';
 
 export class AuthController {
@@ -12,11 +11,10 @@ export class AuthController {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly userService: UserService,
     private readonly config: Config
   ) {
-    this.githubService = new GithubService(this.authService, this.userService, this.config.github);
-    this.githubController = new GithubController(this.githubService, this.authService);
+    this.githubService = new GithubService(this.authService, this.config.github);
+    this.githubController = new GithubController(this.githubService);
   }
 
   setup(group: RouterGroup): void {

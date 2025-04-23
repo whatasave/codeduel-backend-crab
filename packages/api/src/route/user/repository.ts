@@ -35,7 +35,7 @@ export class UserRepository {
   }
 
   async create(user: CreateUser): Promise<User | undefined> {
-    const [newUser] = await this.database
+    const newUser = await this.database
       .insertInto('user')
       .values(user)
       .onConflict((qb) =>
@@ -45,7 +45,7 @@ export class UserRepository {
         })
       )
       .returningAll()
-      .execute();
+      .executeTakeFirst();
     if (!newUser) return undefined;
 
     return this.selectToUser(newUser);

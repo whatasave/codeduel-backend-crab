@@ -38,13 +38,13 @@ export class RootController {
     this.healthService = new HealthService();
     this.userService = new UserService(this.userRepository);
     this.challengeService = new ChallengeService(this.challengeRepository);
-    this.authService = new AuthService(this.authRepository, this.userService, config.auth);
+    this.authService = new AuthService(this.authRepository, config.auth);
 
     this.redocController = new RedocController();
     this.healthController = new HealthController(this.healthService);
     this.userController = new UserController(this.userService);
     this.challengeController = new ChallengeController(this.challengeService);
-    this.authController = new AuthController(this.authService, this.userService, config.auth);
+    this.authController = new AuthController(this.authService, config.auth);
   }
 
   setup(group: RouterGroup): void {

@@ -20,7 +20,7 @@ export const descriptiveErrorHandler: Middleware = (route) => ({
       return await route.handler(request);
     } catch (error) {
       if (error instanceof Error) {
-        return internalServerError(error.stack, {
+        return internalServerError(error.stack ?? error.toString(), {
           'Content-Type': 'text/plain',
         });
       }

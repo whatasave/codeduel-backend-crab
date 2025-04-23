@@ -25,7 +25,7 @@ export function loadConfig(): Config {
           allowedOrigins: env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),
           allowedMethods: env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
           allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
-          allowCredentials: env.CORS_ALLOW_CREDENTIALS === 'true',
+          allowCredentials: env.CORS_ALLOW_CREDENTIALS,
         }
       : undefined,
     database: {
@@ -34,7 +34,7 @@ export function loadConfig(): Config {
       database: env.DATABASE_NAME,
       user: env.DATABASE_USER,
       password: env.DATABASE_PASSWORD,
-      ssl: env.DATABASE_SSL === 'true',
+      ssl: env.DATABASE_SSL,
       maxConnections: env.DATABASE_MAX_CONNECTIONS,
     },
     auth: {
@@ -46,8 +46,9 @@ export function loadConfig(): Config {
           name: env.GITHUB_STATE_COOKIE_NAME,
           domain: env.GITHUB_STATE_COOKIE_DOMAIN,
           path: env.GITHUB_STATE_COOKIE_PATH,
-          httpOnly: env.GITHUB_STATE_COOKIE_HTTP_ONLY === 'true',
-          secure: env.GITHUB_STATE_COOKIE_SECURE === 'true',
+          maxAge: env.GITHUB_STATE_COOKIE_MAX_AGE,
+          httpOnly: env.GITHUB_STATE_COOKIE_HTTP_ONLY,
+          secure: env.GITHUB_STATE_COOKIE_SECURE,
           sameSite: env.GITHUB_STATE_COOKIE_SAME_SITE,
         },
       },
@@ -57,12 +58,28 @@ export function loadConfig(): Config {
         audience: env.JWT_AUDIENCE,
       },
       accessToken: {
-        expiresIn: env.ACCESS_TOKEN_EXPIRES_IN ? parseInt(env.ACCESS_TOKEN_EXPIRES_IN) : 60, // 1 minute
+        expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
+        cookie: {
+          name: env.ACCESS_TOKEN_COOKIE_NAME,
+          domain: env.ACCESS_TOKEN_COOKIE_DOMAIN,
+          path: env.ACCESS_TOKEN_COOKIE_PATH,
+          maxAge: env.ACCESS_TOKEN_COOKIE_MAX_AGE,
+          httpOnly: env.ACCESS_TOKEN_COOKIE_HTTP_ONLY,
+          secure: env.ACCESS_TOKEN_COOKIE_SECURE,
+          sameSite: env.ACCESS_TOKEN_COOKIE_SAME_SITE,
+        },
       },
       refreshToken: {
-        expiresIn: env.REFRESH_TOKEN_EXPIRES_IN
-          ? parseInt(env.REFRESH_TOKEN_EXPIRES_IN)
-          : 60 * 60 * 24 * 30, // 30 days
+        expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
+        cookie: {
+          name: env.REFRESH_TOKEN_COOKIE_NAME,
+          domain: env.REFRESH_TOKEN_COOKIE_DOMAIN,
+          path: env.REFRESH_TOKEN_COOKIE_PATH,
+          maxAge: env.REFRESH_TOKEN_COOKIE_MAX_AGE,
+          httpOnly: env.REFRESH_TOKEN_COOKIE_HTTP_ONLY,
+          secure: env.REFRESH_TOKEN_COOKIE_SECURE,
+          sameSite: env.REFRESH_TOKEN_COOKIE_SAME_SITE,
+        },
       },
     },
   };

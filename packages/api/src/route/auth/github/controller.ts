@@ -32,7 +32,7 @@ export class GithubController {
     },
     handler: async () => {
       const state = randomUUIDv7();
-      const cookie = this.githubService.createCookie(state);
+      const cookie = this.githubService.createStateCookie(state);
       const redirectUrl = this.githubService.getAuthorizationUrl(state);
 
       return temporaryRedirect(undefined, {
@@ -67,26 +67,17 @@ export class GithubController {
       const githubToken = await this.githubService.accessToken(code, state);
       if (!githubToken) return internalServerError({ message: 'Failed to get access token' });
 
-      const user = await this.githubService.userData(githubToken.access_token);
-      if (!user) return internalServerError({ message: 'Failed to get user data' });
+      const githubUser = await this.githubService.userData(githubToken.access_token);
+      if (!githubUser) return internalServerError({ message: 'Failed to get user data' });
 
-      const authUser =
-        (await this.githubService.userByProvider(user.id)) ??
-        (await this.githubService.create(user));
-      if (!authUser) return internalServerError({ message: 'Failed to get user' });
+      const authentication = await this.githubService.authenticate(githubUser);
+      if (!authentication) return internalServerError({ message: 'Failed to authenticate' });
 
-      const tokens = await this.authService.tokens(authUser);
-
-      if (!tokens) return internalServerError({ message: 'Failed to get tokens' });
-      const cookieAccessToken = this.githubService.createCookie(tokens.accessToken);
-      const cookieRefreshToken = this.githubService.createCookie(tokens.refreshToken);
-      // const cookieExpiresIn = this.githubService.createCookie(tokens.expiresIn.toString());
-
-      const setCookie = [cookieAccessToken, cookieRefreshToken].join(',');
+      const cookies = authentication.cookies;
 
       return permanentRedirect(undefined, {
-        Location: 'http://127.0.0.1:5000',
-        'Set-Cookie': setCookie,
+        Location: 'http://127.0.0.1:5000/auth/token',
+        'Set-Cookie': [cookies.access, cookies.refresh],
       });
     },
   });

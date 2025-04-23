@@ -1,6 +1,7 @@
-import type { User } from '../../user/data';
+import { createCookie, getCookieValueByName } from '../../../utils/cookie';
+import type { CreateUser, User } from '../../user/data';
 import type { UserService } from '../../user/service';
-import type { Auth } from '../data';
+import type { Auth, Authentication, Provider } from '../data';
 import type { AuthService } from '../service';
 import type { Config } from './config';
 import type { GithubAccessToken, GithubUserData } from './data';
@@ -14,28 +15,19 @@ export class GithubService {
     private readonly config: Config
   ) {}
 
-  async create(user: GithubUserData): Promise<User | undefined> {
-    const newUser = await this.userService.create({
-      username: user.login,
-      name: user.name ?? user.login,
-      avatar: user.avatar_url ?? undefined,
-      biography: user.bio ?? undefined,
-    });
+  async authenticate(githubUser: GithubUserData): Promise<Authentication | undefined> {
+    const user: CreateUser = {
+      username: githubUser.login,
+      name: githubUser.name ?? githubUser.login,
+      avatar: githubUser.avatar_url,
+    };
 
-    if (!newUser) return undefined;
+    const provider: Provider = {
+      name: GithubService.PROVIDER,
+      userId: githubUser.id,
+    };
 
-    const auth = await this.authService.create({
-      userId: newUser.id,
-      provider: GithubService.PROVIDER,
-      providerId: user.id,
-    });
-
-    if (!auth) {
-      await this.userService.delete(newUser.id);
-      return undefined;
-    }
-
-    return newUser;
+    return await this.authService.authenticate(user, provider);
   }
 
   async byId(providerId: Auth['providerId']): Promise<Auth | undefined> {
@@ -94,30 +86,12 @@ export class GithubService {
     }
   }
 
-  createCookie(state: string): string {
-    const cookieOptions = this.config.stateCookie;
-    const cookie = [
-      `${cookieOptions.name}=${state}`,
-      'Max-Age=600',
-      cookieOptions.domain && `Domain=${cookieOptions.domain}`,
-      cookieOptions.path && `Path=${cookieOptions.path}`,
-      cookieOptions.httpOnly && 'HttpOnly',
-      cookieOptions.secure && 'Secure',
-      cookieOptions.sameSite && `SameSite=${cookieOptions.sameSite}`,
-    ].filter(Boolean);
-    return cookie.join('; ');
+  createStateCookie(state: string): string {
+    return createCookie(this.config.stateCookie.name, state, this.config.stateCookie);
   }
 
   getState(cookie: string): string | undefined {
-    if (!cookie.includes(this.config.stateCookie.name)) return undefined;
-    const parsedCookies = cookie.split('; ').reduce<Record<string, string>>((acc, curr) => {
-      const [key, value] = curr.split('=');
-      if (!key || !value) return acc;
-      acc[key] = value;
-      return acc;
-    }, {});
-
-    return parsedCookies[this.config.stateCookie.name];
+    return getCookieValueByName(cookie, this.config.stateCookie.name);
   }
 
   getAuthorizationUrl(state: string): string {

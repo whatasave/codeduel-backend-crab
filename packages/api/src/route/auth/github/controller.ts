@@ -34,7 +34,7 @@ export class GithubController {
       const { redirect } = query;
       const state = randomUUIDv7();
       const cookie = this.githubService.createStateCookie(state);
-      const redirectCookie = this.githubService.createRedirectCookie(redirect);
+      const redirectCookie = redirect && this.githubService.createRedirectCookie(redirect);
       const redirectUrl = this.githubService.getAuthorizationUrl(state);
 
       return temporaryRedirect(undefined, {
@@ -76,15 +76,14 @@ export class GithubController {
       if (!authentication) return internalServerError({ message: 'Failed to authenticate' });
 
       const cookies = authentication.cookies;
-      console.log('Cookies:', cookies);
-
       const redirect = this.githubService.getRedirect(headers?.get('cookie') ?? '');
-      console.log('Redirect:', redirect);
 
-      return permanentRedirect(undefined, {
-        ...(!redirect && { Location: redirect }),
+      const respHeader = {
+        ...(redirect !== undefined && { Location: redirect }),
         'Set-Cookie': [cookies.access, cookies.refresh],
-      });
+      };
+
+      return permanentRedirect(undefined, respHeader);
     },
   });
 }

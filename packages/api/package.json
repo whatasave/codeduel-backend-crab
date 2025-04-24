@@ -15,8 +15,8 @@
     "typescript": "^5"
   },
   "scripts": {
-    "dev": "bun run ./src/main.ts",
-    "build": "bun build ./src/main.ts --outdir ./dist",
+    "dev": "tsc --noEmit && bun run ./src/main.ts",
+    "build": "bun build ./src/main.ts --target=bun --outdir ./dist",
     "start": "bun run dist/main.js"
   }
 }

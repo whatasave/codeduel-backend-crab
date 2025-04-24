@@ -67,7 +67,7 @@ export class GithubController {
       const cookieState = this.githubService.stateCookie(headers.get('cookie') ?? '');
       if (state !== cookieState) return badRequest({ message: 'Invalid or Missing state' });
 
-      const githubToken = await this.githubService.accessToken(code, state);
+      const githubToken = await this.githubService.exchangeCodeForToken(code, state);
       const githubUser = await this.githubService.userData(githubToken.access_token);
 
       const authentication = await this.githubService.create(githubUser);

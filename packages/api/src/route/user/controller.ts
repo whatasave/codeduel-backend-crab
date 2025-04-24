@@ -29,9 +29,9 @@ export class UserController {
     },
     handler: async ({ query }) => {
       const { username } = query;
-      if (!username) return ok(await this.userService.findAll());
+      if (!username) return ok(await this.userService.all());
 
-      const user = await this.userService.findByUsername(username);
+      const user = await this.userService.byUsername(username);
       if (!user) return notFound({ error: 'User not found' });
       return ok(user);
     },
@@ -53,7 +53,7 @@ export class UserController {
     },
     handler: async ({ params }) => {
       const { id } = params;
-      const user = await this.userService.findById(id);
+      const user = await this.userService.byId(id);
       if (!user) return notFound({ error: 'User not found' });
       return ok(user);
     },

@@ -47,7 +47,7 @@ export class AuthRepository {
         .executeTakeFirst();
 
       if (existingAuth) {
-        const existingUser = await userRepo.findById(existingAuth.user_id);
+        const existingUser = await userRepo.byId(existingAuth.user_id);
         if (!existingUser) throw new Error('Failed to find user');
 
         return [this.selectToAuth(existingAuth), existingUser] as [Auth, User];

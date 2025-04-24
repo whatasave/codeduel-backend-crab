@@ -4,16 +4,24 @@ import type { AuthService } from './service';
 import { GithubController } from './github/controller';
 import { GithubService } from './github/service';
 import type { Config } from './config';
+import { GitlabService } from './gitlab/service';
+import { GitlabController } from './gitlab/controller';
 
 export class AuthController {
   private readonly githubService: GithubService;
+  private readonly gitlabService: GitlabService;
+
   private readonly githubController: GithubController;
+  private readonly gitlabController: GitlabController;
 
   constructor(
     private readonly authService: AuthService,
     private readonly config: Config
   ) {
     this.githubService = new GithubService(this.authService, this.config.github);
+    this.gitlabService = new GitlabService(this.authService, this.config.gitlab);
+
+    this.gitlabController = new GitlabController(this.gitlabService);
     this.githubController = new GithubController(this.githubService);
   }
 
@@ -23,6 +31,7 @@ export class AuthController {
     group.route(this.logout);
 
     this.githubController.setup(group.group({ prefix: '/github' }));
+    this.gitlabController.setup(group.group({ prefix: '/gitlab' }));
   }
 
   validate = validated({

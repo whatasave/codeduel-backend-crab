@@ -2,12 +2,14 @@
   "name": "@codeduel-backend-crab/api",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.9"
   },
   "dependencies": {
     "@codeduel-backend-crab/database": "workspace:*",
     "@codeduel-backend-crab/server": "workspace:*",
-    "@sinclair/typebox": "^0.34.29"
+    "@sinclair/typebox": "^0.34.29",
+    "jsonwebtoken": "^9.0.2"
   },
   "peerDependencies": {
     "typescript": "^5"

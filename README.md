@@ -25,3 +25,9 @@ $ docker run -p 3000:80 codeduel-be
 
 # go to http://localhost:3000/v1/health/liveness
 ```
+
+### Start a PostgreSQL
+
+```bash
+$ docker run --name cd-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_USER=user -e POSTGRES_DB=codeduel -p 5432:5432 -d postgres
+```

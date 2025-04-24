@@ -1,6 +1,6 @@
 import { sql, type Kysely } from 'kysely';
-import { USER_TABLE_NAME } from './20250407_user';
-import { updateTimestampTrigger } from './20250406_update_timestamp';
+import { USER_TABLE_NAME } from './20250421_1_user.ts';
+import { updateTimestampTrigger } from './20250421_0_update_timestamp.ts';
 
 export const CHALLENGE_TABLE_NAME = 'challenge';
 
@@ -23,6 +23,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  await dropTrigger(db);
   await db.schema.dropTable(CHALLENGE_TABLE_NAME).ifExists().execute();
+  await dropTrigger(db);
 }

@@ -2,6 +2,7 @@ import { CorsOptions } from '@codeduel-backend-crab/server/cors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 import { Config as DBConfig } from '@codeduel-backend-crab/database';
+import { Config as AuthConfig } from './route/auth/config';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -10,6 +11,7 @@ export const Config = Type.Object({
   descriptiveErrors: Type.Boolean(),
   cors: Type.Optional(CorsOptions),
   database: DBConfig,
+  auth: AuthConfig,
 });
 
 export function loadConfig(): Config {
@@ -23,7 +25,7 @@ export function loadConfig(): Config {
           allowedOrigins: env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),
           allowedMethods: env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
           allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
-          allowCredentials: env.CORS_ALLOW_CREDENTIALS === 'true',
+          allowCredentials: env.CORS_ALLOW_CREDENTIALS,
         }
       : undefined,
     database: {
@@ -32,8 +34,53 @@ export function loadConfig(): Config {
       database: env.DATABASE_NAME,
       user: env.DATABASE_USER,
       password: env.DATABASE_PASSWORD,
-      ssl: env.DATABASE_SSL === 'true',
+      ssl: env.DATABASE_SSL,
       maxConnections: env.DATABASE_MAX_CONNECTIONS,
+    },
+    auth: {
+      github: {
+        clientId: env.GITHUB_CLIENT_ID,
+        clientSecret: env.GITHUB_CLIENT_SECRET,
+        redirectUri: env.GITHUB_REDIRECT_URI,
+        stateCookie: {
+          name: env.GITHUB_STATE_COOKIE_NAME,
+          domain: env.GITHUB_STATE_COOKIE_DOMAIN,
+          path: env.GITHUB_STATE_COOKIE_PATH,
+          maxAge: env.GITHUB_STATE_COOKIE_MAX_AGE,
+          httpOnly: env.GITHUB_STATE_COOKIE_HTTP_ONLY,
+          secure: env.GITHUB_STATE_COOKIE_SECURE,
+          sameSite: env.GITHUB_STATE_COOKIE_SAME_SITE,
+        },
+      },
+      jwt: {
+        secret: env.JWT_SECRET,
+        issuer: env.JWT_ISSUER,
+        audience: env.JWT_AUDIENCE,
+      },
+      accessToken: {
+        expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
+        cookie: {
+          name: env.ACCESS_TOKEN_COOKIE_NAME,
+          domain: env.ACCESS_TOKEN_COOKIE_DOMAIN,
+          path: env.ACCESS_TOKEN_COOKIE_PATH,
+          maxAge: env.ACCESS_TOKEN_COOKIE_MAX_AGE,
+          httpOnly: env.ACCESS_TOKEN_COOKIE_HTTP_ONLY,
+          secure: env.ACCESS_TOKEN_COOKIE_SECURE,
+          sameSite: env.ACCESS_TOKEN_COOKIE_SAME_SITE,
+        },
+      },
+      refreshToken: {
+        expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
+        cookie: {
+          name: env.REFRESH_TOKEN_COOKIE_NAME,
+          domain: env.REFRESH_TOKEN_COOKIE_DOMAIN,
+          path: env.REFRESH_TOKEN_COOKIE_PATH,
+          maxAge: env.REFRESH_TOKEN_COOKIE_MAX_AGE,
+          httpOnly: env.REFRESH_TOKEN_COOKIE_HTTP_ONLY,
+          secure: env.REFRESH_TOKEN_COOKIE_SECURE,
+          sameSite: env.REFRESH_TOKEN_COOKIE_SAME_SITE,
+        },
+      },
     },
   };
 

@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.29",
-    "kysely": "^0.27.6",
+    "kysely": "^0.28.1",
     "pg": "^8.13.3"
   }
 }

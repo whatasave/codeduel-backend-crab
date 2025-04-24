@@ -1,5 +1,5 @@
 import { sql, type Kysely } from 'kysely';
-import { updateTimestampTrigger } from './20250406_update_timestamp';
+import { updateTimestampTrigger } from './20250421_0_update_timestamp';
 
 export const USER_TABLE_NAME = 'user';
 
@@ -23,6 +23,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  await dropTrigger(db);
   await db.schema.dropTable(USER_TABLE_NAME).ifExists().execute();
+  await dropTrigger(db);
 }

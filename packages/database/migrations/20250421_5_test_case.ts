@@ -1,7 +1,7 @@
 import type { Kysely } from 'kysely';
-import { CHALLENGE_TABLE_NAME } from './20250408_challenge';
+import { CHALLENGE_TABLE_NAME } from './20250421_4_challenge';
 
-export const TEST_CASE_TABLE_NAME = 'test_case';
+const TEST_CASE_TABLE_NAME = 'test_case';
 
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema

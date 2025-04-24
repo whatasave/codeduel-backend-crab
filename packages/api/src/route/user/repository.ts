@@ -1,5 +1,5 @@
 import { type Database, type Select } from '@codeduel-backend-crab/database';
-import type { CreateUser, User } from './data';
+import { type CreateUser, type User } from './data';
 
 export class UserRepository {
   constructor(private readonly database: Database) {}
@@ -34,20 +34,12 @@ export class UserRepository {
     return this.selectToUser(user);
   }
 
-  async create(user: CreateUser): Promise<User | undefined> {
-    const [newUser] = await this.database
+  async create(user: CreateUser): Promise<User> {
+    const newUser = await this.database
       .insertInto('user')
-      .values({
-        username: user.username,
-        name: user.name,
-        avatar: user.avatar,
-        background_image: user.backgroundImage,
-        biography: user.biography,
-      })
+      .values(user)
       .returningAll()
-      .execute();
-
-    if (!newUser) return undefined;
+      .executeTakeFirstOrThrow();
 
     return this.selectToUser(newUser);
   }

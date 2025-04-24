@@ -38,7 +38,7 @@ export class GithubController {
       const redirectUrl = this.githubService.authorizationUrl(state);
 
       return temporaryRedirect(undefined, {
-        'Set-Cookie': [cookie, redirectCookie],
+        'Set-Cookie': [cookie, redirectCookie].filter(Boolean),
         Location: redirectUrl,
       });
     },

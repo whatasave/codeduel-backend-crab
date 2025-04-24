@@ -27,7 +27,7 @@ export function createCookie(name: string, value: string, options: Partial<Cooki
   const filteredOptions = cookieOptions.filter(Boolean);
   const parsedOptions = filteredOptions.join('; ');
 
-  return `${name}=${value}; ${parsedOptions}`;
+  return parsedOptions ? `${name}=${value}; ${parsedOptions}` : `${name}=${value}`;
 }
 
 export function getCookieValueByName(cookies: string, name: string): string | undefined {

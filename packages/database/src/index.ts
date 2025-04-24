@@ -5,7 +5,6 @@ import { Type, type Static } from '@sinclair/typebox';
 import { AssertError, Value } from '@sinclair/typebox/value';
 
 export type Database = Kysely<DB>;
-export type DB2 = DB;
 
 export type Select<T extends keyof DB> = Selectable<DB[T]>;
 export type Insert<T extends keyof DB> = Insertable<DB[T]>;

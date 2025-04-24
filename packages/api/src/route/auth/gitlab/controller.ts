@@ -5,12 +5,12 @@ import {
   badRequest,
 } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
-import type { GithubService } from './service';
+import type { GitlabService } from './service';
 import { randomUUIDv7 } from 'bun';
 import { Type } from '@sinclair/typebox';
 
-export class GithubController {
-  constructor(private readonly githubService: GithubService) {}
+export class GitlabController {
+  constructor(private readonly gitlabService: GitlabService) {}
 
   setup(group: RouterGroup): void {
     group.route(this.login);
@@ -33,9 +33,9 @@ export class GithubController {
     handler: async ({ query }) => {
       const { redirect } = query;
       const state = randomUUIDv7();
-      const cookie = this.githubService.createStateCookie(state);
-      const redirectCookie = redirect && this.githubService.createRedirectCookie(redirect);
-      const redirectUrl = this.githubService.authorizationUrl(state);
+      const cookie = this.gitlabService.createStateCookie(state);
+      const redirectCookie = redirect && this.gitlabService.createRedirectCookie(redirect); // TODO move it to the auth service
+      const redirectUrl = this.gitlabService.authorizationUrl(state);
 
       return temporaryRedirect(undefined, {
         'Set-Cookie': [cookie, redirectCookie].filter(Boolean),
@@ -64,16 +64,16 @@ export class GithubController {
     handler: async ({ query, headers }) => {
       const { code, state } = query;
 
-      const cookieState = this.githubService.stateCookie(headers.get('cookie') ?? '');
+      const cookieState = this.gitlabService.stateCookie(headers.get('cookie') ?? '');
       if (state !== cookieState) return badRequest({ message: 'Invalid or Missing state' });
 
-      const githubToken = await this.githubService.exchangeCodeForToken(code, state);
-      const githubUser = await this.githubService.userData(githubToken.access_token);
+      const gitlabToken = await this.gitlabService.exchangeCodeForToken(code);
+      const gitlabUser = await this.gitlabService.userData(gitlabToken.access_token);
 
-      const authentication = await this.githubService.create(githubUser);
+      const authentication = await this.gitlabService.create(gitlabUser);
 
       const cookies = authentication.cookies;
-      const redirect = this.githubService.redirectCookie(headers.get('cookie') ?? '');
+      const redirect = this.gitlabService.redirectCookie(headers.get('cookie') ?? '');
 
       return permanentRedirect(undefined, {
         ...(redirect !== undefined && { Location: redirect }),

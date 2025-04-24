@@ -33,8 +33,10 @@ export class GithubService {
 
   /**
    * Get the access token from Github.
+   *
+   * More info: https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#web-application-flow
    */
-  async accessToken(code: string, state: string): Promise<GithubAccessToken> {
+  async exchangeCodeForToken(code: string, state: string): Promise<GithubAccessToken> {
     const response = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {

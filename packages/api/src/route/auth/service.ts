@@ -109,7 +109,7 @@ export class AuthService {
       refresh: this.createCookie(
         this.config.refreshToken.cookie.name,
         tokens.refresh,
-        this.config.accessToken.cookie
+        this.config.refreshToken.cookie
       ),
     };
   }

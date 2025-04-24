@@ -7,22 +7,22 @@ export class UserService {
   /**
    * Find all users.
    */
-  async findAll(): Promise<User[]> {
-    return await this.userRepository.findAll();
+  async all(): Promise<User[]> {
+    return await this.userRepository.all();
   }
 
   /**
    * Find a user by username.
    */
-  async findByUsername(username: User['username']): Promise<User | undefined> {
-    return await this.userRepository.findByUsername(username);
+  async byUsername(username: User['username']): Promise<User | undefined> {
+    return await this.userRepository.byUsername(username);
   }
 
   /**
    * Find a user by id.
    */
-  async findById(id: User['id']): Promise<User | undefined> {
-    return await this.userRepository.findById(id);
+  async byId(id: User['id']): Promise<User | undefined> {
+    return await this.userRepository.byId(id);
   }
 
   /**

@@ -24,7 +24,7 @@ export const CreateUser = Type.Object({
 });
 
 export class UserNameAlreadyExistsError extends Error {
-  constructor(username: string) {
+  constructor(public username: string) {
     super(`Username already exists: ${username}`);
     this.name = 'UserNameAlreadyExistsError';
   }

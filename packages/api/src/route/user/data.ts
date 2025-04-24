@@ -22,3 +22,10 @@ export const CreateUser = Type.Object({
   backgroundImage: User.properties.backgroundImage,
   biography: User.properties.biography,
 });
+
+export class UserNameAlreadyExistsError extends Error {
+  constructor(username: string) {
+    super(`Username already exists: ${username}`);
+    this.name = 'UserNameAlreadyExistsError';
+  }
+}

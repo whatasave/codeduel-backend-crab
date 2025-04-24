@@ -1,6 +1,6 @@
 import type { Database, Select } from '@codeduel-backend-crab/database';
 import type { Auth, Provider } from './data';
-import type { CreateUser, User } from '../user/data';
+import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
 import { UserRepository } from '../user/repository';
 
 export class AuthRepository {
@@ -10,8 +10,14 @@ export class AuthRepository {
     const authUser = await this.database.transaction().execute(async (tx) => {
       const userRepo = new UserRepository(tx);
 
+      const existingUser = await tx
+        .selectFrom('user')
+        .selectAll()
+        .where('username', '=', user.username)
+        .executeTakeFirst();
+      if (existingUser) throw new UserNameAlreadyExistsError(user.username);
+
       const newUser = await userRepo.create(user);
-      if (!newUser) throw new Error('Failed to create user');
 
       const newAuth = await tx
         .insertInto('auth')
@@ -21,9 +27,7 @@ export class AuthRepository {
           provider_id: provider.userId,
         })
         .returningAll()
-        .executeTakeFirst();
-
-      if (!newAuth) throw new Error('Failed to create auth');
+        .executeTakeFirstOrThrow();
 
       return [this.selectToAuth(newAuth), newUser] as [Auth, User];
     });

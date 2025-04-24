@@ -70,7 +70,7 @@ export class GithubController {
       const githubToken = await this.githubService.accessToken(code, state);
       const githubUser = await this.githubService.userData(githubToken.access_token);
 
-      const authentication = await this.githubService.authenticate(githubUser);
+      const authentication = await this.githubService.create(githubUser);
 
       const cookies = authentication.cookies;
       const redirect = this.githubService.redirectCookie(headers.get('cookie') ?? '');

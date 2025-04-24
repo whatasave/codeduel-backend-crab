@@ -36,8 +36,8 @@ export const Provider = Type.Object({
   userId: Auth.properties.providerId,
 });
 
-export type Authentication = Static<typeof Authentication>;
-export const Authentication = Type.Object({
+export type AuthUser = Static<typeof AuthUser>;
+export const AuthUser = Type.Object({
   tokens: Tokens,
   cookies: AuthCookies,
   // redirect: Type.String(),

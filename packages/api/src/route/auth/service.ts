@@ -1,9 +1,10 @@
-import { type CookieOptions, createCookie } from '../../utils/cookie';
-import type { CreateUser, User } from '../user/data';
+import { randomUUIDv7 } from 'bun';
+import { createCookie } from '../../utils/cookie';
+import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
 import type { Config } from './config';
 import type {
   AuthCookies,
-  Authentication,
+  AuthUser,
   JwtAccessToken,
   JwtRefreshToken,
   Provider,
@@ -18,15 +19,38 @@ export class AuthService {
     private readonly config: Config
   ) {}
 
-  async authenticate(user: CreateUser, provider: Provider): Promise<Authentication> {
+  /**
+   * Create a new user if it does not exist. If the user already exists, return the existing user.
+   */
+  async createIfNotExists(user: CreateUser, provider: Provider): Promise<AuthUser> {
     const [_, newUser] = await this.authRepository.createIfNotExists(user, provider);
-
     const tokens = await this.tokens(newUser);
     const cookies = this.createCookies(tokens);
 
     return { tokens, cookies };
   }
 
+  /**
+   * Create a new user. If the user already exists, create a new user with a random username.
+   */
+  async createForce(user: CreateUser, provider: Provider): Promise<AuthUser> {
+    try {
+      return await this.createIfNotExists(user, provider);
+    } catch (error) {
+      if (!(error instanceof UserNameAlreadyExistsError)) throw error;
+      return await this.createIfNotExists(
+        {
+          ...user,
+          username: `${user.username}-${randomUUIDv7()}`,
+        },
+        provider
+      );
+    }
+  }
+
+  /**
+   * Create a access token for the user.
+   */
   accessToken(user: User): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
@@ -50,6 +74,9 @@ export class AuthService {
     });
   }
 
+  /**
+   * Create a refresh token for the user.
+   */
   refreshToken(user: User): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
@@ -71,10 +98,16 @@ export class AuthService {
     });
   }
 
+  /**
+   * Create a pair of access and refresh tokens for the user.
+   */
   async tokens(user: User): Promise<Tokens> {
     return { access: await this.accessToken(user), refresh: await this.refreshToken(user) };
   }
 
+  /**
+   * Verify the access or refresh token.
+   */
   async verify(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
       jwt.verify(token, this.config.jwt.secret, { algorithms: ['HS256'] }, (err, decode) => {
@@ -95,18 +128,17 @@ export class AuthService {
     });
   }
 
-  createCookie(key: string, value: string, options: CookieOptions): string {
-    return createCookie(key, value, options);
-  }
-
+  /**
+   * Create a cookie for the access or refresh token.
+   */
   createCookies(tokens: Tokens): AuthCookies {
     return {
-      access: this.createCookie(
+      access: createCookie(
         this.config.accessToken.cookie.name,
         tokens.access,
         this.config.accessToken.cookie
       ),
-      refresh: this.createCookie(
+      refresh: createCookie(
         this.config.refreshToken.cookie.name,
         tokens.refresh,
         this.config.refreshToken.cookie

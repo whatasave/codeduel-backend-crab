@@ -34,25 +34,29 @@ export class UserRepository {
     return this.selectToUser(user);
   }
 
-  async create(user: CreateUser): Promise<User | undefined> {
+  async create(user: CreateUser): Promise<User> {
+    const newUser = await this.database
+      .insertInto('user')
+      .values(user)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.selectToUser(newUser);
+  }
+
+  async createForce(user: CreateUser): Promise<User> {
     const newUser = await this.database
       .insertInto('user')
       .values(user)
       .onConflict((qb) =>
         qb.column('username').doUpdateSet({
-          ...user,
           username: user.username + '_' + Date.now().toString(),
         })
       )
       .returningAll()
-      .executeTakeFirst();
-    if (!newUser) return undefined;
+      .executeTakeFirstOrThrow();
 
     return this.selectToUser(newUser);
-  }
-
-  async delete(id: User['id']): Promise<void> {
-    await this.database.deleteFrom('user').where('id', '=', id).execute();
   }
 
   private selectToUser(user: Select<'user'>): User {

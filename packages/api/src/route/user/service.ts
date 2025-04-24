@@ -16,11 +16,7 @@ export class UserService {
     return await this.userRepository.findById(id);
   }
 
-  async create(user: CreateUser): Promise<User | undefined> {
+  async create(user: CreateUser): Promise<User> {
     return await this.userRepository.create(user);
-  }
-
-  async delete(id: User['id']): Promise<void> {
-    return await this.userRepository.delete(id);
   }
 }

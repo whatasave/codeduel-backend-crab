@@ -1,7 +1,14 @@
 import { type Database, type Select } from '@codeduel-backend-crab/database';
 import { type CreateUser, type User } from './data';
 
-export class UserRepository {
+export interface IUserRepository {
+  all(): Promise<User[]>;
+  byUsername(username: User['username']): Promise<User | undefined>;
+  byId(id: User['id']): Promise<User | undefined>;
+  create(user: CreateUser): Promise<User>;
+}
+
+export class UserRepository implements IUserRepository {
   constructor(private readonly database: Database) {}
 
   async all(): Promise<User[]> {

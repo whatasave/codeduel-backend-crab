@@ -36,13 +36,6 @@ export const Provider = Type.Object({
   userId: Auth.properties.providerId,
 });
 
-export type AuthUser = Static<typeof AuthUser>;
-export const AuthUser = Type.Object({
-  tokens: Tokens,
-  cookies: AuthCookies,
-  // redirect: Type.String(),
-});
-
 export type JwtAccessToken = Static<typeof JwtAccessToken>;
 export const JwtAccessToken = Type.Object({
   iss: Type.String(),

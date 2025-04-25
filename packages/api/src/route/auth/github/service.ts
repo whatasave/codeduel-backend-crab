@@ -1,15 +1,21 @@
-import { createCookie, getCookieValueByName } from '../../../utils/cookie';
-import type { AuthUser } from '../data';
+import { Type, type Static } from '@sinclair/typebox';
+import type { Tokens } from '../data';
 import type { AuthService } from '../service';
-import type { Config } from './config';
 import type { GithubAccessToken, GithubUserData } from './data';
+
+export type GithubServiceConfig = Static<typeof GithubServiceConfig>;
+export const GithubServiceConfig = Type.Object({
+  clientId: Type.String(),
+  clientSecret: Type.String(),
+  redirectUri: Type.String(),
+});
 
 export class GithubService {
   private static readonly PROVIDER: string = 'github';
 
   constructor(
     private readonly authService: AuthService,
-    private readonly config: Config
+    private readonly config: GithubServiceConfig
   ) {}
 
   /**
@@ -17,7 +23,7 @@ export class GithubService {
    *
    * @returns The tokens and cookies for the user.
    */
-  async create(githubUser: GithubUserData): Promise<AuthUser> {
+  async create(githubUser: GithubUserData): Promise<Tokens> {
     return await this.authService.createForce(
       {
         username: githubUser.login,
@@ -69,6 +75,11 @@ export class GithubService {
     return (await response.json()) as unknown as GithubUserData;
   }
 
+  async exchangeCodeForUserData(code: string, state: string): Promise<GithubUserData> {
+    const token = await this.exchangeCodeForToken(code, state);
+    return await this.userData(token.access_token);
+  }
+
   /**
    * Create the authorization URL for Github.
    */
@@ -84,41 +95,5 @@ export class GithubService {
     }).toString();
 
     return url.toString();
-  }
-
-  /**
-   * Create state cookie to prevent CSRF attacks.
-   * This cookie is set when the user is redirected to Github for authentication.
-   * The state is a random string that is used to verify the response from Github.
-   */
-  createStateCookie(state: string): string {
-    return createCookie({
-      ...this.config.stateCookie,
-      name: this.config.stateCookie.name,
-      value: state,
-    });
-  }
-
-  /**
-   * Get the state cookie value.
-   * This cookie is set when the user is redirected to Github for authentication.
-   * The state is a random string that is used to verify the response from Github.
-   */
-  stateCookie(cookie: string | null): string | undefined {
-    return getCookieValueByName(cookie, this.config.stateCookie.name);
-  }
-
-  /**
-   * Create redirect cookie to store the redirect URL after authentication.
-   */
-  createRedirectCookie(redirect: string): string {
-    return createCookie({ name: 'redirect', value: redirect, maxAge: 60 });
-  }
-
-  /**
-   * Get the redirect cookie value.
-   */
-  redirectCookie(cookie: string | null): string | undefined {
-    return getCookieValueByName(cookie, 'redirect');
   }
 }

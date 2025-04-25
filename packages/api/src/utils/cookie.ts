@@ -56,19 +56,16 @@ function parseCookie(cookieString: string): RequestCookie {
   };
 }
 
-export function parseCookies(cookiesString: string | null): RequestCookie[] {
-  if (!cookiesString) return [];
-  const cookies = cookiesString.split(';').map((cookie) => cookie.trim());
-  return cookies.map(parseCookie);
-}
-
-export function getCookieValueByName(
-  cookiesString: string | null,
-  name: RequestCookie['name']
-): string | undefined {
-  const cookies = parseCookies(cookiesString);
-  const cookie = cookies.find((cookie) => cookie.name === name);
-  return cookie?.value;
+export function parseCookies(cookiesString: string | null): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  if (!cookiesString) return cookies;
+  for (const cookieString of cookiesString.split(';')) {
+    const cookie = parseCookie(cookieString.trim());
+    if (cookie.name) {
+      cookies[cookie.name] = cookie.value ?? '';
+    }
+  }
+  return cookies;
 }
 
 export function removeCookie(name: RequestCookie['name']): string {

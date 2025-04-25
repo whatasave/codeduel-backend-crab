@@ -1,39 +1,43 @@
 import { randomUUIDv7 } from 'bun';
-import { createCookie } from '../../utils/cookie';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
-import type { Config } from './config';
-import type {
-  AuthCookies,
-  AuthUser,
-  JwtAccessToken,
-  JwtRefreshToken,
-  Provider,
-  Tokens,
-} from './data';
+import type { JwtAccessToken, JwtRefreshToken, Provider, Tokens } from './data';
 import type { AuthRepository } from './repository';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
+import { Type, type Static } from '@sinclair/typebox';
+
+export type AuthServiceConfig = Static<typeof AuthServiceConfig>;
+export const AuthServiceConfig = Type.Object({
+  jwt: Type.Object({
+    secret: Type.String(),
+    issuer: Type.String(),
+    audience: Type.String(),
+  }),
+  accessToken: Type.Object({
+    expiresIn: Type.Number(),
+  }),
+  refreshToken: Type.Object({
+    expiresIn: Type.Number(),
+  }),
+});
 
 export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
-    private readonly config: Config
+    private readonly config: AuthServiceConfig
   ) {}
 
   /**
    * Create a new user if it does not exist. If the user already exists, return the existing user.
    */
-  async createIfNotExists(user: CreateUser, provider: Provider): Promise<AuthUser> {
+  async createIfNotExists(user: CreateUser, provider: Provider): Promise<Tokens> {
     const [_, newUser] = await this.authRepository.createIfNotExists(user, provider);
-    const tokens = await this.tokens(newUser);
-    const cookies = this.createCookies(tokens);
-
-    return { tokens, cookies };
+    return await this.generateTokens(newUser);
   }
 
   /**
    * Create a new user. If the user already exists, create a new user with a random username.
    */
-  async createForce(user: CreateUser, provider: Provider): Promise<AuthUser> {
+  async createForce(user: CreateUser, provider: Provider): Promise<Tokens> {
     try {
       return await this.createIfNotExists(user, provider);
     } catch (error) {
@@ -51,13 +55,13 @@ export class AuthService {
   /**
    * Create a access token for the user.
    */
-  accessToken(user: User): Promise<string> {
+  generateAccessToken(user: User, now: number = Date.now()): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
         {
           iss: this.config.jwt.issuer,
           aud: this.config.jwt.audience,
-          exp: Math.floor(Date.now() / 1000) + this.config.accessToken.expiresIn,
+          exp: Math.floor(now / 1000) + this.config.accessToken.expiresIn,
           sub: user.id,
 
           username: user.username,
@@ -77,13 +81,13 @@ export class AuthService {
   /**
    * Create a refresh token for the user.
    */
-  refreshToken(user: User): Promise<string> {
+  generateRefreshToken(user: User, now: number = Date.now()): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
         {
           iss: this.config.jwt.issuer,
           aud: this.config.jwt.audience,
-          exp: Math.floor(Date.now() / 1000) + this.config.refreshToken.expiresIn,
+          exp: Math.floor(now / 1000) + this.config.refreshToken.expiresIn,
           sub: user.id,
         } as JwtRefreshToken,
         this.config.jwt.secret,
@@ -101,8 +105,15 @@ export class AuthService {
   /**
    * Create a pair of access and refresh tokens for the user.
    */
-  async tokens(user: User): Promise<Tokens> {
-    return { access: await this.accessToken(user), refresh: await this.refreshToken(user) };
+  async generateTokens(user: User): Promise<Tokens> {
+    const now = Date.now();
+
+    const [access, refresh] = await Promise.all([
+      this.generateAccessToken(user, now),
+      this.generateRefreshToken(user, now),
+    ]);
+
+    return { access, refresh };
   }
 
   /**
@@ -126,23 +137,5 @@ export class AuthService {
         resolve();
       });
     });
-  }
-
-  /**
-   * Create a cookie for the access or refresh token.
-   */
-  createCookies(tokens: Tokens): AuthCookies {
-    return {
-      access: createCookie({
-        ...this.config.accessToken.cookie,
-        name: this.config.accessToken.cookie.name,
-        value: tokens.access,
-      }),
-      refresh: createCookie({
-        ...this.config.refreshToken.cookie,
-        name: this.config.refreshToken.cookie.name,
-        value: tokens.refresh,
-      }),
-    };
   }
 }

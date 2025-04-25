@@ -1,16 +1,22 @@
-import {
-  type RouterGroup,
-  temporaryRedirect,
-  permanentRedirect,
-  badRequest,
-} from '@codeduel-backend-crab/server';
+import { type RouterGroup, temporaryRedirect, badRequest } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { GithubService } from './service';
-import { randomUUIDv7 } from 'bun';
-import { Type } from '@sinclair/typebox';
+import { Type, type Static } from '@sinclair/typebox';
+import { createOauthState, parseOauthState } from '../../../utils/oauth';
+import { CookieOptions, createCookie, parseCookies } from '../../../utils/cookie';
+
+export type GithubControllerConfig = Static<typeof GithubControllerConfig>;
+export const GithubControllerConfig = Type.Object({
+  stateCookie: CookieOptions,
+  accessTokenCookie: CookieOptions,
+  refreshTokenCookie: CookieOptions,
+});
 
 export class GithubController {
-  constructor(private readonly githubService: GithubService) {}
+  constructor(
+    private readonly githubService: GithubService,
+    private readonly config: GithubControllerConfig
+  ) {}
 
   setup(group: RouterGroup): void {
     group.route(this.login);
@@ -23,22 +29,23 @@ export class GithubController {
     schema: {
       request: {
         query: {
-          redirect: Type.Optional(Type.String()),
+          redirect: Type.String(),
         },
       },
       response: {
-        307: Type.Undefined(),
+        307: Type.String(),
       },
     },
     handler: async ({ query }) => {
       const { redirect } = query;
-      const state = randomUUIDv7();
-      const cookie = this.githubService.createStateCookie(state);
-      const redirectCookie = redirect && this.githubService.createRedirectCookie(redirect);
+
+      const state = createOauthState(redirect);
+      const stateCookie = createCookie({ ...this.config.stateCookie, value: state });
       const redirectUrl = this.githubService.authorizationUrl(state);
 
-      return temporaryRedirect(undefined, {
-        'Set-Cookie': [cookie, redirectCookie].filter(Boolean),
+      return temporaryRedirect(`Redirecting to ${redirectUrl}`, {
+        'Content-Type': 'text/plain',
+        'Set-Cookie': stateCookie,
         Location: redirectUrl,
       });
     },
@@ -55,7 +62,7 @@ export class GithubController {
         },
       },
       response: {
-        308: Type.Undefined(),
+        307: Type.String(),
         400: Type.Object({
           message: Type.String(),
         }),
@@ -64,20 +71,28 @@ export class GithubController {
     handler: async ({ query, headers }) => {
       const { code, state } = query;
 
-      const cookieState = this.githubService.stateCookie(headers.get('cookie'));
-      if (state !== cookieState) return badRequest({ message: 'Invalid or Missing state' });
+      const cookies = parseCookies(headers.get('cookie'));
+      const cookieState = cookies[this.config.stateCookie.name];
 
-      const githubToken = await this.githubService.exchangeCodeForToken(code, state);
-      const githubUser = await this.githubService.userData(githubToken.access_token);
+      if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
+      const redirect = parseOauthState(state).state;
 
+      const githubUser = await this.githubService.exchangeCodeForUserData(code, state);
       const authentication = await this.githubService.create(githubUser);
 
-      const cookies = authentication.cookies;
-      const redirect = this.githubService.redirectCookie(headers.get('cookie'));
+      const accessCookie = createCookie({
+        ...this.config.accessTokenCookie,
+        value: authentication.access,
+      });
+      const refreshCookie = createCookie({
+        ...this.config.refreshTokenCookie,
+        value: authentication.refresh,
+      });
 
-      return permanentRedirect(undefined, {
-        ...(redirect !== undefined && { Location: redirect }),
-        'Set-Cookie': [cookies.access, cookies.refresh],
+      return temporaryRedirect(`Redirecting to ${redirect}`, {
+        'Content-Type': 'text/plain',
+        Location: redirect,
+        'Set-Cookie': [accessCookie, refreshCookie],
       });
     },
   });

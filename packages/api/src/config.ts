@@ -1,8 +1,12 @@
 import { CorsOptions } from '@codeduel-backend-crab/server/cors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
-import { Config as DBConfig } from '@codeduel-backend-crab/database';
-import { Config as AuthConfig } from './route/auth/config';
+import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
+import { AuthServiceConfig } from './route/auth/service';
+import { GithubControllerConfig } from './route/auth/github/controller';
+import { GitlabControllerConfig } from './route/auth/gitlab/controller';
+import { GithubServiceConfig } from './route/auth/github/service';
+import { GitlabServiceConfig } from './route/auth/gitlab/service';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -10,24 +14,51 @@ export const Config = Type.Object({
   port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
   descriptiveErrors: Type.Boolean(),
   cors: Type.Optional(CorsOptions),
-  database: DBConfig,
-  auth: AuthConfig,
+  database: DatabaseConfig,
+  auth: Type.Object({
+    service: AuthServiceConfig,
+    github: Type.Object({
+      service: GithubServiceConfig,
+      controller: GithubControllerConfig,
+    }),
+    gitlab: Type.Object({
+      service: GitlabServiceConfig,
+      controller: GitlabControllerConfig,
+    }),
+  }),
 });
 
 export function loadConfig(): Config {
   const env = process.env;
+
+  const accessTokenCookie = {
+    name: env.ACCESS_TOKEN_COOKIE_NAME,
+    domain: env.ACCESS_TOKEN_COOKIE_DOMAIN,
+    path: env.ACCESS_TOKEN_COOKIE_PATH,
+    maxAge: env.ACCESS_TOKEN_COOKIE_MAX_AGE,
+    httpOnly: env.ACCESS_TOKEN_COOKIE_HTTP_ONLY,
+    secure: env.ACCESS_TOKEN_COOKIE_SECURE,
+    sameSite: env.ACCESS_TOKEN_COOKIE_SAME_SITE,
+  };
+  const refreshTokenCookie = {
+    name: env.REFRESH_TOKEN_COOKIE_NAME,
+    domain: env.REFRESH_TOKEN_COOKIE_DOMAIN,
+    path: env.REFRESH_TOKEN_COOKIE_PATH,
+    maxAge: env.REFRESH_TOKEN_COOKIE_MAX_AGE,
+    httpOnly: env.REFRESH_TOKEN_COOKIE_HTTP_ONLY,
+    secure: env.REFRESH_TOKEN_COOKIE_SECURE,
+    sameSite: env.REFRESH_TOKEN_COOKIE_SAME_SITE,
+  };
   const config = {
     host: env.HOST,
     port: env.PORT,
     descriptiveErrors: env.DESCRIPTIVE_ERRORS,
-    cors: env.CORS_ALLOWED_ORIGINS
-      ? {
-          allowedOrigins: env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),
-          allowedMethods: env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
-          allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
-          allowCredentials: env.CORS_ALLOW_CREDENTIALS,
-        }
-      : undefined,
+    cors: env.CORS_ALLOWED_ORIGINS && {
+      allowedOrigins: env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),
+      allowedMethods: env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
+      allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
+      allowCredentials: env.CORS_ALLOW_CREDENTIALS,
+    },
     database: {
       host: env.DATABASE_HOST,
       port: env.DATABASE_PORT,
@@ -38,61 +69,57 @@ export function loadConfig(): Config {
       maxConnections: env.DATABASE_MAX_CONNECTIONS,
     },
     auth: {
-      jwt: {
-        secret: env.JWT_SECRET,
-        issuer: env.JWT_ISSUER,
-        audience: env.JWT_AUDIENCE,
-      },
-      accessToken: {
-        expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
-        cookie: {
-          name: env.ACCESS_TOKEN_COOKIE_NAME,
-          domain: env.ACCESS_TOKEN_COOKIE_DOMAIN,
-          path: env.ACCESS_TOKEN_COOKIE_PATH,
-          maxAge: env.ACCESS_TOKEN_COOKIE_MAX_AGE,
-          httpOnly: env.ACCESS_TOKEN_COOKIE_HTTP_ONLY,
-          secure: env.ACCESS_TOKEN_COOKIE_SECURE,
-          sameSite: env.ACCESS_TOKEN_COOKIE_SAME_SITE,
+      service: {
+        jwt: {
+          secret: env.JWT_SECRET,
+          issuer: env.JWT_ISSUER,
+          audience: env.JWT_AUDIENCE,
         },
-      },
-      refreshToken: {
-        expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
-        cookie: {
-          name: env.REFRESH_TOKEN_COOKIE_NAME,
-          domain: env.REFRESH_TOKEN_COOKIE_DOMAIN,
-          path: env.REFRESH_TOKEN_COOKIE_PATH,
-          maxAge: env.REFRESH_TOKEN_COOKIE_MAX_AGE,
-          httpOnly: env.REFRESH_TOKEN_COOKIE_HTTP_ONLY,
-          secure: env.REFRESH_TOKEN_COOKIE_SECURE,
-          sameSite: env.REFRESH_TOKEN_COOKIE_SAME_SITE,
+        accessToken: {
+          expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
+        },
+        refreshToken: {
+          expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
         },
       },
       github: {
-        clientId: env.GITHUB_CLIENT_ID,
-        clientSecret: env.GITHUB_CLIENT_SECRET,
-        redirectUri: env.GITHUB_REDIRECT_URI,
-        stateCookie: {
-          name: env.GITHUB_STATE_COOKIE_NAME,
-          domain: env.GITHUB_STATE_COOKIE_DOMAIN,
-          path: env.GITHUB_STATE_COOKIE_PATH,
-          maxAge: env.GITHUB_STATE_COOKIE_MAX_AGE,
-          httpOnly: env.GITHUB_STATE_COOKIE_HTTP_ONLY,
-          secure: env.GITHUB_STATE_COOKIE_SECURE,
-          sameSite: env.GITHUB_STATE_COOKIE_SAME_SITE,
+        service: {
+          clientId: env.GITHUB_CLIENT_ID,
+          clientSecret: env.GITHUB_CLIENT_SECRET,
+          redirectUri: env.GITHUB_REDIRECT_URI,
+        },
+        controller: {
+          stateCookie: {
+            name: env.GITHUB_STATE_COOKIE_NAME,
+            domain: env.GITHUB_STATE_COOKIE_DOMAIN,
+            path: env.GITHUB_STATE_COOKIE_PATH,
+            maxAge: env.GITHUB_STATE_COOKIE_MAX_AGE,
+            httpOnly: env.GITHUB_STATE_COOKIE_HTTP_ONLY,
+            secure: env.GITHUB_STATE_COOKIE_SECURE,
+            sameSite: env.GITHUB_STATE_COOKIE_SAME_SITE,
+          },
+          accessTokenCookie,
+          refreshTokenCookie,
         },
       },
       gitlab: {
-        applicationId: env.GITLAB_APPLICATION_ID,
-        secret: env.GITLAB_SECRET,
-        callbackUri: env.GITLAB_CALLBACK_URI,
-        stateCookie: {
-          name: env.GITLAB_STATE_COOKIE_NAME,
-          domain: env.GITLAB_STATE_COOKIE_DOMAIN,
-          path: env.GITLAB_STATE_COOKIE_PATH,
-          maxAge: env.GITLAB_STATE_COOKIE_MAX_AGE,
-          httpOnly: env.GITLAB_STATE_COOKIE_HTTP_ONLY,
-          secure: env.GITLAB_STATE_COOKIE_SECURE,
-          sameSite: env.GITLAB_STATE_COOKIE_SAME_SITE,
+        service: {
+          applicationId: env.GITLAB_APPLICATION_ID,
+          secret: env.GITLAB_SECRET,
+          callbackUri: env.GITLAB_CALLBACK_URI,
+        },
+        controller: {
+          stateCookie: {
+            name: env.GITLAB_STATE_COOKIE_NAME,
+            domain: env.GITLAB_STATE_COOKIE_DOMAIN,
+            path: env.GITLAB_STATE_COOKIE_PATH,
+            maxAge: env.GITLAB_STATE_COOKIE_MAX_AGE,
+            httpOnly: env.GITLAB_STATE_COOKIE_HTTP_ONLY,
+            secure: env.GITLAB_STATE_COOKIE_SECURE,
+            sameSite: env.GITLAB_STATE_COOKIE_SAME_SITE,
+          },
+          accessTokenCookie,
+          refreshTokenCookie,
         },
       },
     },

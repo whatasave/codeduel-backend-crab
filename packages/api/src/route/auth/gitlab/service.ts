@@ -1,15 +1,21 @@
-import { createCookie, getCookieValueByName } from '../../../utils/cookie';
-import type { AuthUser } from '../data';
+import { Type, type Static } from '@sinclair/typebox';
+import type { Tokens } from '../data';
 import type { AuthService } from '../service';
-import type { Config } from './config';
 import type { GitlabAccessToken, GitlabUserData } from './data';
+
+export type GitlabServiceConfig = Static<typeof GitlabServiceConfig>;
+export const GitlabServiceConfig = Type.Object({
+  applicationId: Type.String(),
+  secret: Type.String(),
+  callbackUri: Type.String(),
+});
 
 export class GitlabService {
   private static readonly PROVIDER: string = 'gitlab';
 
   constructor(
     private readonly authService: AuthService,
-    private readonly config: Config
+    private readonly config: GitlabServiceConfig
   ) {}
 
   /**
@@ -17,7 +23,7 @@ export class GitlabService {
    *
    * @returns The tokens and cookies for the user.
    */
-  async create(gitlabUser: GitlabUserData): Promise<AuthUser> {
+  async create(gitlabUser: GitlabUserData): Promise<Tokens> {
     return await this.authService.createForce(
       {
         username: gitlabUser.username,
@@ -52,8 +58,7 @@ export class GitlabService {
         redirect_uri: this.config.callbackUri,
       }),
     });
-    const res = (await response.json()) as unknown as GitlabAccessToken;
-    return res;
+    return (await response.json()) as unknown as GitlabAccessToken;
   }
 
   /**
@@ -69,8 +74,12 @@ export class GitlabService {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    const res = (await response.json()) as unknown as GitlabUserData;
-    return res;
+    return (await response.json()) as unknown as GitlabUserData;
+  }
+
+  async exchangeCodeForUserData(code: string): Promise<GitlabUserData> {
+    const token = await this.exchangeCodeForToken(code);
+    return await this.userData(token.access_token);
   }
 
   /**
@@ -88,41 +97,5 @@ export class GitlabService {
     }).toString();
 
     return url.toString();
-  }
-
-  /**
-   * Create state cookie to prevent CSRF attacks.
-   * This cookie is set when the user is redirected to Gitlab for authentication.
-   * The state is a random string that is used to verify the response from Gitlab.
-   */
-  createStateCookie(state: string): string {
-    return createCookie({
-      ...this.config.stateCookie,
-      name: this.config.stateCookie.name,
-      value: state,
-    });
-  }
-
-  /**
-   * Get the state cookie value.
-   * This cookie is set when the user is redirected to Gitlab for authentication.
-   * The state is a random string that is used to verify the response from Gitlab.
-   */
-  stateCookie(cookie: string | null): string | undefined {
-    return getCookieValueByName(cookie, this.config.stateCookie.name);
-  }
-
-  /**
-   * Create redirect cookie to store the redirect URL after authentication.
-   */
-  createRedirectCookie(redirect: string): string {
-    return createCookie({ name: 'redirect', value: redirect, maxAge: 60 });
-  }
-
-  /**
-   * Get the redirect cookie value.
-   */
-  redirectCookie(cookie: string | null): string | undefined {
-    return getCookieValueByName(cookie, 'redirect');
   }
 }

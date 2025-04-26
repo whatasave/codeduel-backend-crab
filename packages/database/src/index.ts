@@ -1,5 +1,3 @@
-import fs from 'fs/promises';
-import path from 'path';
 import {
   Kysely,
   PostgresDialect,
@@ -14,6 +12,8 @@ import type { DB } from './database';
 import { Type, type Static } from '@sinclair/typebox';
 import { AssertError, Value } from '@sinclair/typebox/value';
 import { NO_MIGRATIONS } from 'kysely';
+import fs from 'fs/promises';
+import path from 'path';
 
 export type Database = Kysely<DB>;
 
@@ -79,7 +79,7 @@ export function loadConfig(): Config {
   }
 }
 
-export async function migrateToLatest(db: Kysely<DB>): Promise<void> {
+export async function migrateToLatest(db: Database): Promise<void> {
   const provider = new FileMigrationProvider({
     fs,
     path,

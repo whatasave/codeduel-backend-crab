@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "tsc --noEmit && bun run ./src/main.ts",
     "build": "bun build ./src/main.ts --target=bun --outdir ./dist",
-    "start": "bun run dist/main.js"
+    "start": "bun run dist/main.js",
+    "test": "bun test"
   }
 }

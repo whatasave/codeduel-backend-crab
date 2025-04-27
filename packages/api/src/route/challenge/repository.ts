@@ -48,7 +48,7 @@ export class ChallengeRepository {
   }
 
   async create(challenge: CreateChallenge): Promise<Challenge | undefined> {
-    const [createdChallenge] = await this.database
+    const created = await this.database
       .insertInto('challenge')
       .values({
         owner_id: challenge.ownerId,
@@ -56,13 +56,14 @@ export class ChallengeRepository {
         description: challenge.description,
         content: challenge.content,
       })
+      .onConflict((oc) => oc.doNothing())
       .returningAll()
-      .execute();
-    return createdChallenge && this.selectToChallenge(createdChallenge);
+      .executeTakeFirst();
+    return created && this.selectToChallenge(created);
   }
 
   async update(challenge: UpdateChallenge): Promise<Challenge | undefined> {
-    const [updatedChallenge] = await this.database
+    const updated = await this.database
       .updateTable('challenge')
       .set({
         title: challenge.title,
@@ -71,8 +72,8 @@ export class ChallengeRepository {
       })
       .where('id', '=', challenge.id)
       .returningAll()
-      .execute();
-    return updatedChallenge && this.selectToChallenge(updatedChallenge);
+      .executeTakeFirst();
+    return updated && this.selectToChallenge(updated);
   }
 
   async delete(id: Challenge['id']): Promise<boolean> {

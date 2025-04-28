@@ -1,4 +1,14 @@
-import { Kysely, PostgresDialect, type Selectable, type Insertable, type Updateable } from 'kysely';
+import fs from 'fs/promises';
+import path from 'path';
+import {
+  Kysely,
+  PostgresDialect,
+  type Selectable,
+  type Insertable,
+  type Updateable,
+  FileMigrationProvider,
+  Migrator,
+} from 'kysely';
 import { Pool } from 'pg';
 import type { DB } from './database';
 import { Type, type Static } from '@sinclair/typebox';
@@ -65,5 +75,18 @@ export function loadConfig(): Config {
       throw new Error(`Invalid environment:\n${errors}`);
     }
     throw error;
+  }
+}
+
+export async function migrateToLatest(db: Database): Promise<void> {
+  const provider = new FileMigrationProvider({
+    fs,
+    path,
+    migrationFolder: path.join(import.meta.dir, '../migrations'),
+  });
+  const migrator = new Migrator({ db, provider });
+  const { error } = await migrator.migrateToLatest();
+  if (error) {
+    throw new Error('Migration failed', { cause: error });
   }
 }

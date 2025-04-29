@@ -15,14 +15,24 @@ describe('Route.User.Services', () => {
     avatar: 'pic.io/avatar.png',
     backgroundImage: 'pic.io/cover.png',
     biography: 'the best',
-    createdAt: '',
-    updatedAt: '',
+    createdAt: new Date('2023-10-01T12:00:00Z').toString(),
+    updatedAt: new Date('2023-10-01T12:00:00Z').toString(),
   } as User;
   const fakeUsers = [
-    { id: 1, username: 'albert', createdAt: '', updatedAt: '' },
-    { id: 2, username: 'berta', createdAt: '', updatedAt: '' },
+    {
+      id: 1,
+      username: 'albert',
+      createdAt: new Date().toString(),
+      updatedAt: new Date().toString(),
+    },
+    {
+      id: 2,
+      username: 'berta',
+      createdAt: new Date().toString(),
+      updatedAt: new Date().toString(),
+    },
     fakeUser,
-    { id: 4, username: 'dora', createdAt: '', updatedAt: '' },
+    { id: 4, username: 'dora', createdAt: new Date().toString(), updatedAt: new Date().toString() },
   ] as User[];
 
   beforeAll(() => {
@@ -30,10 +40,6 @@ describe('Route.User.Services', () => {
     repo = new UserRepository(db);
     serv = new UserService(repo);
   });
-
-  // afterAll(() => {
-  //   restoreAllMocks();
-  // });
 
   test('should return all the users', async () => {
     const spyAll = spyOn(repo, 'all').mockResolvedValue(fakeUsers);

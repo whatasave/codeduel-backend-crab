@@ -64,7 +64,7 @@ export class GitlabController {
     handler: async ({ query, headers }) => {
       const { code, state } = query;
 
-      const cookieState = this.gitlabService.stateCookie(headers.get('cookie') ?? '');
+      const cookieState = this.gitlabService.stateCookie(headers.get('cookie'));
       if (state !== cookieState) return badRequest({ message: 'Invalid or Missing state' });
 
       const gitlabToken = await this.gitlabService.exchangeCodeForToken(code);
@@ -73,7 +73,7 @@ export class GitlabController {
       const authentication = await this.gitlabService.create(gitlabUser);
 
       const cookies = authentication.cookies;
-      const redirect = this.gitlabService.redirectCookie(headers.get('cookie') ?? '');
+      const redirect = this.gitlabService.redirectCookie(headers.get('cookie'));
 
       return permanentRedirect(undefined, {
         ...(redirect !== undefined && { Location: redirect }),

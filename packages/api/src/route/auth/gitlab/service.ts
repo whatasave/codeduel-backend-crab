@@ -96,7 +96,11 @@ export class GitlabService {
    * The state is a random string that is used to verify the response from Gitlab.
    */
   createStateCookie(state: string): string {
-    return createCookie(this.config.stateCookie.name, state, this.config.stateCookie);
+    return createCookie({
+      ...this.config.stateCookie,
+      name: this.config.stateCookie.name,
+      value: state,
+    });
   }
 
   /**
@@ -104,7 +108,7 @@ export class GitlabService {
    * This cookie is set when the user is redirected to Gitlab for authentication.
    * The state is a random string that is used to verify the response from Gitlab.
    */
-  stateCookie(cookie: string): string | undefined {
+  stateCookie(cookie: string | null): string | undefined {
     return getCookieValueByName(cookie, this.config.stateCookie.name);
   }
 
@@ -112,13 +116,13 @@ export class GitlabService {
    * Create redirect cookie to store the redirect URL after authentication.
    */
   createRedirectCookie(redirect: string): string {
-    return createCookie('redirect', redirect, { maxAge: 60 });
+    return createCookie({ name: 'redirect', value: redirect, maxAge: 60 });
   }
 
   /**
    * Get the redirect cookie value.
    */
-  redirectCookie(cookie: string): string | undefined {
+  redirectCookie(cookie: string | null): string | undefined {
     return getCookieValueByName(cookie, 'redirect');
   }
 }

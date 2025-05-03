@@ -133,16 +133,16 @@ export class AuthService {
    */
   createCookies(tokens: Tokens): AuthCookies {
     return {
-      access: createCookie(
-        this.config.accessToken.cookie.name,
-        tokens.access,
-        this.config.accessToken.cookie
-      ),
-      refresh: createCookie(
-        this.config.refreshToken.cookie.name,
-        tokens.refresh,
-        this.config.refreshToken.cookie
-      ),
+      access: createCookie({
+        ...this.config.accessToken.cookie,
+        name: this.config.accessToken.cookie.name,
+        value: tokens.access,
+      }),
+      refresh: createCookie({
+        ...this.config.refreshToken.cookie,
+        name: this.config.refreshToken.cookie.name,
+        value: tokens.refresh,
+      }),
     };
   }
 }

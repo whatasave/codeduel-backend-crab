@@ -64,7 +64,7 @@ export class GithubController {
     handler: async ({ query, headers }) => {
       const { code, state } = query;
 
-      const cookieState = this.githubService.stateCookie(headers.get('cookie') ?? '');
+      const cookieState = this.githubService.stateCookie(headers.get('cookie'));
       if (state !== cookieState) return badRequest({ message: 'Invalid or Missing state' });
 
       const githubToken = await this.githubService.exchangeCodeForToken(code, state);
@@ -73,7 +73,7 @@ export class GithubController {
       const authentication = await this.githubService.create(githubUser);
 
       const cookies = authentication.cookies;
-      const redirect = this.githubService.redirectCookie(headers.get('cookie') ?? '');
+      const redirect = this.githubService.redirectCookie(headers.get('cookie'));
 
       return permanentRedirect(undefined, {
         ...(redirect !== undefined && { Location: redirect }),

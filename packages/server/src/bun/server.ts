@@ -30,8 +30,8 @@ export class BunServer implements Server {
     });
     return {
       url: server.url,
-      host: server.hostname,
-      port: server.port,
+      host,
+      port,
       stop: () => server.stop(),
     };
   }

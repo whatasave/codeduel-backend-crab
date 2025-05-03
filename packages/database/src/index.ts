@@ -117,15 +117,21 @@ export async function createMockDatabase(): Promise<Database> {
   const memDb = newDb({
     autoCreateForeignKeyIndices: true,
   });
+  memDb.registerLanguage('plpgsql', () => {});
+
+  memDb.public.registerFunction({
+    name: 'update_timestamp',
+    returns: 'trigger',
+    implementation: () => {
+      return { updated_at: new Date() };
+    },
+  });
 
   const pg = memDb.adapters.createPg();
-  const memPool = pg.Pool as unknown as Pool;
-
-  const db = new Kysely<DB>({
-    dialect: new PostgresDialect({
-      pool: memPool as unknown as Pool,
-    }),
-  });
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  const pool = new pg.Pool() as unknown as Pool;
+  const dialect = new PostgresDialect({ pool });
+  const db = new Kysely<DB>({ dialect });
 
   await runMigrations(db);
 

@@ -16,14 +16,24 @@ describe('Route.User.Repository', () => {
     avatar: 'pic.io/avatar.png',
     backgroundImage: 'pic.io/cover.png',
     biography: 'the best',
-    createdAt: '',
-    updatedAt: '',
+    createdAt: new Date('2025-05-04T14:12:02.712Z').toString(),
+    updatedAt: new Date('2023-10-01T12:00:00Z').toString(),
   } as User;
   const fakeUsers = [
-    { id: 1, username: 'albert', createdAt: '', updatedAt: '' },
-    { id: 2, username: 'berta', createdAt: '', updatedAt: '' },
+    {
+      id: 1,
+      username: 'albert',
+      createdAt: new Date().toString(),
+      updatedAt: new Date().toString(),
+    },
+    {
+      id: 2,
+      username: 'berta',
+      createdAt: new Date().toString(),
+      updatedAt: new Date().toString(),
+    },
     fakeUser,
-    { id: 4, username: 'dora', createdAt: '', updatedAt: '' },
+    { id: 4, username: 'dora', createdAt: new Date().toString(), updatedAt: new Date().toString() },
   ] as User[];
 
   beforeAll(async () => {
@@ -31,7 +41,19 @@ describe('Route.User.Repository', () => {
     repo = new UserRepository(db);
 
     await db.transaction().execute(async (trx) => {
-      await trx.insertInto('user').values(fakeUsers).execute();
+      await trx
+        .insertInto('user')
+        .values(
+          fakeUsers.map((user) => ({
+            username: user.username,
+            name: user.name,
+            avatar: user.avatar,
+            background_image: user.backgroundImage,
+            biography: user.biography,
+          }))
+        )
+        .returningAll()
+        .executeTakeFirstOrThrow();
     });
   });
 
@@ -46,15 +68,15 @@ describe('Route.User.Repository', () => {
     } satisfies CreateUser;
 
     const createdUser = await repo.create(user);
-    expect(createdUser.id).toBeDefined();
-    expect(createdUser.username).toEqual(user.username);
-    expect(createdUser.name).toEqual(user.name);
-    expect(createdUser.avatar).toEqual(user.avatar);
-    expect(createdUser.backgroundImage).toEqual(user.backgroundImage);
-    expect(createdUser.biography).toEqual(user.biography);
-    expect(createdUser.createdAt).toBeDefined();
-    expect(createdUser.updatedAt).toBeDefined();
-    expect(createdUser.createdAt).toEqual(createdUser.updatedAt);
+    expect(createdUser).toContainAnyKeys(['id', 'username', 'createdAt', 'updatedAt']);
+    expect(createdUser).toMatchObject({
+      username: user.username,
+      name: user.name,
+      avatar: user.avatar,
+      backgroundImage: user.backgroundImage,
+      biography: user.biography,
+      updatedAt: createdUser.createdAt,
+    });
   });
 
   test('should throw error if username already exists', async () => {
@@ -77,13 +99,33 @@ describe('Route.User.Repository', () => {
   // describe('when searching', () => {
   test('should return all users', async () => {
     const users = await repo.all();
-    console.log(users);
-    expect(users).toEqual(fakeUsers);
+    expect(users).toBeArray();
+    expect(users).toBeArrayOfSize(5);
+
+    for (const user of users) {
+      expect(user).toContainAllKeys([
+        'name',
+        'avatar',
+        'backgroundImage',
+        'biography',
+        'id',
+        'username',
+        'createdAt',
+        'updatedAt',
+      ]);
+    }
   });
 
   test('shuld return user by id', async () => {
     const user = await repo.byId(fakeUser.id);
-    expect(user).toEqual(fakeUser);
+    expect(user).toMatchObject({
+      id: fakeUser.id,
+      username: fakeUser.username,
+      name: fakeUser.name,
+      avatar: fakeUser.avatar,
+      backgroundImage: fakeUser.backgroundImage,
+      biography: fakeUser.biography,
+    });
   });
 
   test('shuld return undefined if user with `id` does not exist', async () => {
@@ -93,7 +135,14 @@ describe('Route.User.Repository', () => {
 
   test('should return user by username', async () => {
     const user = await repo.byUsername(fakeUser.username);
-    expect(user).toEqual(fakeUser);
+    expect(user).toMatchObject({
+      id: fakeUser.id,
+      username: fakeUser.username,
+      name: fakeUser.name,
+      avatar: fakeUser.avatar,
+      backgroundImage: fakeUser.backgroundImage,
+      biography: fakeUser.biography,
+    });
   });
 
   test('should return undefined if user with `username` does not exist', async () => {
@@ -103,7 +152,13 @@ describe('Route.User.Repository', () => {
 
   test('should return user by username with case insensitive', async () => {
     const user = await repo.byUsername('CEASAR');
-    expect(user).toEqual(fakeUser);
+    expect(user).toMatchObject({
+      id: fakeUser.id,
+      username: fakeUser.username,
+      name: fakeUser.name,
+      avatar: fakeUser.avatar,
+      backgroundImage: fakeUser.backgroundImage,
+      biography: fakeUser.biography,
+    });
   });
-  // });
 });

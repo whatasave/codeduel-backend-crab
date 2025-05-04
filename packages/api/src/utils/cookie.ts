@@ -1,5 +1,4 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { TypeCompiler } from '@sinclair/typebox/compiler';
 
 export type CookieOptions = Static<typeof CookieOptions>;
 export const CookieOptions = Type.Object({
@@ -36,11 +35,7 @@ export const ResponseCookie = Type.Object({
   ),
 });
 
-const CookieValidator = TypeCompiler.Compile(ResponseCookie);
-
 export function createCookie(cookie: ResponseCookie): string {
-  if (!CookieValidator.Check(cookie)) throw new Error('Invalid cookie object');
-
   const base: string[] = [`${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value)}`];
 
   const opts = [

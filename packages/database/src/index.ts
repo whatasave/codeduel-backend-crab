@@ -93,7 +93,7 @@ export async function migrateToLatest(db: Kysely<DB>): Promise<void> {
 }
 
 export async function runMigrations(db: Kysely<DB>): Promise<void> {
-  const migrationsPath = path.join(import.meta.dir, '../migrations');
+  const migrationsPath = path.join(import.meta.dir, '../migrations_test');
   const files = await fs.readdir(migrationsPath);
   const migrationFiles = files.filter((f) => f.endsWith('.ts'));
 
@@ -117,13 +117,7 @@ export async function createMockDatabase(): Promise<Database> {
   const memDb = newDb({
     autoCreateForeignKeyIndices: true,
   });
-  memDb.registerLanguage('plpgsql', () => {});
-
-  memDb.public.registerFunction({
-    name: 'update_timestamp',
-    returns: 'trigger',
-    implementation: () => ({ updated_at: new Date() }),
-  });
+  // memDb.registerLanguage('plpgsql', () => {});
 
   const pg = memDb.adapters.createPg();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call

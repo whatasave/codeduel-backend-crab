@@ -122,9 +122,7 @@ export async function createMockDatabase(): Promise<Database> {
   memDb.public.registerFunction({
     name: 'update_timestamp',
     returns: 'trigger',
-    implementation: () => {
-      return { updated_at: new Date() };
-    },
+    implementation: () => ({ updated_at: new Date() }),
   });
 
   const pg = memDb.adapters.createPg();

@@ -60,6 +60,8 @@ describe('Route.User.Services', () => {
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();
     expect(users.body).toEqual(fakeUsers);
+
+    allSpy.mockRestore();
   });
 
   test('should return a user by username', async () => {
@@ -80,6 +82,8 @@ describe('Route.User.Services', () => {
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();
     expect(users.body).toEqual(fakeUser);
+
+    byUsernameSpy.mockRestore();
   });
 
   test('should return a user by id', async () => {
@@ -100,6 +104,8 @@ describe('Route.User.Services', () => {
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();
     expect(users.body).toEqual(fakeUser);
+
+    byIdSpy.mockRestore();
   });
 
   test('should return a user profile', async () => {
@@ -122,5 +128,7 @@ describe('Route.User.Services', () => {
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();
     expect(users.body).toEqual(fakeUser);
+
+    byId.mockRestore();
   });
 });

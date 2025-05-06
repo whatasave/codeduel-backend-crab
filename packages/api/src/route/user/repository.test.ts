@@ -7,7 +7,7 @@ import { setupTestDatabase } from '../../utils/test';
 describe('Route.User.Repository', () => {
   let db: Database;
   let repo: UserRepository;
-  const fakeUser: User = {
+  const mockUser: User = {
     id: 3,
     username: 'ceasar',
     name: 'Giuglio Cesare',
@@ -17,7 +17,7 @@ describe('Route.User.Repository', () => {
     createdAt: new Date('2025-05-04T14:12:02.712Z').toString(),
     updatedAt: new Date('2023-10-01T12:00:00Z').toString(),
   };
-  const fakeUsers: User[] = [
+  const mockUsers: User[] = [
     {
       id: 1,
       username: 'albert',
@@ -30,7 +30,7 @@ describe('Route.User.Repository', () => {
       createdAt: new Date().toString(),
       updatedAt: new Date().toString(),
     },
-    fakeUser,
+    mockUser,
     { id: 4, username: 'dora', createdAt: new Date().toString(), updatedAt: new Date().toString() },
   ];
 
@@ -42,7 +42,7 @@ describe('Route.User.Repository', () => {
       await trx
         .insertInto('user')
         .values(
-          fakeUsers.map((user) => ({
+          mockUsers.map((user) => ({
             username: user.username,
             name: user.name,
             avatar: user.avatar,
@@ -83,7 +83,7 @@ describe('Route.User.Repository', () => {
 
     test('should throw error if username already exists', async () => {
       const user = {
-        username: fakeUser.username,
+        username: mockUser.username,
         name: 'Michael Schumacher',
         avatar: 'pic.io/avatar.png',
         backgroundImage: 'pic.io/cover.png',
@@ -115,14 +115,14 @@ describe('Route.User.Repository', () => {
 
   describe('byId', () => {
     test('should return user by id', async () => {
-      const user = await repo.byId(fakeUser.id);
+      const user = await repo.byId(mockUser.id);
       expect(user).toMatchObject({
-        id: fakeUser.id,
-        username: fakeUser.username,
-        name: fakeUser.name,
-        avatar: fakeUser.avatar,
-        backgroundImage: fakeUser.backgroundImage,
-        biography: fakeUser.biography,
+        id: mockUser.id,
+        username: mockUser.username,
+        name: mockUser.name,
+        avatar: mockUser.avatar,
+        backgroundImage: mockUser.backgroundImage,
+        biography: mockUser.biography,
       });
     });
 
@@ -134,14 +134,14 @@ describe('Route.User.Repository', () => {
 
   describe('byUsername', () => {
     test('should return user by username', async () => {
-      const user = await repo.byUsername(fakeUser.username);
+      const user = await repo.byUsername(mockUser.username);
       expect(user).toMatchObject({
-        id: fakeUser.id,
-        username: fakeUser.username,
-        name: fakeUser.name,
-        avatar: fakeUser.avatar,
-        backgroundImage: fakeUser.backgroundImage,
-        biography: fakeUser.biography,
+        id: mockUser.id,
+        username: mockUser.username,
+        name: mockUser.name,
+        avatar: mockUser.avatar,
+        backgroundImage: mockUser.backgroundImage,
+        biography: mockUser.biography,
       });
     });
 
@@ -153,12 +153,12 @@ describe('Route.User.Repository', () => {
     test('should return user by username with case insensitive', async () => {
       const user = await repo.byUsername('CEASAR');
       expect(user).toMatchObject({
-        id: fakeUser.id,
-        username: fakeUser.username,
-        name: fakeUser.name,
-        avatar: fakeUser.avatar,
-        backgroundImage: fakeUser.backgroundImage,
-        biography: fakeUser.biography,
+        id: mockUser.id,
+        username: mockUser.username,
+        name: mockUser.name,
+        avatar: mockUser.avatar,
+        backgroundImage: mockUser.backgroundImage,
+        biography: mockUser.biography,
       });
     });
   });

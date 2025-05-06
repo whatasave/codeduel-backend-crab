@@ -8,7 +8,7 @@ describe('Route.User.Services', () => {
   let db: Database;
   let repo: UserRepository;
   let serv: UserService;
-  const fakeUser: User = {
+  const mockUser: User = {
     id: 3,
     username: 'ceasar',
     name: 'Giuglio Cesare',
@@ -18,7 +18,7 @@ describe('Route.User.Services', () => {
     createdAt: new Date('2023-10-01T12:00:00Z').toString(),
     updatedAt: new Date('2023-10-01T12:00:00Z').toString(),
   };
-  const fakeUsers: User[] = [
+  const mockUsers: User[] = [
     {
       id: 1,
       username: 'albert',
@@ -31,7 +31,7 @@ describe('Route.User.Services', () => {
       createdAt: new Date().toString(),
       updatedAt: new Date().toString(),
     },
-    fakeUser,
+    mockUser,
     { id: 4, username: 'dora', createdAt: new Date().toString(), updatedAt: new Date().toString() },
   ];
 
@@ -46,36 +46,36 @@ describe('Route.User.Services', () => {
   });
 
   test('should return all the users', async () => {
-    const spyAll = spyOn(repo, 'all').mockResolvedValue(fakeUsers);
+    const spyAll = spyOn(repo, 'all').mockResolvedValue(mockUsers);
     const users = await serv.all();
 
     expect(spyAll).toHaveBeenCalledWith();
     expect(spyAll).toHaveBeenCalledTimes(1);
-    expect(users).toEqual(fakeUsers);
+    expect(users).toEqual(mockUsers);
   });
 
   test('should return a user with the same username', async () => {
-    const spyByUsername = spyOn(repo, 'byUsername').mockResolvedValue(fakeUser);
-    const user = await serv.byUsername(fakeUser.username);
+    const spyByUsername = spyOn(repo, 'byUsername').mockResolvedValue(mockUser);
+    const user = await serv.byUsername(mockUser.username);
 
-    expect(spyByUsername).toHaveBeenCalledWith(fakeUser.username);
+    expect(spyByUsername).toHaveBeenCalledWith(mockUser.username);
     expect(spyByUsername).toHaveBeenCalledTimes(1);
-    expect(user).toEqual(fakeUser);
+    expect(user).toEqual(mockUser);
   });
 
   test('should return the user with the same id', async () => {
-    const spyById = spyOn(repo, 'byId').mockResolvedValue(fakeUser);
-    const user = await serv.byId(fakeUser.id);
+    const spyById = spyOn(repo, 'byId').mockResolvedValue(mockUser);
+    const user = await serv.byId(mockUser.id);
 
-    expect(spyById).toHaveBeenCalledWith(fakeUser.id);
+    expect(spyById).toHaveBeenCalledWith(mockUser.id);
     expect(spyById).toHaveBeenCalledTimes(1);
-    expect(user).toEqual(fakeUser);
+    expect(user).toEqual(mockUser);
   });
 
   describe('should create user', () => {
     test('with only required attributes', async () => {
-      const newUser = { username: fakeUser.username } satisfies CreateUser;
-      const spyCreate = spyOn(repo, 'create').mockResolvedValue(fakeUser);
+      const newUser = { username: mockUser.username } satisfies CreateUser;
+      const spyCreate = spyOn(repo, 'create').mockResolvedValue(mockUser);
       const savedUser = await serv.create(newUser);
 
       expect(spyCreate).toHaveBeenCalledWith(newUser);
@@ -86,20 +86,20 @@ describe('Route.User.Services', () => {
 
     test('with all attributes', async () => {
       const newUser = {
-        username: fakeUser.username,
-        name: fakeUser.name,
-        avatar: fakeUser.avatar,
-        backgroundImage: fakeUser.backgroundImage,
-        biography: fakeUser.biography,
+        username: mockUser.username,
+        name: mockUser.name,
+        avatar: mockUser.avatar,
+        backgroundImage: mockUser.backgroundImage,
+        biography: mockUser.biography,
       } satisfies CreateUser;
 
-      const spyCreate = spyOn(repo, 'create').mockResolvedValue(fakeUser);
+      const spyCreate = spyOn(repo, 'create').mockResolvedValue(mockUser);
       const savedUser = await serv.create(newUser);
 
       expect(spyCreate).toHaveBeenCalledWith(newUser);
       expect(spyCreate).toHaveBeenCalledTimes(1);
       expect(savedUser.id).toBeNumber();
-      expect(savedUser).toEqual(fakeUser);
+      expect(savedUser).toEqual(mockUser);
     });
   });
 });

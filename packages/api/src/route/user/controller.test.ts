@@ -1,13 +1,12 @@
 import { beforeAll, describe, expect, spyOn, test } from 'bun:test';
-import { UserRepository } from './repository';
-import type { CreateUser, User } from './data';
+import type { User } from './data';
 import { UserService } from './service';
-import type { Database } from '@codeduel-backend-crab/database';
+import { UserController } from './controller';
+import type { UserRepository } from './repository';
 
 describe('Route.User.Services', () => {
-  let db: Database;
-  let repo: UserRepository;
   let serv: UserService;
+  let controller: UserController;
   const fakeUser = {
     id: 3,
     username: 'ceasar',
@@ -36,76 +35,92 @@ describe('Route.User.Services', () => {
   ] as User[];
 
   beforeAll(() => {
-    db = {} as Database;
-    repo = new UserRepository(db);
+    const repo = {} as UserRepository;
     serv = new UserService(repo);
+    controller = new UserController(serv);
   });
+
+  test('should set up routes', async () => {});
 
   test('should return all the users', async () => {
-    const spyAll = spyOn(repo, 'all').mockResolvedValue(fakeUsers);
-    const users = await serv.all();
+    const allSpy = spyOn(serv, 'all').mockResolvedValue(fakeUsers);
 
-    expect(spyAll).toHaveBeenCalledWith();
-    expect(spyAll).toHaveBeenCalledTimes(1);
-    expect(users).toEqual(fakeUsers);
-
-    spyAll.mockRestore();
-  });
-
-  test('should return a user with the same username', async () => {
-    const spyByUsername = spyOn(repo, 'byUsername').mockResolvedValue(fakeUser);
-    const user = await serv.byUsername(fakeUser.username);
-
-    expect(spyByUsername).toHaveBeenCalledWith(fakeUser.username);
-    expect(spyByUsername).toHaveBeenCalledTimes(1);
-    expect(user).toEqual(fakeUser);
-
-    spyByUsername.mockRestore();
-  });
-
-  test('should return the user with the same id', async () => {
-    const spyById = spyOn(repo, 'byId').mockResolvedValue(fakeUser);
-    const user = await serv.byId(fakeUser.id);
-
-    expect(spyById).toHaveBeenCalledWith(fakeUser.id);
-    expect(spyById).toHaveBeenCalledTimes(1);
-    expect(user).toEqual(fakeUser);
-
-    spyById.mockRestore();
-  });
-
-  describe('should create user', () => {
-    test('with only required attributes', async () => {
-      const newUser = { username: fakeUser.username } satisfies CreateUser;
-      const spyCreate = spyOn(repo, 'create').mockResolvedValue(fakeUser);
-      const savedUser = await serv.create(newUser);
-
-      expect(spyCreate).toHaveBeenCalledWith(newUser);
-      expect(spyCreate).toHaveBeenCalledTimes(1);
-      expect(savedUser.id).toBeNumber();
-      expect(savedUser.username).toEqual(newUser.username);
-
-      spyCreate.mockRestore();
+    const users = await controller.users.handler({
+      method: 'GET',
+      path: '/',
+      query: {},
+      params: {},
+      body: undefined,
+      headers: new Headers(),
     });
 
-    test('with all attributes', async () => {
-      const newUser = {
-        username: fakeUser.username,
-        name: fakeUser.name,
-        avatar: fakeUser.avatar,
-        backgroundImage: fakeUser.backgroundImage,
-        biography: fakeUser.biography,
-      } satisfies CreateUser;
+    expect(allSpy).toHaveBeenCalledWith();
+    expect(allSpy).toHaveBeenCalledTimes(1);
 
-      const spyCreate = spyOn(repo, 'create').mockResolvedValue(fakeUser);
-      const savedUser = await serv.create(newUser);
+    expect(users.status).toEqual(200);
+    expect(users.headers).toBeUndefined();
+    expect(users.body).toEqual(fakeUsers);
+  });
 
-      expect(spyCreate).toHaveBeenCalledWith(newUser);
-      expect(spyCreate).toHaveBeenCalledTimes(1);
-      expect(savedUser.id).toBeNumber();
-      expect(savedUser).toEqual(fakeUser);
+  test('should return a user by username', async () => {
+    const byUsernameSpy = spyOn(serv, 'byUsername').mockResolvedValue(fakeUser);
 
-      spyCreate.mockRestore();
+    const users = await controller.users.handler({
+      method: 'GET',
+      path: '/',
+      query: { username: fakeUser.username },
+      params: {},
+      body: undefined,
+      headers: new Headers(),
     });
+
+    expect(byUsernameSpy).toHaveBeenCalledWith(fakeUser.username);
+    expect(byUsernameSpy).toHaveBeenCalledTimes(1);
+
+    expect(users.status).toEqual(200);
+    expect(users.headers).toBeUndefined();
+    expect(users.body).toEqual(fakeUser);
+  });
+
+  test('should return a user by id', async () => {
+    const byIdSpy = spyOn(serv, 'byId').mockResolvedValue(fakeUser);
+
+    const users = await controller.byId.handler({
+      method: 'GET',
+      path: '/:id',
+      query: {},
+      params: { id: fakeUser.id },
+      body: undefined,
+      headers: new Headers(),
+    });
+
+    expect(byIdSpy).toHaveBeenCalledWith(fakeUser.id);
+    expect(byIdSpy).toHaveBeenCalledTimes(1);
+
+    expect(users.status).toEqual(200);
+    expect(users.headers).toBeUndefined();
+    expect(users.body).toEqual(fakeUser);
+  });
+
+  test('should return a user profile', async () => {
+    const byId = spyOn(serv, 'byId').mockResolvedValue(fakeUser);
+
+    const users = await controller.profile.handler({
+      method: 'GET',
+      path: '/profile',
+      query: {},
+      params: {},
+      body: undefined,
+      headers: new Headers({
+        authorization: 'Bearer token_value',
+      }),
+    });
+
+    expect(byId).toHaveBeenCalledWith(fakeUser.id);
+    expect(byId).toHaveBeenCalledTimes(1);
+
+    expect(users.status).toEqual(200);
+    expect(users.headers).toBeUndefined();
+    expect(users.body).toEqual(fakeUser);
   });
 });

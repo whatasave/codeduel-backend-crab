@@ -88,11 +88,7 @@ describe('Route.User.Repository', () => {
       biography: 'the best',
     } satisfies CreateUser;
 
-    const createUserSpy = spyOn(repo, 'create');
-    await repo.create(user);
-    expect(createUserSpy).toHaveBeenCalledWith(user);
-    expect(createUserSpy).toHaveBeenCalledTimes(1);
-    expect(createUserSpy).toThrowError();
+    expect(repo.create(user)).rejects.toThrowError();
   });
   // });
 

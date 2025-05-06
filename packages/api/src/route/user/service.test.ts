@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import { afterEach, beforeAll, describe, expect, spyOn, test, jest } from 'bun:test';
 import { UserRepository } from './repository';
 import type { CreateUser, User } from './data';
 import { UserService } from './service';
@@ -41,6 +41,10 @@ describe('Route.User.Services', () => {
     serv = new UserService(repo);
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   test('should return all the users', async () => {
     const spyAll = spyOn(repo, 'all').mockResolvedValue(fakeUsers);
     const users = await serv.all();
@@ -48,8 +52,6 @@ describe('Route.User.Services', () => {
     expect(spyAll).toHaveBeenCalledWith();
     expect(spyAll).toHaveBeenCalledTimes(1);
     expect(users).toEqual(fakeUsers);
-
-    spyAll.mockRestore();
   });
 
   test('should return a user with the same username', async () => {
@@ -59,8 +61,6 @@ describe('Route.User.Services', () => {
     expect(spyByUsername).toHaveBeenCalledWith(fakeUser.username);
     expect(spyByUsername).toHaveBeenCalledTimes(1);
     expect(user).toEqual(fakeUser);
-
-    spyByUsername.mockRestore();
   });
 
   test('should return the user with the same id', async () => {
@@ -70,8 +70,6 @@ describe('Route.User.Services', () => {
     expect(spyById).toHaveBeenCalledWith(fakeUser.id);
     expect(spyById).toHaveBeenCalledTimes(1);
     expect(user).toEqual(fakeUser);
-
-    spyById.mockRestore();
   });
 
   describe('should create user', () => {
@@ -84,8 +82,6 @@ describe('Route.User.Services', () => {
       expect(spyCreate).toHaveBeenCalledTimes(1);
       expect(savedUser.id).toBeNumber();
       expect(savedUser.username).toEqual(newUser.username);
-
-      spyCreate.mockRestore();
     });
 
     test('with all attributes', async () => {
@@ -104,8 +100,6 @@ describe('Route.User.Services', () => {
       expect(spyCreate).toHaveBeenCalledTimes(1);
       expect(savedUser.id).toBeNumber();
       expect(savedUser).toEqual(fakeUser);
-
-      spyCreate.mockRestore();
     });
   });
 });

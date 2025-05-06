@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import { afterEach, beforeAll, describe, expect, jest, spyOn, test } from 'bun:test';
 import type { User } from './data';
 import { UserService } from './service';
 import { UserController } from './controller';
@@ -41,6 +41,10 @@ describe('Route.User.Services', () => {
     controller = new UserController(serv);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   test('should set up routes', async () => {
     const router = new Router();
     controller.setup(router.group({ prefix: '/' }));
@@ -69,8 +73,6 @@ describe('Route.User.Services', () => {
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();
     expect(users.body).toEqual(fakeUsers);
-
-    allSpy.mockRestore();
   });
 
   test('should return a user by username', async () => {
@@ -91,8 +93,6 @@ describe('Route.User.Services', () => {
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();
     expect(users.body).toEqual(fakeUser);
-
-    byUsernameSpy.mockRestore();
   });
 
   test('should return a user by id', async () => {
@@ -113,8 +113,6 @@ describe('Route.User.Services', () => {
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();
     expect(users.body).toEqual(fakeUser);
-
-    byIdSpy.mockRestore();
   });
 
   test('should return a user profile', async () => {
@@ -137,7 +135,5 @@ describe('Route.User.Services', () => {
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();
     expect(users.body).toEqual(fakeUser);
-
-    byId.mockRestore();
   });
 });

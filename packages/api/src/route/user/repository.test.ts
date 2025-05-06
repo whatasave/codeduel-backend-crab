@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterEach, beforeAll, describe, expect, jest, test } from 'bun:test';
 import { UserRepository } from './repository';
 import type { CreateUser, User } from './data';
 import type { Database } from '@codeduel-backend-crab/database';
@@ -53,6 +53,10 @@ describe('Route.User.Repository', () => {
         .returningAll()
         .executeTakeFirstOrThrow();
     });
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('create', () => {

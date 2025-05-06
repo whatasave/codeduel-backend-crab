@@ -47,7 +47,7 @@ export class ChallengeRepository {
     return challenges.map(this.selectToChallenge.bind(this));
   }
 
-  async create(challenge: CreateChallenge): Promise<Challenge | undefined> {
+  async create(challenge: CreateChallenge): Promise<Challenge> {
     const created = await this.database
       .insertInto('challenge')
       .values({
@@ -58,8 +58,8 @@ export class ChallengeRepository {
       })
       .onConflict((oc) => oc.doNothing())
       .returningAll()
-      .executeTakeFirst();
-    return created && this.selectToChallenge(created);
+      .executeTakeFirstOrThrow();
+    return this.selectToChallenge(created);
   }
 
   async update(challenge: UpdateChallenge): Promise<Challenge | undefined> {

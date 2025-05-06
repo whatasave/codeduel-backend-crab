@@ -8,7 +8,7 @@ import { Router, type PathString } from '@codeduel-backend-crab/server';
 describe('Route.User.Services', () => {
   let serv: UserService;
   let controller: UserController;
-  const fakeUser = {
+  const fakeUser: User = {
     id: 3,
     username: 'ceasar',
     name: 'Giuglio Cesare',
@@ -17,8 +17,8 @@ describe('Route.User.Services', () => {
     biography: 'the best',
     createdAt: new Date('2023-10-01T12:00:00Z').toString(),
     updatedAt: new Date('2023-10-01T12:00:00Z').toString(),
-  } as User;
-  const fakeUsers = [
+  };
+  const fakeUsers: User[] = [
     {
       id: 1,
       username: 'albert',
@@ -33,7 +33,7 @@ describe('Route.User.Services', () => {
     },
     fakeUser,
     { id: 4, username: 'dora', createdAt: new Date().toString(), updatedAt: new Date().toString() },
-  ] as User[];
+  ];
 
   beforeAll(() => {
     const repo = {} as UserRepository;

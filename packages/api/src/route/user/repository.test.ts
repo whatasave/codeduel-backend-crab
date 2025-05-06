@@ -7,7 +7,7 @@ import { setupTestDatabase } from '../../utils/test';
 describe('Route.User.Repository', () => {
   let db: Database;
   let repo: UserRepository;
-  const fakeUser = {
+  const fakeUser: User = {
     id: 3,
     username: 'ceasar',
     name: 'Giuglio Cesare',
@@ -16,8 +16,8 @@ describe('Route.User.Repository', () => {
     biography: 'the best',
     createdAt: new Date('2025-05-04T14:12:02.712Z').toString(),
     updatedAt: new Date('2023-10-01T12:00:00Z').toString(),
-  } as User;
-  const fakeUsers = [
+  };
+  const fakeUsers: User[] = [
     {
       id: 1,
       username: 'albert',
@@ -32,7 +32,7 @@ describe('Route.User.Repository', () => {
     },
     fakeUser,
     { id: 4, username: 'dora', createdAt: new Date().toString(), updatedAt: new Date().toString() },
-  ] as User[];
+  ];
 
   beforeAll(async () => {
     db = await setupTestDatabase();

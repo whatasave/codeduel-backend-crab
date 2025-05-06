@@ -7,12 +7,12 @@ import type { Challenge, CreateChallenge } from './data';
 
 describe('Route.Challenge.Repository', () => {
   let db: Database;
-  let challenges: ChallengeRepository;
+  let repository: ChallengeRepository;
   let users: UserRepository;
 
   beforeEach(async () => {
     db = await setupTestDatabase();
-    challenges = new ChallengeRepository(db);
+    repository = new ChallengeRepository(db);
     users = new UserRepository(db);
   });
 
@@ -32,7 +32,7 @@ describe('Route.Challenge.Repository', () => {
     });
 
     test('should create a challenge', async () => {
-      const challenge = await challenges.create(createChallenge);
+      const challenge = await repository.create(createChallenge);
 
       expect(challenge).toMatchObject(createChallenge);
 
@@ -57,9 +57,9 @@ describe('Route.Challenge.Repository', () => {
         content: 'print("Hello, World!")',
       };
 
-      const challenge = await challenges.create(createChallenge);
+      const challenge = await repository.create(createChallenge);
 
-      const foundChallenge = await challenges.byId(challenge.id);
+      const foundChallenge = await repository.byId(challenge.id);
 
       expect(foundChallenge).toMatchObject(createChallenge);
     });
@@ -69,14 +69,14 @@ describe('Route.Challenge.Repository', () => {
         username: 'test',
       });
 
-      const challenge = await challenges.create({
+      const challenge = await repository.create({
         ownerId: user.id,
         title: 'Test Challenge',
         description: 'This is a test challenge',
         content: 'print("Hello, World!")',
       });
 
-      const foundChallenge = await challenges.byId(challenge.id + 1);
+      const foundChallenge = await repository.byId(challenge.id + 1);
 
       expect(foundChallenge).toBeUndefined();
     });
@@ -89,13 +89,13 @@ describe('Route.Challenge.Repository', () => {
       });
 
       const created = await Promise.all([
-        challenges.create({
+        repository.create({
           ownerId: user.id,
           title: 'Test Challenge 1',
           description: 'This is a test challenge 1',
           content: 'print("Hello, World!")',
         }),
-        challenges.create({
+        repository.create({
           ownerId: user.id,
           title: 'Test Challenge 2',
           description: 'This is a test challenge 2',
@@ -103,7 +103,7 @@ describe('Route.Challenge.Repository', () => {
         }),
       ]);
 
-      const all = await challenges.all();
+      const all = await repository.all();
 
       expect(all).toEqual(created as Challenge[]);
     });
@@ -115,14 +115,14 @@ describe('Route.Challenge.Repository', () => {
         username: 'test',
       });
 
-      const challenge = await challenges.create({
+      const challenge = await repository.create({
         ownerId: user.id,
         title: 'Test Challenge',
         description: 'This is a test challenge',
         content: 'print("Hello, World!")',
       });
 
-      const updatedChallenge = await challenges.update({
+      const updatedChallenge = await repository.update({
         id: challenge.id,
         title: 'Updated Challenge',
         description: 'This is an updated test challenge',
@@ -142,14 +142,14 @@ describe('Route.Challenge.Repository', () => {
         username: 'test',
       });
 
-      const challenge = await challenges.create({
+      const challenge = await repository.create({
         ownerId: user.id,
         title: 'Test Challenge',
         description: 'This is a test challenge',
         content: 'print("Hello, World!")',
       });
 
-      const updatedChallenge = await challenges.update({
+      const updatedChallenge = await repository.update({
         id: challenge.id + 1,
         title: 'Updated Challenge',
         description: 'This is an updated test challenge',
@@ -166,21 +166,21 @@ describe('Route.Challenge.Repository', () => {
         username: 'test',
       });
 
-      const challenge = await challenges.create({
+      const challenge = await repository.create({
         ownerId: user.id,
         title: 'Test Challenge',
         description: 'This is a test challenge',
         content: 'print("Hello, World!")',
       });
 
-      const deleted = await challenges.delete(challenge.id);
+      const deleted = await repository.delete(challenge.id);
 
       expect(deleted).toBe(true);
 
-      const foundChallenge = await challenges.byId(challenge.id);
+      const foundChallenge = await repository.byId(challenge.id);
       expect(foundChallenge).toBeUndefined();
 
-      const all = await challenges.all();
+      const all = await repository.all();
       expect(all).toEqual([]);
     });
   });
@@ -192,13 +192,13 @@ describe('Route.Challenge.Repository', () => {
       });
 
       const created = await Promise.all([
-        challenges.create({
+        repository.create({
           ownerId: user.id,
           title: 'Test Challenge 1',
           description: 'This is a test challenge 1',
           content: 'print("Hello, World!")',
         }),
-        challenges.create({
+        repository.create({
           ownerId: user.id,
           title: 'Test Challenge 2',
           description: 'This is a test challenge 2',
@@ -206,13 +206,13 @@ describe('Route.Challenge.Repository', () => {
         }),
       ]);
 
-      const randomChallenge = await challenges.random();
+      const randomChallenge = await repository.random();
       expect(randomChallenge).toBeDefined();
       expect(created.map((c) => ({ ...c, testCases: [] }))).toContainEqual(randomChallenge);
     });
 
     test('should return undefined if no challenges exist', async () => {
-      const randomChallenge = await challenges.random();
+      const randomChallenge = await repository.random();
       expect(randomChallenge).toBeUndefined();
     });
   });

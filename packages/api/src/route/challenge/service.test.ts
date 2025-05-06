@@ -1,20 +1,12 @@
-import { beforeEach, describe, test, jest, expect, afterEach, spyOn } from 'bun:test';
+import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
 import { ChallengeService } from './service';
-import type { ChallengeRepository } from './repository';
+import { ChallengeRepository } from './repository';
 import type { Challenge, ChallengeDetailed } from './data';
+import type { Database } from '@codeduel-backend-crab/database';
 
-describe('Route.Challenge.Repository', () => {
-  let challenges: ChallengeRepository;
+describe('Route.Challenge.Service', () => {
+  let repository: ChallengeRepository;
   let service: ChallengeService;
-
-  beforeEach(async () => {
-    challenges = {} as ChallengeRepository;
-    service = new ChallengeService(challenges);
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
 
   const mockChallenge: Challenge = {
     id: 1,
@@ -31,9 +23,18 @@ describe('Route.Challenge.Repository', () => {
     testCases: [{ input: 'input', output: 'output' }],
   };
 
+  beforeAll(async () => {
+    repository = new ChallengeRepository({} as Database);
+    service = new ChallengeService(repository);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   describe('create', () => {
     test('should create a challenge', async () => {
-      const spyCreate = spyOn(challenges, 'create').mockResolvedValue(mockChallenge);
+      const spyCreate = spyOn(repository, 'create').mockResolvedValue(mockChallenge);
 
       const challenge = await service.create({
         ownerId: 1,
@@ -55,7 +56,7 @@ describe('Route.Challenge.Repository', () => {
 
   describe('byId', () => {
     test('should get a challenge by id', async () => {
-      const spyById = spyOn(challenges, 'byId').mockResolvedValue(mockChallengeDetailed);
+      const spyById = spyOn(repository, 'byId').mockResolvedValue(mockChallengeDetailed);
 
       const challenge = await service.byId(1);
 
@@ -65,7 +66,7 @@ describe('Route.Challenge.Repository', () => {
     });
 
     test('should return undefined if challenge not found', async () => {
-      const spyById = spyOn(challenges, 'byId').mockResolvedValue(undefined);
+      const spyById = spyOn(repository, 'byId').mockResolvedValue(undefined);
 
       const challenge = await service.byId(999);
 
@@ -77,7 +78,7 @@ describe('Route.Challenge.Repository', () => {
 
   describe('all', () => {
     test('should get all challenges', async () => {
-      const spyAll = spyOn(challenges, 'all').mockResolvedValue([mockChallenge]);
+      const spyAll = spyOn(repository, 'all').mockResolvedValue([mockChallenge]);
 
       const allChallenges = await service.all();
 
@@ -88,7 +89,7 @@ describe('Route.Challenge.Repository', () => {
 
   describe('update', () => {
     test('should update a challenge', async () => {
-      const spyUpdate = spyOn(challenges, 'update').mockResolvedValue(mockChallenge);
+      const spyUpdate = spyOn(repository, 'update').mockResolvedValue(mockChallenge);
 
       const updatedChallenge = await service.update({
         id: 1,
@@ -108,7 +109,7 @@ describe('Route.Challenge.Repository', () => {
     });
 
     test('should return undefined on update not found', async () => {
-      const spyUpdate = spyOn(challenges, 'update').mockResolvedValue(undefined);
+      const spyUpdate = spyOn(repository, 'update').mockResolvedValue(undefined);
 
       const updatedChallenge = await service.update({
         id: 999,
@@ -130,7 +131,7 @@ describe('Route.Challenge.Repository', () => {
 
   describe('delete', () => {
     test('should delete a challenge', async () => {
-      const spyDelete = spyOn(challenges, 'delete').mockResolvedValue(true);
+      const spyDelete = spyOn(repository, 'delete').mockResolvedValue(true);
 
       const result = await service.delete(1);
 
@@ -142,7 +143,7 @@ describe('Route.Challenge.Repository', () => {
 
   describe('random', () => {
     test('should get a random challenge', async () => {
-      const spyRandom = spyOn(challenges, 'random').mockResolvedValue(mockChallengeDetailed);
+      const spyRandom = spyOn(repository, 'random').mockResolvedValue(mockChallengeDetailed);
 
       const randomChallenge = await service.random();
 
@@ -151,7 +152,7 @@ describe('Route.Challenge.Repository', () => {
     });
 
     test('should return undefined if no challenges exist', async () => {
-      const spyRandom = spyOn(challenges, 'random').mockResolvedValue(undefined);
+      const spyRandom = spyOn(repository, 'random').mockResolvedValue(undefined);
 
       const randomChallenge = await service.random();
 

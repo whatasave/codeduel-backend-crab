@@ -1,11 +1,11 @@
 import type { Database } from '@codeduel-backend-crab/database';
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { setupTestDatabase } from '../../test';
+import { setupTestDatabase } from '../../utils/test';
 import { ChallengeRepository } from './repository';
 import { UserRepository } from '../user/repository';
 import type { Challenge, CreateChallenge } from './data';
 
-describe('Challenge Repository', () => {
+describe('Route.Challenge.Repository', () => {
   let db: Database;
   let challenges: ChallengeRepository;
   let users: UserRepository;

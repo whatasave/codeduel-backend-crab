@@ -13,7 +13,7 @@ import { Pool } from 'pg';
 import type { DB } from './database';
 import { Type, type Static } from '@sinclair/typebox';
 import { AssertError, Value } from '@sinclair/typebox/value';
-import { newDb } from 'pg-mem';
+import { NO_MIGRATIONS } from 'kysely';
 
 export type Database = Kysely<DB>;
 
@@ -92,40 +92,15 @@ export async function migrateToLatest(db: Kysely<DB>): Promise<void> {
   }
 }
 
-export async function runMigrations(db: Kysely<DB>): Promise<void> {
-  const migrationsPath = path.join(import.meta.dir, '../migrations_test');
-  const files = await fs.readdir(migrationsPath);
-  const migrationFiles = files.filter((f) => f.endsWith('.ts'));
-
-  for (const file of migrationFiles.sort()) {
-    const fullPath = path.resolve(migrationsPath, file);
-    interface Migration {
-      up: (db: Kysely<unknown>) => Promise<void>;
-      down?: (db: Kysely<unknown>) => Promise<void>;
-    }
-    const migration = (await import(fullPath)) as Migration;
-
-    if (typeof migration.up === 'function') {
-      await migration.up(db as unknown as Kysely<unknown>);
-    } else {
-      console.warn(`Skipping ${file}: no 'up' function found.`);
-    }
-  }
-}
-
-export async function createMockDatabase(): Promise<Database> {
-  const memDb = newDb({
-    autoCreateForeignKeyIndices: true,
+export async function rollbackMigrations(db: Kysely<DB>): Promise<void> {
+  const provider = new FileMigrationProvider({
+    fs,
+    path,
+    migrationFolder: path.join(import.meta.dir, '../migrations'),
   });
-  // memDb.registerLanguage('plpgsql', () => {});
-
-  const pg = memDb.adapters.createPg();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-  const pool = new pg.Pool() as unknown as Pool;
-  const dialect = new PostgresDialect({ pool });
-  const db = new Kysely<DB>({ dialect });
-
-  await runMigrations(db);
-
-  return db as Database;
+  const migrator = new Migrator({ db, provider });
+  const { error } = await migrator.migrateTo(NO_MIGRATIONS);
+  if (error) {
+    throw new Error('Rollback failed', { cause: error });
+  }
 }

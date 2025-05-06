@@ -3,6 +3,7 @@ import type { User } from './data';
 import { UserService } from './service';
 import { UserController } from './controller';
 import type { UserRepository } from './repository';
+import { Router, type PathString } from '@codeduel-backend-crab/server';
 
 describe('Route.User.Services', () => {
   let serv: UserService;
@@ -40,7 +41,15 @@ describe('Route.User.Services', () => {
     controller = new UserController(serv);
   });
 
-  test('should set up routes', async () => {});
+  test('should set up routes', async () => {
+    const router = new Router();
+    controller.setup(router.group({ prefix: '/' }));
+    const routes = [...router.allRoutes()].map((r) => r.path);
+    const expectedRoutes = ['/:id', '/', '/profile'].sort() as PathString[];
+
+    expect(routes).toHaveLength(3);
+    expect(routes.sort()).toEqual(expectedRoutes);
+  });
 
   test('should return all the users', async () => {
     const allSpy = spyOn(serv, 'all').mockResolvedValue(fakeUsers);

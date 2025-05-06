@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 import { UserRepository } from './repository';
 import type { CreateUser, User } from './data';
 import { createMockDatabase, type Database } from '@codeduel-backend-crab/database';
@@ -112,7 +112,7 @@ describe('Route.User.Repository', () => {
     }
   });
 
-  test('shuld return user by id', async () => {
+  test('should return user by id', async () => {
     const user = await repo.byId(fakeUser.id);
     expect(user).toMatchObject({
       id: fakeUser.id,
@@ -124,7 +124,7 @@ describe('Route.User.Repository', () => {
     });
   });
 
-  test('shuld return undefined if user with `id` does not exist', async () => {
+  test('should return undefined if user with `id` does not exist', async () => {
     const user = await repo.byId(99);
     expect(user).toBeUndefined();
   });

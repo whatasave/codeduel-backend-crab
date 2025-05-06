@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { UserRepository } from './repository';
 import type { CreateUser, User } from './data';
 import { createMockDatabase, type Database } from '@codeduel-backend-crab/database';
+import { setupTestDatabase } from '../../utils/test';
 
 // defaults?: Partial<DefaultData<NewUser>>
 // defaultData: DefaultData<Insertable<User>>
@@ -37,7 +38,7 @@ describe('Route.User.Repository', () => {
   ] as User[];
 
   beforeAll(async () => {
-    db = await createMockDatabase();
+    db = await setupTestDatabase();
     repo = new UserRepository(db);
 
     await db.transaction().execute(async (trx) => {

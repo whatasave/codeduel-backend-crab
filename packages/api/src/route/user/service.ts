@@ -1,8 +1,8 @@
 import type { CreateUser, User } from './data';
-import type { IUserRepository } from './repository';
+import type { UserRepository } from './repository';
 
 export class UserService {
-  constructor(private readonly userRepository: IUserRepository) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   /**
    * Find all users.

@@ -14,7 +14,7 @@ export class UserRepository {
     const user = await this.database
       .selectFrom('user')
       .selectAll()
-      .where('username', '=', username)
+      .where('username', '=', username.toLowerCase())
       .executeTakeFirst();
 
     if (!user) return undefined;
@@ -37,7 +37,13 @@ export class UserRepository {
   async create(user: CreateUser): Promise<User> {
     const newUser = await this.database
       .insertInto('user')
-      .values(user)
+      .values({
+        username: user.username,
+        name: user.name,
+        avatar: user.avatar,
+        background_image: user.backgroundImage,
+        biography: user.biography,
+      })
       .returningAll()
       .executeTakeFirstOrThrow();
 

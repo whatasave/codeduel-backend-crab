@@ -8,12 +8,12 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   setup(group: RouterGroup): void {
-    group.route(this.findById);
-    group.route(this.findByUsername);
-    group.route(this.getProfile);
+    group.route(this.byId);
+    group.route(this.users);
+    group.route(this.profile);
   }
 
-  findByUsername = validated({
+  users = validated({
     method: 'GET',
     path: '/',
     schema: {
@@ -37,7 +37,7 @@ export class UserController {
     },
   });
 
-  findById = validated({
+  byId = validated({
     method: 'GET',
     path: '/:id',
     schema: {
@@ -59,7 +59,7 @@ export class UserController {
     },
   });
 
-  getProfile = validated({
+  profile = validated({
     method: 'GET',
     path: '/profile',
     schema: {

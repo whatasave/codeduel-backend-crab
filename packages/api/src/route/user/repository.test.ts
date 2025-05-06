@@ -1,11 +1,8 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { UserRepository } from './repository';
 import type { CreateUser, User } from './data';
-import { createMockDatabase, type Database } from '@codeduel-backend-crab/database';
+import type { Database } from '@codeduel-backend-crab/database';
 import { setupTestDatabase } from '../../utils/test';
-
-// defaults?: Partial<DefaultData<NewUser>>
-// defaultData: DefaultData<Insertable<User>>
 
 describe('Route.User.Repository', () => {
   let db: Database;
@@ -58,42 +55,41 @@ describe('Route.User.Repository', () => {
     });
   });
 
-  // describe('when creating', () => {
-  test('should create new user', async () => {
-    const user = {
-      username: 'schumacher',
-      name: 'Michael Schumacher',
-      avatar: 'pic.io/avatar.png',
-      backgroundImage: 'pic.io/cover.png',
-      biography: 'the best',
-    } satisfies CreateUser;
+  describe('create', () => {
+    test('should create new user', async () => {
+      const user = {
+        username: 'schumacher',
+        name: 'Michael Schumacher',
+        avatar: 'pic.io/avatar.png',
+        backgroundImage: 'pic.io/cover.png',
+        biography: 'the best',
+      } satisfies CreateUser;
 
-    const createdUser = await repo.create(user);
-    expect(createdUser).toContainAnyKeys(['id', 'username', 'createdAt', 'updatedAt']);
-    expect(createdUser).toMatchObject({
-      username: user.username,
-      name: user.name,
-      avatar: user.avatar,
-      backgroundImage: user.backgroundImage,
-      biography: user.biography,
-      updatedAt: createdUser.createdAt,
+      const createdUser = await repo.create(user);
+      expect(createdUser).toContainAnyKeys(['id', 'username', 'createdAt', 'updatedAt']);
+      expect(createdUser).toMatchObject({
+        username: user.username,
+        name: user.name,
+        avatar: user.avatar,
+        backgroundImage: user.backgroundImage,
+        biography: user.biography,
+        updatedAt: createdUser.createdAt,
+      });
+    });
+
+    test('should throw error if username already exists', async () => {
+      const user = {
+        username: fakeUser.username,
+        name: 'Michael Schumacher',
+        avatar: 'pic.io/avatar.png',
+        backgroundImage: 'pic.io/cover.png',
+        biography: 'the best',
+      } satisfies CreateUser;
+
+      expect(repo.create(user)).rejects.toThrowError();
     });
   });
 
-  test('should throw error if username already exists', async () => {
-    const user = {
-      username: fakeUser.username,
-      name: 'Michael Schumacher',
-      avatar: 'pic.io/avatar.png',
-      backgroundImage: 'pic.io/cover.png',
-      biography: 'the best',
-    } satisfies CreateUser;
-
-    expect(repo.create(user)).rejects.toThrowError();
-  });
-  // });
-
-  // describe('when searching', () => {
   test('should return all users', async () => {
     const users = await repo.all();
     expect(users).toBeArray();
@@ -113,49 +109,53 @@ describe('Route.User.Repository', () => {
     }
   });
 
-  test('should return user by id', async () => {
-    const user = await repo.byId(fakeUser.id);
-    expect(user).toMatchObject({
-      id: fakeUser.id,
-      username: fakeUser.username,
-      name: fakeUser.name,
-      avatar: fakeUser.avatar,
-      backgroundImage: fakeUser.backgroundImage,
-      biography: fakeUser.biography,
+  describe('byId', () => {
+    test('should return user by id', async () => {
+      const user = await repo.byId(fakeUser.id);
+      expect(user).toMatchObject({
+        id: fakeUser.id,
+        username: fakeUser.username,
+        name: fakeUser.name,
+        avatar: fakeUser.avatar,
+        backgroundImage: fakeUser.backgroundImage,
+        biography: fakeUser.biography,
+      });
+    });
+
+    test('should return undefined if user with `id` does not exist', async () => {
+      const user = await repo.byId(99);
+      expect(user).toBeUndefined();
     });
   });
 
-  test('should return undefined if user with `id` does not exist', async () => {
-    const user = await repo.byId(99);
-    expect(user).toBeUndefined();
-  });
-
-  test('should return user by username', async () => {
-    const user = await repo.byUsername(fakeUser.username);
-    expect(user).toMatchObject({
-      id: fakeUser.id,
-      username: fakeUser.username,
-      name: fakeUser.name,
-      avatar: fakeUser.avatar,
-      backgroundImage: fakeUser.backgroundImage,
-      biography: fakeUser.biography,
+  describe('byUsername', () => {
+    test('should return user by username', async () => {
+      const user = await repo.byUsername(fakeUser.username);
+      expect(user).toMatchObject({
+        id: fakeUser.id,
+        username: fakeUser.username,
+        name: fakeUser.name,
+        avatar: fakeUser.avatar,
+        backgroundImage: fakeUser.backgroundImage,
+        biography: fakeUser.biography,
+      });
     });
-  });
 
-  test('should return undefined if user with `username` does not exist', async () => {
-    const user = await repo.byUsername('non-existing');
-    expect(user).toBeUndefined();
-  });
+    test('should return undefined if user with `username` does not exist', async () => {
+      const user = await repo.byUsername('non-existing');
+      expect(user).toBeUndefined();
+    });
 
-  test('should return user by username with case insensitive', async () => {
-    const user = await repo.byUsername('CEASAR');
-    expect(user).toMatchObject({
-      id: fakeUser.id,
-      username: fakeUser.username,
-      name: fakeUser.name,
-      avatar: fakeUser.avatar,
-      backgroundImage: fakeUser.backgroundImage,
-      biography: fakeUser.biography,
+    test('should return user by username with case insensitive', async () => {
+      const user = await repo.byUsername('CEASAR');
+      expect(user).toMatchObject({
+        id: fakeUser.id,
+        username: fakeUser.username,
+        name: fakeUser.name,
+        avatar: fakeUser.avatar,
+        backgroundImage: fakeUser.backgroundImage,
+        biography: fakeUser.biography,
+      });
     });
   });
 });

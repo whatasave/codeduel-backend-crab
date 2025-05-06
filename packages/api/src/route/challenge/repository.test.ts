@@ -184,4 +184,36 @@ describe('Route.Challenge.Repository', () => {
       expect(all).toEqual([]);
     });
   });
+
+  describe('random', () => {
+    test('should get a random challenge', async () => {
+      const user = await users.create({
+        username: 'test',
+      });
+
+      const created = await Promise.all([
+        challenges.create({
+          ownerId: user.id,
+          title: 'Test Challenge 1',
+          description: 'This is a test challenge 1',
+          content: 'print("Hello, World!")',
+        }),
+        challenges.create({
+          ownerId: user.id,
+          title: 'Test Challenge 2',
+          description: 'This is a test challenge 2',
+          content: 'print("Hello, World!")',
+        }),
+      ]);
+
+      const randomChallenge = await challenges.random();
+      expect(randomChallenge).toBeDefined();
+      expect(created.map((c) => ({ ...c, testCases: [] }))).toContainEqual(randomChallenge);
+    });
+
+    test('should return undefined if no challenges exist', async () => {
+      const randomChallenge = await challenges.random();
+      expect(randomChallenge).toBeUndefined();
+    });
+  });
 });

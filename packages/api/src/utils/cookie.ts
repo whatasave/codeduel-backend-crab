@@ -22,21 +22,14 @@ export const RequestCookie = Type.Object({
 
 export type ResponseCookie = Static<typeof ResponseCookie>;
 export const ResponseCookie = Type.Object({
-  name: Type.String({ minLength: 1 }),
-  value: Type.String(),
-  expires: Type.Optional(Type.String({ format: 'date-time' })),
-  maxAge: Type.Optional(Type.Integer({ minimum: 0 })),
-  domain: Type.Optional(Type.String({ minLength: 1 })),
-  path: Type.Optional(Type.String({ minLength: 1 })),
-  secure: Type.Optional(Type.Boolean()),
-  httpOnly: Type.Optional(Type.Boolean()),
-  sameSite: Type.Optional(
-    Type.Union([Type.Literal('Strict'), Type.Literal('Lax'), Type.Literal('None')])
-  ),
+  ...RequestCookie.properties,
+  ...CookieOptions.properties,
 });
 
 export function createCookie(cookie: ResponseCookie): string {
-  const base: string[] = [`${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value)}`];
+  const base: string[] = [
+    `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value ?? '')}`,
+  ];
 
   const opts = [
     cookie.expires && `Expires=${new Date(cookie.expires).toUTCString()}`,
@@ -52,9 +45,9 @@ export function createCookie(cookie: ResponseCookie): string {
 }
 
 function parseCookie(cookieString: string): RequestCookie {
-  const cookieTimmed = cookieString.trim();
-  if (!cookieTimmed) throw new Error('Invalid cookie string');
-  const [key, value] = cookieTimmed.split('=').map((p) => p.trim());
+  const cookieTrimmed = cookieString.trim();
+  if (!cookieTrimmed) throw new Error('Invalid cookie string');
+  const [key, value] = cookieTrimmed.split('=').map((p) => p.trim());
   if (!key) throw new Error('Invalid cookie string');
 
   return {

@@ -1,7 +1,7 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
 import { ChallengeService } from './service';
 import { ChallengeRepository } from './repository';
-import type { Challenge, ChallengeDetailed } from './data';
+import type { Challenge, ChallengeDetailed, CreateChallenge, UpdateChallenge } from './data';
 import type { Database } from '@codeduel-backend-crab/database';
 
 describe('Route.Challenge.Service', () => {
@@ -33,23 +33,20 @@ describe('Route.Challenge.Service', () => {
   });
 
   describe('create', () => {
+    const mockCreateChallenge: CreateChallenge = {
+      ownerId: 1,
+      title: 'Test Challenge',
+      description: 'This is a test challenge',
+      content: 'print("Hello, World!")',
+    };
+
     test('should create a challenge', async () => {
       const spyCreate = spyOn(repository, 'create').mockResolvedValue(mockChallenge);
 
-      const challenge = await service.create({
-        ownerId: 1,
-        title: 'Test Challenge',
-        description: 'This is a test challenge',
-        content: 'print("Hello, World!")',
-      });
+      const challenge = await service.create(mockCreateChallenge);
 
       expect(spyCreate).toHaveBeenCalledTimes(1);
-      expect(spyCreate).toHaveBeenCalledWith({
-        ownerId: 1,
-        title: 'Test Challenge',
-        description: 'This is a test challenge',
-        content: 'print("Hello, World!")',
-      });
+      expect(spyCreate).toHaveBeenCalledWith(mockCreateChallenge);
       expect(challenge).toEqual(mockChallenge);
     });
   });
@@ -88,43 +85,30 @@ describe('Route.Challenge.Service', () => {
   });
 
   describe('update', () => {
+    const mockUpdateChallenge: UpdateChallenge = {
+      id: 1,
+      title: 'Updated Challenge',
+      description: 'This is an updated test challenge',
+      content: 'print("Hello, Updated World!")',
+    };
+
     test('should update a challenge', async () => {
       const spyUpdate = spyOn(repository, 'update').mockResolvedValue(mockChallenge);
 
-      const updatedChallenge = await service.update({
-        id: 1,
-        title: 'Updated Challenge',
-        description: 'This is an updated test challenge',
-        content: 'print("Hello, Updated World!")',
-      });
+      const updatedChallenge = await service.update(mockUpdateChallenge);
 
       expect(spyUpdate).toHaveBeenCalledTimes(1);
-      expect(spyUpdate).toHaveBeenCalledWith({
-        id: 1,
-        title: 'Updated Challenge',
-        description: 'This is an updated test challenge',
-        content: 'print("Hello, Updated World!")',
-      });
+      expect(spyUpdate).toHaveBeenCalledWith(mockUpdateChallenge);
       expect(updatedChallenge).toEqual(mockChallenge);
     });
 
     test('should return undefined on update not found', async () => {
       const spyUpdate = spyOn(repository, 'update').mockResolvedValue(undefined);
 
-      const updatedChallenge = await service.update({
-        id: 999,
-        title: 'Updated Challenge',
-        description: 'This is an updated test challenge',
-        content: 'print("Hello, Updated World!")',
-      });
+      const updatedChallenge = await service.update(mockUpdateChallenge);
 
       expect(spyUpdate).toHaveBeenCalledTimes(1);
-      expect(spyUpdate).toHaveBeenCalledWith({
-        id: 999,
-        title: 'Updated Challenge',
-        description: 'This is an updated test challenge',
-        content: 'print("Hello, Updated World!")',
-      });
+      expect(spyUpdate).toHaveBeenCalledWith(mockUpdateChallenge);
       expect(updatedChallenge).toBeUndefined();
     });
   });

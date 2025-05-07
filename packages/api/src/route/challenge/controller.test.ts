@@ -1,6 +1,6 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
 import { ChallengeService } from './service';
-import type { Challenge, ChallengeDetailed } from './data';
+import type { Challenge, ChallengeDetailed, CreateChallenge } from './data';
 import { ChallengeController } from './controller';
 import type { ChallengeRepository } from './repository';
 
@@ -33,6 +33,13 @@ describe('Route.Challenge.Controller', () => {
   });
 
   describe('create', () => {
+    const mockCreateChallenge: CreateChallenge = {
+      ownerId: 1,
+      title: 'Test Challenge',
+      description: 'This is a test challenge',
+      content: 'print("Hello, World!")',
+    };
+
     test('should create a challenge', async () => {
       const spyCreate = spyOn(service, 'create').mockResolvedValue(mockChallenge);
 
@@ -42,21 +49,11 @@ describe('Route.Challenge.Controller', () => {
         headers: new Headers(),
         params: {},
         query: {},
-        body: {
-          ownerId: 1,
-          title: 'Test Challenge',
-          description: 'This is a test challenge',
-          content: 'print("Hello, World!")',
-        },
+        body: mockCreateChallenge,
       });
 
       expect(spyCreate).toHaveBeenCalledTimes(1);
-      expect(spyCreate).toHaveBeenCalledWith({
-        ownerId: 1,
-        title: 'Test Challenge',
-        description: 'This is a test challenge',
-        content: 'print("Hello, World!")',
-      });
+      expect(spyCreate).toHaveBeenCalledWith(mockCreateChallenge);
       expect(challenge).toEqual({ status: 201, body: mockChallenge });
     });
   });

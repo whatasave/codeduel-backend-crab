@@ -2,38 +2,75 @@ import { Type, type Static } from '@sinclair/typebox';
 
 export type CookieOptions = Static<typeof CookieOptions>;
 export const CookieOptions = Type.Object({
-  name: Type.String(),
-  domain: Type.String(),
-  path: Type.String({ default: '/' }),
-  maxAge: Type.Number(),
-  httpOnly: Type.Boolean(),
-  secure: Type.Boolean(),
-  sameSite: Type.String({
-    default: 'Lax',
-    enum: ['Strict', 'Lax', 'None'],
-  }),
+  name: Type.String({ minLength: 1 }),
+  expires: Type.Optional(Type.String({ format: 'date-time' })),
+  maxAge: Type.Optional(Type.Integer({ minimum: 0 })),
+  domain: Type.Optional(Type.String({ minLength: 1 })),
+  path: Type.Optional(Type.String({ minLength: 1 })),
+  secure: Type.Optional(Type.Boolean()),
+  httpOnly: Type.Optional(Type.Boolean()),
+  sameSite: Type.Optional(
+    Type.Union([Type.Literal('Strict'), Type.Literal('Lax'), Type.Literal('None')])
+  ),
 });
 
-export function createCookie(name: string, value: string, options: Partial<CookieOptions>): string {
-  const cookieOptions = [
-    options.domain && `Domain=${options.domain}`,
-    `Path=${options.path ?? '/'}`,
-    options.maxAge && `Max-Age=${options.maxAge}`,
-    options.httpOnly && 'HttpOnly',
-    options.secure && 'Secure',
-    `SameSite=${options.sameSite ?? 'Lax'}`,
+export type RequestCookie = Static<typeof RequestCookie>;
+export const RequestCookie = Type.Object({
+  name: Type.String({ minLength: 1 }),
+  value: Type.Optional(Type.String()),
+});
+
+export type ResponseCookie = Static<typeof ResponseCookie>;
+export const ResponseCookie = Type.Object({
+  ...RequestCookie.properties,
+  ...CookieOptions.properties,
+});
+
+export function createCookie(cookie: ResponseCookie): string {
+  const base: string[] = [
+    `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value ?? '')}`,
   ];
 
-  const filteredOptions = cookieOptions.filter(Boolean);
-  const parsedOptions = filteredOptions.join('; ');
+  const opts = [
+    cookie.expires && `Expires=${new Date(cookie.expires).toUTCString()}`,
+    cookie.maxAge && `Max-Age=${cookie.maxAge}`,
+    cookie.domain && `Domain=${cookie.domain}`,
+    cookie.path && `Path=${cookie.path}`,
+    cookie.secure && 'Secure',
+    cookie.httpOnly && 'HttpOnly',
+    cookie.sameSite && `SameSite=${cookie.sameSite}`,
+  ].filter(Boolean);
 
-  return parsedOptions ? `${name}=${value}; ${parsedOptions}` : `${name}=${value}`;
+  return [base, ...opts].join('; ');
 }
 
-export function getCookieValueByName(cookies: string, name: string): string | undefined {
-  const cookieArray = cookies.split('; ');
-  const cookie = cookieArray.find((cookie) => cookie.startsWith(`${name}=`));
-  if (!cookie) return undefined;
+function parseCookie(cookieString: string): RequestCookie {
+  const cookieTrimmed = cookieString.trim();
+  if (!cookieTrimmed) throw new Error('Invalid cookie string');
+  const [key, value] = cookieTrimmed.split('=').map((p) => p.trim());
+  if (!key) throw new Error('Invalid cookie string');
 
-  return cookie.split('=')[1];
+  return {
+    name: decodeURIComponent(key),
+    value: value ? decodeURIComponent(value) : undefined,
+  };
+}
+
+export function parseCookies(cookiesString: string | null): RequestCookie[] {
+  if (!cookiesString) return [];
+  const cookies = cookiesString.split(';').map((cookie) => cookie.trim());
+  return cookies.map(parseCookie);
+}
+
+export function getCookieValueByName(
+  cookiesString: string | null,
+  name: RequestCookie['name']
+): string | undefined {
+  const cookies = parseCookies(cookiesString);
+  const cookie = cookies.find((cookie) => cookie.name === name);
+  return cookie?.value;
+}
+
+export function removeCookie(name: RequestCookie['name']): string {
+  return createCookie({ name, value: '', maxAge: -1, path: '/' });
 }

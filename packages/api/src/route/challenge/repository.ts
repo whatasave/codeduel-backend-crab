@@ -6,7 +6,6 @@ import type {
   TestCase,
   UpdateChallenge,
 } from './data';
-import { jsonBuildObject } from 'kysely/helpers/postgres';
 import { sql } from 'kysely';
 
 export class ChallengeRepository {
@@ -15,31 +14,16 @@ export class ChallengeRepository {
   async byId(id: Challenge['id']): Promise<ChallengeDetailed | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
-      .leftJoin('test_case', 'test_case.challenge_id', 'challenge.id')
-      .select((eb) => [
-        'challenge.id',
-        'challenge.owner_id',
-        'challenge.title',
-        'challenge.description',
-        'challenge.content',
-        'challenge.created_at',
-        'challenge.updated_at',
-        eb.fn
-          .coalesce(
-            eb.fn.jsonAgg(
-              jsonBuildObject({
-                input: eb.ref('test_case.input').$notNull(),
-                output: eb.ref('test_case.output').$notNull(),
-              })
-            ),
-            sql`'[]'::json`
-          )
-          .as('test_cases'),
-      ])
-      .where('challenge.id', '=', id)
-      .groupBy('challenge.id')
+      .where('id', '=', id)
+      .selectAll()
       .executeTakeFirst();
-    return challenge && this.selectToChallengeDetailed(challenge);
+    if (!challenge) return undefined;
+    const test_cases = await this.database
+      .selectFrom('test_case')
+      .where('challenge_id', '=', challenge.id)
+      .selectAll()
+      .execute();
+    return this.selectToChallengeDetailed({ ...challenge, test_cases });
   }
 
   async all(): Promise<Challenge[]> {
@@ -47,8 +31,8 @@ export class ChallengeRepository {
     return challenges.map(this.selectToChallenge.bind(this));
   }
 
-  async create(challenge: CreateChallenge): Promise<Challenge | undefined> {
-    const [createdChallenge] = await this.database
+  async create(challenge: CreateChallenge): Promise<Challenge> {
+    const created = await this.database
       .insertInto('challenge')
       .values({
         owner_id: challenge.ownerId,
@@ -56,13 +40,14 @@ export class ChallengeRepository {
         description: challenge.description,
         content: challenge.content,
       })
+      .onConflict((oc) => oc.doNothing())
       .returningAll()
-      .execute();
-    return createdChallenge && this.selectToChallenge(createdChallenge);
+      .executeTakeFirstOrThrow();
+    return this.selectToChallenge(created);
   }
 
   async update(challenge: UpdateChallenge): Promise<Challenge | undefined> {
-    const [updatedChallenge] = await this.database
+    const updated = await this.database
       .updateTable('challenge')
       .set({
         title: challenge.title,
@@ -71,8 +56,8 @@ export class ChallengeRepository {
       })
       .where('id', '=', challenge.id)
       .returningAll()
-      .execute();
-    return updatedChallenge && this.selectToChallenge(updatedChallenge);
+      .executeTakeFirst();
+    return updated && this.selectToChallenge(updated);
   }
 
   async delete(id: Challenge['id']): Promise<boolean> {
@@ -86,32 +71,17 @@ export class ChallengeRepository {
   async random(): Promise<ChallengeDetailed | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
-      .leftJoin('test_case', 'test_case.challenge_id', 'challenge.id')
-      .select((eb) => [
-        'challenge.id',
-        'challenge.owner_id',
-        'challenge.title',
-        'challenge.description',
-        'challenge.content',
-        'challenge.created_at',
-        'challenge.updated_at',
-        eb.fn
-          .coalesce(
-            eb.fn.jsonAgg(
-              jsonBuildObject({
-                input: eb.ref('test_case.input').$notNull(),
-                output: eb.ref('test_case.output').$notNull(),
-              })
-            ),
-            sql`'[]'::json`
-          )
-          .as('test_cases'),
-      ])
-      .orderBy(sql`random()`)
+      .orderBy(sql`RANDOM()`)
       .limit(1)
-      .groupBy('challenge.id')
+      .selectAll()
       .executeTakeFirst();
-    return challenge && this.selectToChallengeDetailed(challenge);
+    if (!challenge) return undefined;
+    const test_cases = await this.database
+      .selectFrom('test_case')
+      .where('challenge_id', '=', challenge.id)
+      .selectAll()
+      .execute();
+    return this.selectToChallengeDetailed({ ...challenge, test_cases });
   }
 
   private selectToChallengeDetailed(

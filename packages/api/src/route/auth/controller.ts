@@ -1,15 +1,41 @@
 import { internalServerError, type RouterGroup } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { AuthService } from './service';
-import type { GithubController } from './github/controller';
-import type { GitlabController } from './gitlab/controller';
+import { GithubController, GithubControllerConfig } from './github/controller';
+import { GitlabController, GitlabControllerConfig } from './gitlab/controller';
+import { Type, type Static } from '@sinclair/typebox';
+import { GithubService, GithubServiceConfig } from './github/service';
+import { GitlabService, GitlabServiceConfig } from './gitlab/service';
+
+export type AuthControllerConfig = Static<typeof AuthControllerConfig>;
+export const AuthControllerConfig = Type.Object({
+  github: Type.Object({
+    service: GithubServiceConfig,
+    controller: GithubControllerConfig,
+  }),
+  gitlab: Type.Object({
+    service: GitlabServiceConfig,
+    controller: GitlabControllerConfig,
+  }),
+});
 
 export class AuthController {
+  private readonly githubController: GithubController;
+  private readonly gitlabController: GitlabController;
+
   constructor(
     private readonly authService: AuthService,
-    private readonly githubController: GithubController,
-    private readonly gitlabController: GitlabController
-  ) {}
+    config: AuthControllerConfig
+  ) {
+    this.githubController = new GithubController(
+      new GithubService(authService, config.github.service),
+      config.github.controller
+    );
+    this.gitlabController = new GitlabController(
+      new GitlabService(authService, config.gitlab.service),
+      config.gitlab.controller
+    );
+  }
 
   setup(group: RouterGroup): void {
     group.route(this.validate);

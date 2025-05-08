@@ -3,10 +3,7 @@ import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
 import { AuthServiceConfig } from './route/auth/service';
-import { GithubControllerConfig } from './route/auth/github/controller';
-import { GitlabControllerConfig } from './route/auth/gitlab/controller';
-import { GithubServiceConfig } from './route/auth/github/service';
-import { GitlabServiceConfig } from './route/auth/gitlab/service';
+import { AuthControllerConfig } from './route/auth/controller';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -17,14 +14,7 @@ export const Config = Type.Object({
   database: DatabaseConfig,
   auth: Type.Object({
     service: AuthServiceConfig,
-    github: Type.Object({
-      service: GithubServiceConfig,
-      controller: GithubControllerConfig,
-    }),
-    gitlab: Type.Object({
-      service: GitlabServiceConfig,
-      controller: GitlabControllerConfig,
-    }),
+    controller: AuthControllerConfig,
   }),
 });
 

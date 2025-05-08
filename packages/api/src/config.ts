@@ -1,7 +1,7 @@
 import { CorsOptions } from '@codeduel-backend-crab/server/cors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
-import { Config as DBConfig } from '@codeduel-backend-crab/database';
+import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
 import { Config as AuthConfig } from './route/auth/config';
 
 export type Config = Static<typeof Config>;
@@ -10,24 +10,23 @@ export const Config = Type.Object({
   port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
   descriptiveErrors: Type.Boolean(),
   cors: Type.Optional(CorsOptions),
-  database: DBConfig,
+  database: DatabaseConfig,
   auth: AuthConfig,
 });
 
 export function loadConfig(): Config {
   const env = process.env;
+
   const config = {
     host: env.HOST,
     port: env.PORT,
     descriptiveErrors: env.DESCRIPTIVE_ERRORS,
-    cors: env.CORS_ALLOWED_ORIGINS
-      ? {
-          allowedOrigins: env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),
-          allowedMethods: env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
-          allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
-          allowCredentials: env.CORS_ALLOW_CREDENTIALS,
-        }
-      : undefined,
+    cors: env.CORS_ALLOWED_ORIGINS && {
+      allowedOrigins: env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),
+      allowedMethods: env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
+      allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
+      allowCredentials: env.CORS_ALLOW_CREDENTIALS,
+    },
     database: {
       host: env.DATABASE_HOST,
       port: env.DATABASE_PORT,

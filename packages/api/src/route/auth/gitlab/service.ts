@@ -1,8 +1,9 @@
-import { createCookie, getCookieValueByName } from '../../../utils/cookie';
-import type { AuthUser } from '../data';
+import type { Auth } from '../data';
 import type { AuthService } from '../service';
-import type { Config } from './config';
 import type { GitlabAccessToken, GitlabUserData } from './data';
+import type { User } from '../../user/data';
+import type { CookieOptions } from '../../../utils/cookie';
+import type { Config } from './config';
 
 export class GitlabService {
   private static readonly PROVIDER: string = 'gitlab';
@@ -12,30 +13,21 @@ export class GitlabService {
     private readonly config: Config
   ) {}
 
-  /**
-   * Create a new user if it does not exist.
-   *
-   * @returns The tokens and cookies for the user.
-   */
-  async create(gitlabUser: GitlabUserData): Promise<AuthUser> {
+  get stateCookieOptions(): CookieOptions {
+    return this.config.stateCookie;
+  }
+
+  async create(gitlabUser: GitlabUserData): Promise<[Auth, User]> {
     return await this.authService.createForce(
+      { name: GitlabService.PROVIDER, userId: gitlabUser.id },
       {
         username: gitlabUser.username,
         name: gitlabUser.name ?? gitlabUser.username,
         avatar: gitlabUser.avatar_url,
-      },
-      {
-        name: GitlabService.PROVIDER,
-        userId: gitlabUser.id,
       }
     );
   }
 
-  /**
-   * Get the access token from Gitlab.
-   *
-   * More info: https://docs.gitlab.com/api/oauth2/#authorization-code-flow
-   */
   async exchangeCodeForToken(code: string): Promise<GitlabAccessToken> {
     const response = await fetch('https://gitlab.com/oauth/token', {
       method: 'POST',
@@ -52,13 +44,9 @@ export class GitlabService {
         redirect_uri: this.config.callbackUri,
       }),
     });
-    const res = (await response.json()) as unknown as GitlabAccessToken;
-    return res;
+    return (await response.json()) as unknown as GitlabAccessToken;
   }
 
-  /**
-   * Get the user data from Gitlab.
-   */
   async userData(accessToken: string): Promise<GitlabUserData> {
     // or https://gitlab.com/oauth/userinfo
     const response = await fetch('https://gitlab.com/api/v4/user', {
@@ -69,13 +57,9 @@ export class GitlabService {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    const res = (await response.json()) as unknown as GitlabUserData;
-    return res;
+    return (await response.json()) as unknown as GitlabUserData;
   }
 
-  /**
-   * Create the authorization URL for Gitlab.
-   */
   authorizationUrl(state: string): string {
     const url = new URL('https://gitlab.com/oauth/authorize');
 
@@ -88,41 +72,5 @@ export class GitlabService {
     }).toString();
 
     return url.toString();
-  }
-
-  /**
-   * Create state cookie to prevent CSRF attacks.
-   * This cookie is set when the user is redirected to Gitlab for authentication.
-   * The state is a random string that is used to verify the response from Gitlab.
-   */
-  createStateCookie(state: string): string {
-    return createCookie({
-      ...this.config.stateCookie,
-      name: this.config.stateCookie.name,
-      value: state,
-    });
-  }
-
-  /**
-   * Get the state cookie value.
-   * This cookie is set when the user is redirected to Gitlab for authentication.
-   * The state is a random string that is used to verify the response from Gitlab.
-   */
-  stateCookie(cookie: string | null): string | undefined {
-    return getCookieValueByName(cookie, this.config.stateCookie.name);
-  }
-
-  /**
-   * Create redirect cookie to store the redirect URL after authentication.
-   */
-  createRedirectCookie(redirect: string): string {
-    return createCookie({ name: 'redirect', value: redirect, maxAge: 60 });
-  }
-
-  /**
-   * Get the redirect cookie value.
-   */
-  redirectCookie(cookie: string | null): string | undefined {
-    return getCookieValueByName(cookie, 'redirect');
   }
 }

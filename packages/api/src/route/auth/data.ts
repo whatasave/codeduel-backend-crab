@@ -1,5 +1,6 @@
 import { Type, type Static } from '@sinclair/typebox';
 import { User } from '../user/data';
+import { TypeCompiler } from '@sinclair/typebox/compiler';
 
 export type Auth = Static<typeof Auth>;
 export const Auth = Type.Object({
@@ -18,29 +19,10 @@ export const CreateAuth = Type.Object({
   providerId: Auth.properties.providerId,
 });
 
-export type Tokens = Static<typeof Tokens>;
-export const Tokens = Type.Object({
-  access: Type.String(),
-  refresh: Type.String(),
-});
-
-export type AuthCookies = Static<typeof AuthCookies>;
-export const AuthCookies = Type.Object({
-  access: Type.String(),
-  refresh: Type.String(),
-});
-
 export type Provider = Static<typeof Provider>;
 export const Provider = Type.Object({
   name: Auth.properties.provider,
   userId: Auth.properties.providerId,
-});
-
-export type AuthUser = Static<typeof AuthUser>;
-export const AuthUser = Type.Object({
-  tokens: Tokens,
-  cookies: AuthCookies,
-  // redirect: Type.String(),
 });
 
 export type JwtAccessToken = Static<typeof JwtAccessToken>;
@@ -60,3 +42,11 @@ export const JwtRefreshToken = Type.Object({
   exp: Type.Number(),
   sub: User.properties.id,
 });
+
+export type State = Static<typeof State>;
+export const State = Type.Object({
+  csrfToken: Type.String(),
+  redirect: Type.String(),
+});
+
+export const stateValidator = TypeCompiler.Compile(State);

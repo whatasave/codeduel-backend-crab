@@ -1,18 +1,18 @@
 import type { RouterGroup } from '@codeduel-backend-crab/server';
+import type { Database } from '@codeduel-backend-crab/database';
+import type { Config } from '../config';
 import { HealthController } from './health/controller';
 import { HealthService } from './health/service';
 import { RedocController } from './redoc/controller';
 import { UserController } from './user/controller';
 import { UserRepository } from './user/repository';
 import { UserService } from './user/service';
-import type { Database } from '@codeduel-backend-crab/database';
 import { ChallengeRepository } from './challenge/repository';
 import { ChallengeService } from './challenge/service';
 import { ChallengeController } from './challenge/controller';
 import { AuthRepository } from './auth/repository';
 import { AuthService } from './auth/service';
 import { AuthController } from './auth/controller';
-import type { Config } from '../config';
 
 export class RootController {
   private readonly userRepository: UserRepository;

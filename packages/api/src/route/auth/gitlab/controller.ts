@@ -1,16 +1,16 @@
-import {
-  type RouterGroup,
-  temporaryRedirect,
-  permanentRedirect,
-  badRequest,
-} from '@codeduel-backend-crab/server';
+import { type RouterGroup, temporaryRedirect, badRequest } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { GitlabService } from './service';
-import { randomUUIDv7 } from 'bun';
 import { Type } from '@sinclair/typebox';
+import { createCookie, parseCookies } from '../../../utils/cookie';
+import type { AuthService } from '../service';
+import { randomUUIDv7 } from 'bun';
 
 export class GitlabController {
-  constructor(private readonly gitlabService: GitlabService) {}
+  constructor(
+    private readonly service: GitlabService,
+    private readonly authService: AuthService
+  ) {}
 
   setup(group: RouterGroup): void {
     group.route(this.login);
@@ -23,22 +23,27 @@ export class GitlabController {
     schema: {
       request: {
         query: {
-          redirect: Type.Optional(Type.String()),
+          redirect: Type.String(),
         },
       },
       response: {
-        307: Type.Undefined(),
+        307: Type.String(),
       },
     },
     handler: async ({ query }) => {
       const { redirect } = query;
-      const state = randomUUIDv7();
-      const cookie = this.gitlabService.createStateCookie(state);
-      const redirectCookie = redirect && this.gitlabService.createRedirectCookie(redirect); // TODO move it to the auth service
-      const redirectUrl = this.gitlabService.authorizationUrl(state);
 
-      return temporaryRedirect(undefined, {
-        'Set-Cookie': [cookie, redirectCookie].filter(Boolean),
+      const state = this.authService.encodeState({
+        csrfToken: randomUUIDv7('base64url'),
+        redirect,
+      });
+      const redirectUrl = this.service.authorizationUrl(state);
+
+      const stateCookie = createCookie({ ...this.service.stateCookieOptions, value: state });
+
+      return temporaryRedirect(`Redirecting to ${redirectUrl}`, {
+        'Content-Type': 'text/plain',
+        'Set-Cookie': stateCookie,
         Location: redirectUrl,
       });
     },
@@ -55,7 +60,7 @@ export class GitlabController {
         },
       },
       response: {
-        308: Type.Undefined(),
+        307: Type.String(),
         400: Type.Object({
           message: Type.String(),
         }),
@@ -64,20 +69,32 @@ export class GitlabController {
     handler: async ({ query, headers }) => {
       const { code, state } = query;
 
-      const cookieState = this.gitlabService.stateCookie(headers.get('cookie'));
-      if (state !== cookieState) return badRequest({ message: 'Invalid or Missing state' });
+      const cookies = parseCookies(headers.get('cookie'));
+      const cookieState = cookies[this.service.stateCookieOptions.name];
 
-      const gitlabToken = await this.gitlabService.exchangeCodeForToken(code);
-      const gitlabUser = await this.gitlabService.userData(gitlabToken.access_token);
+      if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
+      const { redirect } = this.authService.decodeState(state);
 
-      const authentication = await this.gitlabService.create(gitlabUser);
+      const token = await this.service.exchangeCodeForToken(code);
+      const gitlabUser = await this.service.userData(token.access_token);
+      const [_, user] = await this.service.create(gitlabUser);
 
-      const cookies = authentication.cookies;
-      const redirect = this.gitlabService.redirectCookie(headers.get('cookie'));
+      const accessToken = await this.authService.accessToken(user);
+      const refreshToken = await this.authService.refreshToken(user);
 
-      return permanentRedirect(undefined, {
-        ...(redirect !== undefined && { Location: redirect }),
-        'Set-Cookie': [cookies.access, cookies.refresh],
+      const accessCookie = createCookie({
+        ...this.service.stateCookieOptions,
+        value: accessToken,
+      });
+      const refreshCookie = createCookie({
+        ...this.service.stateCookieOptions,
+        value: refreshToken,
+      });
+
+      return temporaryRedirect(`Redirecting to ${redirect}`, {
+        'Content-Type': 'text/plain',
+        Location: redirect,
+        'Set-Cookie': [accessCookie, refreshCookie],
       });
     },
   });

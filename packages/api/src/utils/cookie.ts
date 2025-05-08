@@ -26,6 +26,9 @@ export const ResponseCookie = Type.Object({
   ...CookieOptions.properties,
 });
 
+export type Cookies = Static<typeof Cookies>;
+export const Cookies = Type.Record(Type.String(), Type.String());
+
 export function createCookie(cookie: ResponseCookie): string {
   const base: string[] = [
     `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value ?? '')}`,
@@ -56,19 +59,16 @@ function parseCookie(cookieString: string): RequestCookie {
   };
 }
 
-export function parseCookies(cookiesString: string | null): RequestCookie[] {
-  if (!cookiesString) return [];
-  const cookies = cookiesString.split(';').map((cookie) => cookie.trim());
-  return cookies.map(parseCookie);
-}
+export function parseCookies(cookiesString: string | null): Cookies {
+  const cookies: Cookies = {};
+  if (!cookiesString) return cookies;
 
-export function getCookieValueByName(
-  cookiesString: string | null,
-  name: RequestCookie['name']
-): string | undefined {
-  const cookies = parseCookies(cookiesString);
-  const cookie = cookies.find((cookie) => cookie.name === name);
-  return cookie?.value;
+  for (const cookieString of cookiesString.trim().split(';')) {
+    const cookie = parseCookie(cookieString);
+    cookies[cookie.name] = cookie.value ?? '';
+  }
+
+  return cookies;
 }
 
 export function removeCookie(name: RequestCookie['name']): string {

@@ -1,6 +1,13 @@
 import { randomUUIDv7 } from 'bun';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
-import type { Auth, JwtAccessToken, JwtRefreshToken, Provider } from './data';
+import {
+  stateValidator,
+  type Auth,
+  type JwtAccessToken,
+  type JwtRefreshToken,
+  type Provider,
+  type State,
+} from './data';
 import type { AuthRepository } from './repository';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import type { Config } from './config';
@@ -80,7 +87,7 @@ export class AuthService {
     });
   }
 
-  async verify(token: string): Promise<void> {
+  async verifyToken(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
       jwt.verify(token, this.config.jwt.secret, { algorithms: ['HS256'] }, (err, decode) => {
         if (err) return reject(err);
@@ -100,14 +107,19 @@ export class AuthService {
     });
   }
 
-  state(state: string): string {
-    const nonce = randomUUIDv7('base64url');
-    return nonce + encodeURIComponent(state);
+  encodeState(state: State): string {
+    const jsonState = JSON.stringify(state);
+    const buffer = Buffer.from(jsonState, 'utf-8');
+    const base64State = buffer.toString('base64url');
+
+    return base64State;
   }
 
-  parseState(state: string): { nonce: string; state: string } {
-    const nonce = state.slice(0, 22);
-    const decodedState = decodeURIComponent(state.slice(22));
-    return { nonce, state: decodedState };
+  decodeState(state: string): State {
+    const buffer = Buffer.from(state, 'base64url');
+    const jsonState = buffer.toString('utf-8');
+    const parsedState = stateValidator.Decode(JSON.parse(jsonState));
+
+    return parsedState;
   }
 }

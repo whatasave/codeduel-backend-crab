@@ -1,5 +1,6 @@
 import { Type, type Static } from '@sinclair/typebox';
 import { User } from '../user/data';
+import { TypeCompiler } from '@sinclair/typebox/compiler';
 
 export type Auth = Static<typeof Auth>;
 export const Auth = Type.Object({
@@ -41,3 +42,11 @@ export const JwtRefreshToken = Type.Object({
   exp: Type.Number(),
   sub: User.properties.id,
 });
+
+export type State = Static<typeof State>;
+export const State = Type.Object({
+  csrfToken: Type.String(),
+  redirect: Type.String(),
+});
+
+export const stateValidator = TypeCompiler.Compile(State);

@@ -4,6 +4,7 @@ import type { GithubService } from './service';
 import { Type } from '@sinclair/typebox';
 import { createCookie, parseCookies } from '../../../utils/cookie';
 import type { AuthService } from '../service';
+import { randomUUIDv7 } from 'bun';
 
 export class GithubController {
   constructor(
@@ -22,7 +23,6 @@ export class GithubController {
     schema: {
       request: {
         query: {
-          // redirect: Type.Optional(Type.String()),
           redirect: Type.String(),
         },
       },
@@ -33,7 +33,10 @@ export class GithubController {
     handler: async ({ query }) => {
       const { redirect } = query;
 
-      const state = this.authService.state(redirect);
+      const state = this.authService.encodeState({
+        csrfToken: randomUUIDv7('base64url'),
+        redirect,
+      });
       const redirectUrl = this.service.authorizationUrl(state);
 
       const stateCookie = createCookie({ ...this.service.stateCookieOptions, value: state });
@@ -70,7 +73,7 @@ export class GithubController {
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
-      const redirect = this.authService.parseState(state).state;
+      const { redirect } = this.authService.decodeState(state);
 
       const token = await this.service.exchangeCodeForToken(code, state);
       const githubUser = await this.service.userData(token.access_token);

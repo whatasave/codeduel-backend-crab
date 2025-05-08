@@ -6,7 +6,7 @@ import { UserRepository } from '../user/repository';
 export class AuthRepository {
   constructor(private readonly database: Database) {}
 
-  async create(user: CreateUser, provider: Provider): Promise<[Auth, User]> {
+  async create(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
     const authUser = await this.database.transaction().execute(async (tx) => {
       const userRepo = new UserRepository(tx);
 
@@ -35,7 +35,7 @@ export class AuthRepository {
     return authUser;
   }
 
-  async createIfNotExists(user: CreateUser, provider: Provider): Promise<[Auth, User]> {
+  async createIfNotExists(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
     const authUser = await this.database.transaction().execute(async (tx) => {
       const userRepo = new UserRepository(tx);
 
@@ -53,7 +53,7 @@ export class AuthRepository {
         return [this.selectToAuth(existingAuth), existingUser] as [Auth, User];
       }
 
-      return this.create(user, provider);
+      return this.create(provider, user);
     });
 
     return authUser;

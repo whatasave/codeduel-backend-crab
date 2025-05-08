@@ -1,9 +1,12 @@
 import { randomUUIDv7 } from 'bun';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
-import type { JwtAccessToken, JwtRefreshToken, Provider, Tokens } from './data';
+import type { Auth, JwtAccessToken, JwtRefreshToken, Provider } from './data';
 import type { AuthRepository } from './repository';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import { Type, type Static } from '@sinclair/typebox';
+import { GithubServiceConfig } from './github/service';
+import { GitlabServiceConfig } from './gitlab/service';
+import { CookieOptions, type ResponseCookie } from '../../utils/cookie';
 
 export type AuthServiceConfig = Static<typeof AuthServiceConfig>;
 export const AuthServiceConfig = Type.Object({
@@ -14,48 +17,40 @@ export const AuthServiceConfig = Type.Object({
   }),
   accessToken: Type.Object({
     expiresIn: Type.Number(),
+    cookie: CookieOptions,
   }),
   refreshToken: Type.Object({
     expiresIn: Type.Number(),
+    cookie: CookieOptions,
   }),
+
+  github: GithubServiceConfig,
+  gitlab: GitlabServiceConfig,
 });
 
 export class AuthService {
   constructor(
-    private readonly authRepository: AuthRepository,
+    private readonly repository: AuthRepository,
     private readonly config: AuthServiceConfig
   ) {}
 
-  /**
-   * Create a new user if it does not exist. If the user already exists, return the existing user.
-   */
-  async createIfNotExists(user: CreateUser, provider: Provider): Promise<Tokens> {
-    const [_, newUser] = await this.authRepository.createIfNotExists(user, provider);
-    return await this.generateTokens(newUser);
+  async createIfNotExists(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
+    return await this.repository.createIfNotExists(provider, user);
   }
 
-  /**
-   * Create a new user. If the user already exists, create a new user with a random username.
-   */
-  async createForce(user: CreateUser, provider: Provider): Promise<Tokens> {
+  async createForce(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
     try {
-      return await this.createIfNotExists(user, provider);
+      return await this.createIfNotExists(provider, user);
     } catch (error) {
       if (!(error instanceof UserNameAlreadyExistsError)) throw error;
-      return await this.createIfNotExists(
-        {
-          ...user,
-          username: `${user.username}-${randomUUIDv7()}`,
-        },
-        provider
-      );
+      return await this.repository.create(provider, {
+        ...user,
+        username: `${user.username}-${randomUUIDv7()}`,
+      });
     }
   }
 
-  /**
-   * Create a access token for the user.
-   */
-  generateAccessToken(user: User, now: number = Date.now()): Promise<string> {
+  accessToken(user: User, now: number = Date.now()): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
         {
@@ -78,10 +73,7 @@ export class AuthService {
     });
   }
 
-  /**
-   * Create a refresh token for the user.
-   */
-  generateRefreshToken(user: User, now: number = Date.now()): Promise<string> {
+  refreshToken(user: User, now: number = Date.now()): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
         {
@@ -102,23 +94,20 @@ export class AuthService {
     });
   }
 
-  /**
-   * Create a pair of access and refresh tokens for the user.
-   */
-  async generateTokens(user: User): Promise<Tokens> {
-    const now = Date.now();
-
-    const [access, refresh] = await Promise.all([
-      this.generateAccessToken(user, now),
-      this.generateRefreshToken(user, now),
-    ]);
-
-    return { access, refresh };
+  accessTokenCookie(accessToken: string): ResponseCookie {
+    return {
+      ...this.config.accessToken.cookie,
+      value: accessToken,
+    };
   }
 
-  /**
-   * Verify the access or refresh token.
-   */
+  refreshTokenCookie(refreshToken: string): ResponseCookie {
+    return {
+      ...this.config.refreshToken.cookie,
+      value: refreshToken,
+    };
+  }
+
   async verify(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
       jwt.verify(token, this.config.jwt.secret, { algorithms: ['HS256'] }, (err, decode) => {
@@ -137,5 +126,20 @@ export class AuthService {
         resolve();
       });
     });
+  }
+
+  // accessTokenCookie(): ResponseCookie {
+  //   return {
+  //     name: 'access_token',
+
+  createOauthState(state: string): string {
+    const nonce = randomUUIDv7('base64url');
+    return nonce + encodeURIComponent(state);
+  }
+
+  parseOauthState(state: string): { nonce: string; state: string } {
+    const nonce = state.slice(0, 22);
+    const decodedState = decodeURIComponent(state.slice(22));
+    return { nonce, state: decodedState };
   }
 }

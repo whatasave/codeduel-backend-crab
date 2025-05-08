@@ -3,7 +3,6 @@ import { validated } from '@codeduel-backend-crab/server/validation';
 import type { GitlabService } from './service';
 import { Type } from '@sinclair/typebox';
 import { createCookie, parseCookies } from '../../../utils/cookie';
-import { parseOauthState } from '../../../utils/oauth';
 import type { AuthService } from '../service';
 
 export class GitlabController {
@@ -70,7 +69,7 @@ export class GitlabController {
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
-      const redirect = parseOauthState(state).state;
+      const redirect = this.authService.parseState(state).state;
 
       const token = await this.service.exchangeCodeForToken(code);
       const gitlabUser = await this.service.userData(token.access_token);

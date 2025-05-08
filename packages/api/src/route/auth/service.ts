@@ -6,7 +6,7 @@ import jwt, { type JwtPayload } from 'jsonwebtoken';
 import { Type, type Static } from '@sinclair/typebox';
 import { GithubServiceConfig } from './github/service';
 import { GitlabServiceConfig } from './gitlab/service';
-import { CookieOptions, type ResponseCookie } from '../../utils/cookie';
+import { CookieOptions } from '../../utils/cookie';
 
 export type AuthServiceConfig = Static<typeof AuthServiceConfig>;
 export const AuthServiceConfig = Type.Object({
@@ -33,6 +33,14 @@ export class AuthService {
     private readonly repository: AuthRepository,
     private readonly config: AuthServiceConfig
   ) {}
+
+  get accessTokenCookieOptions(): CookieOptions {
+    return this.config.accessToken.cookie;
+  }
+
+  get refreshTokenCookieOptions(): CookieOptions {
+    return this.config.refreshToken.cookie;
+  }
 
   async createIfNotExists(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
     return await this.repository.createIfNotExists(provider, user);
@@ -94,20 +102,6 @@ export class AuthService {
     });
   }
 
-  accessTokenCookie(accessToken: string): ResponseCookie {
-    return {
-      ...this.config.accessToken.cookie,
-      value: accessToken,
-    };
-  }
-
-  refreshTokenCookie(refreshToken: string): ResponseCookie {
-    return {
-      ...this.config.refreshToken.cookie,
-      value: refreshToken,
-    };
-  }
-
   async verify(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
       jwt.verify(token, this.config.jwt.secret, { algorithms: ['HS256'] }, (err, decode) => {
@@ -128,16 +122,12 @@ export class AuthService {
     });
   }
 
-  // accessTokenCookie(): ResponseCookie {
-  //   return {
-  //     name: 'access_token',
-
-  createOauthState(state: string): string {
+  state(state: string): string {
     const nonce = randomUUIDv7('base64url');
     return nonce + encodeURIComponent(state);
   }
 
-  parseOauthState(state: string): { nonce: string; state: string } {
+  parseState(state: string): { nonce: string; state: string } {
     const nonce = state.slice(0, 22);
     const decodedState = decodeURIComponent(state.slice(22));
     return { nonce, state: decodedState };

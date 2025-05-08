@@ -18,18 +18,6 @@ export const CreateAuth = Type.Object({
   providerId: Auth.properties.providerId,
 });
 
-export type Tokens = Static<typeof Tokens>;
-export const Tokens = Type.Object({
-  access: Type.String(),
-  refresh: Type.String(),
-});
-
-export type AuthCookies = Static<typeof AuthCookies>;
-export const AuthCookies = Type.Object({
-  access: Type.String(),
-  refresh: Type.String(),
-});
-
 export type Provider = Static<typeof Provider>;
 export const Provider = Type.Object({
   name: Auth.properties.provider,

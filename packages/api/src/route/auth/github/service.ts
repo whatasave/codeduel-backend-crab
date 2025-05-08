@@ -2,7 +2,7 @@ import { Type, type Static } from '@sinclair/typebox';
 import type { Auth } from '../data';
 import type { AuthService } from '../service';
 import type { GithubAccessToken, GithubUserData } from './data';
-import { CookieOptions, type Cookies, type ResponseCookie } from '../../../utils/cookie';
+import { CookieOptions } from '../../../utils/cookie';
 import type { User } from '../../user/data';
 
 export type GithubServiceConfig = Static<typeof GithubServiceConfig>;
@@ -20,6 +20,10 @@ export class GithubService {
     private readonly authService: AuthService,
     private readonly config: GithubServiceConfig
   ) {}
+
+  get stateCookieOptions(): CookieOptions {
+    return this.config.stateCookie;
+  }
 
   async create(githubUser: GithubUserData): Promise<[Auth, User]> {
     return await this.authService.createForce(
@@ -62,11 +66,6 @@ export class GithubService {
     return (await response.json()) as unknown as GithubUserData;
   }
 
-  async exchangeCodeForUserData(code: string, state: string): Promise<GithubUserData> {
-    const token = await this.exchangeCodeForToken(code, state);
-    return await this.userData(token.access_token);
-  }
-
   authorizationUrl(state: string): string {
     const url = new URL('https://github.com/login/oauth/authorize');
 
@@ -79,19 +78,5 @@ export class GithubService {
     }).toString();
 
     return url.toString();
-  }
-
-  stateCookie(state: string): ResponseCookie {
-    return {
-      ...this.config.stateCookie,
-      value: state,
-    };
-  }
-
-  stateFromCookie(cookie: Cookies): string {
-    const state = cookie[this.config.stateCookie.name];
-    if (!state) throw new Error('Invalid or missing state');
-
-    return state;
   }
 }

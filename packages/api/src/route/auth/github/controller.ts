@@ -33,14 +33,14 @@ export class GithubController {
     handler: async ({ query }) => {
       const { redirect } = query;
 
-      const state = this.authService.createOauthState(redirect);
+      const state = this.authService.state(redirect);
       const redirectUrl = this.service.authorizationUrl(state);
 
-      const stateCookie = this.service.stateCookie(state);
+      const stateCookie = createCookie({ ...this.service.stateCookieOptions, value: state });
 
       return temporaryRedirect(`Redirecting to ${redirectUrl}`, {
         'Content-Type': 'text/plain',
-        'Set-Cookie': createCookie(stateCookie),
+        'Set-Cookie': stateCookie,
         Location: redirectUrl,
       });
     },
@@ -66,24 +66,32 @@ export class GithubController {
     handler: async ({ query, headers }) => {
       const { code, state } = query;
 
-      const cookieState = this.service.stateFromCookie(parseCookies(headers.get('cookie')));
+      const cookies = parseCookies(headers.get('cookie'));
+      const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
       const redirect = parseOauthState(state).state;
 
-      const githubUser = await this.service.exchangeCodeForUserData(code, state);
+      const token = await this.service.exchangeCodeForToken(code, state);
+      const githubUser = await this.service.userData(token.access_token);
       const [_, user] = await this.service.create(githubUser);
 
       const accessToken = await this.authService.accessToken(user);
       const refreshToken = await this.authService.refreshToken(user);
 
-      const accessCookie = this.authService.accessTokenCookie(accessToken);
-      const refreshCookie = this.authService.refreshTokenCookie(refreshToken);
+      const accessCookie = createCookie({
+        ...this.service.stateCookieOptions,
+        value: accessToken,
+      });
+      const refreshCookie = createCookie({
+        ...this.service.stateCookieOptions,
+        value: refreshToken,
+      });
 
       return temporaryRedirect(`Redirecting to ${redirect}`, {
         'Content-Type': 'text/plain',
         Location: redirect,
-        'Set-Cookie': [accessCookie, refreshCookie].map(createCookie),
+        'Set-Cookie': [accessCookie, refreshCookie],
       });
     },
   });

@@ -1,13 +1,16 @@
 import { Type, type Static } from '@sinclair/typebox';
-import type { Tokens } from '../data';
+import type { Auth } from '../data';
 import type { AuthService } from '../service';
 import type { GitlabAccessToken, GitlabUserData } from './data';
+import { CookieOptions } from '../../../utils/cookie';
+import type { User } from '../../user/data';
 
 export type GitlabServiceConfig = Static<typeof GitlabServiceConfig>;
 export const GitlabServiceConfig = Type.Object({
   applicationId: Type.String(),
   secret: Type.String(),
   callbackUri: Type.String(),
+  stateCookie: CookieOptions,
 });
 
 export class GitlabService {
@@ -18,30 +21,17 @@ export class GitlabService {
     private readonly config: GitlabServiceConfig
   ) {}
 
-  /**
-   * Create a new user if it does not exist.
-   *
-   * @returns The tokens and cookies for the user.
-   */
-  async create(gitlabUser: GitlabUserData): Promise<Tokens> {
+  async create(gitlabUser: GitlabUserData): Promise<[Auth, User]> {
     return await this.authService.createForce(
+      { name: GitlabService.PROVIDER, userId: gitlabUser.id },
       {
         username: gitlabUser.username,
         name: gitlabUser.name ?? gitlabUser.username,
         avatar: gitlabUser.avatar_url,
-      },
-      {
-        name: GitlabService.PROVIDER,
-        userId: gitlabUser.id,
       }
     );
   }
 
-  /**
-   * Get the access token from Gitlab.
-   *
-   * More info: https://docs.gitlab.com/api/oauth2/#authorization-code-flow
-   */
   async exchangeCodeForToken(code: string): Promise<GitlabAccessToken> {
     const response = await fetch('https://gitlab.com/oauth/token', {
       method: 'POST',
@@ -61,9 +51,6 @@ export class GitlabService {
     return (await response.json()) as unknown as GitlabAccessToken;
   }
 
-  /**
-   * Get the user data from Gitlab.
-   */
   async userData(accessToken: string): Promise<GitlabUserData> {
     // or https://gitlab.com/oauth/userinfo
     const response = await fetch('https://gitlab.com/api/v4/user', {
@@ -77,14 +64,6 @@ export class GitlabService {
     return (await response.json()) as unknown as GitlabUserData;
   }
 
-  async exchangeCodeForUserData(code: string): Promise<GitlabUserData> {
-    const token = await this.exchangeCodeForToken(code);
-    return await this.userData(token.access_token);
-  }
-
-  /**
-   * Create the authorization URL for Gitlab.
-   */
   authorizationUrl(state: string): string {
     const url = new URL('https://gitlab.com/oauth/authorize');
 
@@ -97,5 +76,9 @@ export class GitlabService {
     }).toString();
 
     return url.toString();
+  }
+
+  get stateCookieOptions(): CookieOptions {
+    return this.config.stateCookie;
   }
 }

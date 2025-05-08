@@ -1,21 +1,15 @@
 import { type RouterGroup, temporaryRedirect, badRequest } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { GitlabService } from './service';
-import { Type, type Static } from '@sinclair/typebox';
-import { CookieOptions, createCookie, parseCookies } from '../../../utils/cookie';
-import { createOauthState, parseOauthState } from '../../../utils/oauth';
-
-export type GitlabControllerConfig = Static<typeof GitlabControllerConfig>;
-export const GitlabControllerConfig = Type.Object({
-  stateCookie: CookieOptions,
-  accessTokenCookie: CookieOptions,
-  refreshTokenCookie: CookieOptions,
-});
+import { Type } from '@sinclair/typebox';
+import { createCookie, parseCookies } from '../../../utils/cookie';
+import { parseOauthState } from '../../../utils/oauth';
+import type { AuthService } from '../service';
 
 export class GitlabController {
   constructor(
-    private readonly gitlabService: GitlabService,
-    private readonly config: GitlabControllerConfig
+    private readonly service: GitlabService,
+    private readonly authService: AuthService
   ) {}
 
   setup(group: RouterGroup): void {
@@ -39,9 +33,10 @@ export class GitlabController {
     handler: async ({ query }) => {
       const { redirect } = query;
 
-      const state = createOauthState(redirect);
-      const stateCookie = createCookie({ ...this.config.stateCookie, value: state });
-      const redirectUrl = this.gitlabService.authorizationUrl(state);
+      const state = this.authService.state(redirect);
+      const redirectUrl = this.service.authorizationUrl(state);
+
+      const stateCookie = createCookie({ ...this.service.stateCookieOptions, value: state });
 
       return temporaryRedirect(`Redirecting to ${redirectUrl}`, {
         'Content-Type': 'text/plain',
@@ -72,21 +67,25 @@ export class GitlabController {
       const { code, state } = query;
 
       const cookies = parseCookies(headers.get('cookie'));
-      const cookieState = cookies[this.config.stateCookie.name];
+      const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
       const redirect = parseOauthState(state).state;
 
-      const gitlabUser = await this.gitlabService.exchangeCodeForUserData(code);
-      const authentication = await this.gitlabService.create(gitlabUser);
+      const token = await this.service.exchangeCodeForToken(code);
+      const gitlabUser = await this.service.userData(token.access_token);
+      const [_, user] = await this.service.create(gitlabUser);
+
+      const accessToken = await this.authService.accessToken(user);
+      const refreshToken = await this.authService.refreshToken(user);
 
       const accessCookie = createCookie({
-        ...this.config.accessTokenCookie,
-        value: authentication.access,
+        ...this.service.stateCookieOptions,
+        value: accessToken,
       });
       const refreshCookie = createCookie({
-        ...this.config.refreshTokenCookie,
-        value: authentication.refresh,
+        ...this.service.stateCookieOptions,
+        value: refreshToken,
       });
 
       return temporaryRedirect(`Redirecting to ${redirect}`, {

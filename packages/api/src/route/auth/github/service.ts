@@ -1,24 +1,16 @@
-import { Type, type Static } from '@sinclair/typebox';
 import type { Auth } from '../data';
 import type { AuthService } from '../service';
 import type { GithubAccessToken, GithubUserData } from './data';
-import { CookieOptions } from '../../../utils/cookie';
 import type { User } from '../../user/data';
-
-export type GithubServiceConfig = Static<typeof GithubServiceConfig>;
-export const GithubServiceConfig = Type.Object({
-  clientId: Type.String(),
-  clientSecret: Type.String(),
-  redirectUri: Type.String(),
-  stateCookie: CookieOptions,
-});
+import type { Config } from './config';
+import type { CookieOptions } from '../../../utils/cookie';
 
 export class GithubService {
   private static readonly PROVIDER: string = 'github';
 
   constructor(
     private readonly authService: AuthService,
-    private readonly config: GithubServiceConfig
+    private readonly config: Config
   ) {}
 
   get stateCookieOptions(): CookieOptions {

@@ -1,25 +1,21 @@
-import { Type, type Static } from '@sinclair/typebox';
 import type { Auth } from '../data';
 import type { AuthService } from '../service';
 import type { GitlabAccessToken, GitlabUserData } from './data';
-import { CookieOptions } from '../../../utils/cookie';
 import type { User } from '../../user/data';
-
-export type GitlabServiceConfig = Static<typeof GitlabServiceConfig>;
-export const GitlabServiceConfig = Type.Object({
-  applicationId: Type.String(),
-  secret: Type.String(),
-  callbackUri: Type.String(),
-  stateCookie: CookieOptions,
-});
+import type { CookieOptions } from '../../../utils/cookie';
+import type { Config } from './config';
 
 export class GitlabService {
   private static readonly PROVIDER: string = 'gitlab';
 
   constructor(
     private readonly authService: AuthService,
-    private readonly config: GitlabServiceConfig
+    private readonly config: Config
   ) {}
+
+  get stateCookieOptions(): CookieOptions {
+    return this.config.stateCookie;
+  }
 
   async create(gitlabUser: GitlabUserData): Promise<[Auth, User]> {
     return await this.authService.createForce(
@@ -76,9 +72,5 @@ export class GitlabService {
     }).toString();
 
     return url.toString();
-  }
-
-  get stateCookieOptions(): CookieOptions {
-    return this.config.stateCookie;
   }
 }

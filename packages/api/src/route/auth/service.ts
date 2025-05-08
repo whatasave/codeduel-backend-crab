@@ -3,35 +3,13 @@ import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/
 import type { Auth, JwtAccessToken, JwtRefreshToken, Provider } from './data';
 import type { AuthRepository } from './repository';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
-import { Type, type Static } from '@sinclair/typebox';
-import { GithubServiceConfig } from './github/service';
-import { GitlabServiceConfig } from './gitlab/service';
-import { CookieOptions } from '../../utils/cookie';
-
-export type AuthServiceConfig = Static<typeof AuthServiceConfig>;
-export const AuthServiceConfig = Type.Object({
-  jwt: Type.Object({
-    secret: Type.String(),
-    issuer: Type.String(),
-    audience: Type.String(),
-  }),
-  accessToken: Type.Object({
-    expiresIn: Type.Number(),
-    cookie: CookieOptions,
-  }),
-  refreshToken: Type.Object({
-    expiresIn: Type.Number(),
-    cookie: CookieOptions,
-  }),
-
-  github: GithubServiceConfig,
-  gitlab: GitlabServiceConfig,
-});
+import type { Config } from './config';
+import type { CookieOptions } from '../../utils/cookie';
 
 export class AuthService {
   constructor(
     private readonly repository: AuthRepository,
-    private readonly config: AuthServiceConfig
+    private readonly config: Config
   ) {}
 
   get accessTokenCookieOptions(): CookieOptions {

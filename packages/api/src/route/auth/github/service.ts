@@ -1,13 +1,16 @@
 import { Type, type Static } from '@sinclair/typebox';
-import type { Tokens } from '../data';
+import type { Auth } from '../data';
 import type { AuthService } from '../service';
 import type { GithubAccessToken, GithubUserData } from './data';
+import { CookieOptions, type Cookies, type ResponseCookie } from '../../../utils/cookie';
+import type { User } from '../../user/data';
 
 export type GithubServiceConfig = Static<typeof GithubServiceConfig>;
 export const GithubServiceConfig = Type.Object({
   clientId: Type.String(),
   clientSecret: Type.String(),
   redirectUri: Type.String(),
+  stateCookie: CookieOptions,
 });
 
 export class GithubService {
@@ -18,30 +21,17 @@ export class GithubService {
     private readonly config: GithubServiceConfig
   ) {}
 
-  /**
-   * Create a new user if it does not exist.
-   *
-   * @returns The tokens and cookies for the user.
-   */
-  async create(githubUser: GithubUserData): Promise<Tokens> {
+  async create(githubUser: GithubUserData): Promise<[Auth, User]> {
     return await this.authService.createForce(
+      { name: GithubService.PROVIDER, userId: githubUser.id },
       {
         username: githubUser.login,
         name: githubUser.name ?? githubUser.login,
         avatar: githubUser.avatar_url,
-      },
-      {
-        name: GithubService.PROVIDER,
-        userId: githubUser.id,
       }
     );
   }
 
-  /**
-   * Get the access token from Github.
-   *
-   * More info: https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#web-application-flow
-   */
   async exchangeCodeForToken(code: string, state: string): Promise<GithubAccessToken> {
     const response = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
@@ -60,9 +50,6 @@ export class GithubService {
     return (await response.json()) as unknown as GithubAccessToken;
   }
 
-  /**
-   * Get the user data from Github.
-   */
   async userData(accessToken: string): Promise<GithubUserData> {
     const response = await fetch('https://api.github.com/user', {
       method: 'GET',
@@ -80,9 +67,6 @@ export class GithubService {
     return await this.userData(token.access_token);
   }
 
-  /**
-   * Create the authorization URL for Github.
-   */
   authorizationUrl(state: string): string {
     const url = new URL('https://github.com/login/oauth/authorize');
 
@@ -95,5 +79,19 @@ export class GithubService {
     }).toString();
 
     return url.toString();
+  }
+
+  stateCookie(state: string): ResponseCookie {
+    return {
+      ...this.config.stateCookie,
+      value: state,
+    };
+  }
+
+  stateFromCookie(cookie: Cookies): string {
+    const state = cookie[this.config.stateCookie.name];
+    if (!state) throw new Error('Invalid or missing state');
+
+    return state;
   }
 }

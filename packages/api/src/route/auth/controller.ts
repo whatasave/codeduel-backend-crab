@@ -1,10 +1,11 @@
 import { internalServerError, type RouterGroup } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
-import type { AuthService, AuthServiceConfig } from './service';
+import type { AuthService } from './service';
 import { GithubController } from './github/controller';
 import { GitlabController } from './gitlab/controller';
 import { GithubService } from './github/service';
 import { GitlabService } from './gitlab/service';
+import type { Config } from './config';
 
 export class AuthController {
   private readonly githubController: GithubController;
@@ -12,7 +13,7 @@ export class AuthController {
 
   constructor(
     private readonly service: AuthService,
-    config: AuthServiceConfig
+    config: Config
   ) {
     this.githubController = new GithubController(
       new GithubService(this.service, config.github),

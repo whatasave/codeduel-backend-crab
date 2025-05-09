@@ -72,5 +72,5 @@ export function parseCookies(cookiesString: string | null): Cookies {
 }
 
 export function removeCookie(name: RequestCookie['name']): string {
-  return createCookie({ name, value: '', maxAge: -1, path: '/' });
+  return createCookie({ name, value: '', maxAge: -1, path: '*' });
 }

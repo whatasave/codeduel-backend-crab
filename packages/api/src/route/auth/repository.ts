@@ -1,5 +1,5 @@
 import type { Database, Select } from '@codeduel-backend-crab/database';
-import type { Auth, Provider } from './data';
+import type { Auth, AuthSession, CreateAuthSession, Provider } from './data';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
 import { UserRepository } from '../user/repository';
 
@@ -57,6 +57,62 @@ export class AuthRepository {
     });
 
     return authUser;
+  }
+
+  async createSession(session: CreateAuthSession): Promise<AuthSession> {
+    const newSession = await this.database
+      .insertInto('auth_session')
+      .values({
+        user_id: session.userId,
+        token: session.token,
+        device: session.device,
+        ip: session.ip,
+        user_agent: session.userAgent,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.selectToSession(newSession);
+  }
+
+  async updateSession(id: AuthSession['id'], token: string): Promise<void> {
+    await this.database
+      .updateTable('auth_session')
+      .set({ token })
+      .where('id', '=', id)
+      .executeTakeFirstOrThrow();
+  }
+
+  async sessionByToken(token: string): Promise<AuthSession | undefined> {
+    const session = await this.database
+      .selectFrom('auth_session')
+      .selectAll()
+      .where('token', '=', token)
+      .executeTakeFirst();
+
+    return session && this.selectToSession(session);
+  }
+
+  async deleteSession(id: number): Promise<void> {
+    await this.database.deleteFrom('auth_session').where('id', '=', id).executeTakeFirstOrThrow();
+  }
+
+  async deleteSessionByToken(token: string): Promise<void> {
+    await this.database
+      .deleteFrom('auth_session')
+      .where('token', '=', token)
+      .executeTakeFirstOrThrow();
+  }
+
+  private selectToSession(authSession: Select<'auth_session'>): AuthSession {
+    return {
+      id: authSession.id,
+      device: authSession.device,
+      ip: authSession.ip,
+      user_agent: authSession.user_agent,
+      createdAt: authSession.created_at.toISOString(),
+      updatedAt: authSession.updated_at.toISOString(),
+    };
   }
 
   private selectToAuth(user: Select<'auth'>): Auth {

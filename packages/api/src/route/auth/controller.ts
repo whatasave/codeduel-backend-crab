@@ -1,4 +1,4 @@
-import { internalServerError, type RouterGroup } from '@codeduel-backend-crab/server';
+import { internalServerError, noContent, type RouterGroup } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { AuthService } from './service';
 import { GithubController } from './github/controller';
@@ -6,6 +6,9 @@ import { GitlabController } from './gitlab/controller';
 import { GithubService } from './github/service';
 import { GitlabService } from './gitlab/service';
 import type { Config } from './config';
+import { createCookie, parseCookies, removeCookie } from '../../utils/cookie';
+import { Type } from '@sinclair/typebox';
+import type { UserService } from '../user/service';
 
 export class AuthController {
   private readonly githubController: GithubController;
@@ -13,6 +16,7 @@ export class AuthController {
 
   constructor(
     private readonly service: AuthService,
+    private readonly userService: UserService,
     config: Config
   ) {
     this.githubController = new GithubController(
@@ -51,10 +55,50 @@ export class AuthController {
     path: '/refresh',
     schema: {
       request: {},
-      response: {},
+      response: {
+        204: Type.Undefined(),
+      },
     },
-    handler: async () => {
-      return internalServerError({ error: 'Path not implemented' });
+    handler: async ({ headers }) => {
+      const cookies = parseCookies(headers.get('cookie'));
+      const logout = (): ReturnType<typeof noContent> => {
+        const refreshTokenCookie = removeCookie(this.service.refreshToken.name);
+        const accessTokenCookie = removeCookie(this.service.accessToken.name);
+
+        return noContent(undefined, {
+          'Content-Type': 'text/plain',
+          'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
+        });
+      };
+
+      const refreshToken = cookies[this.service.refreshToken.name];
+      if (!refreshToken) return logout();
+      const { sub: userId } = await this.service.verifyRefreshToken(refreshToken);
+
+      const session = await this.service.sessionByToken(refreshToken);
+      if (!session) return logout();
+
+      const user = await this.userService.byId(userId);
+      if (!user) return logout();
+
+      const newAccessToken = await this.service.accessToken(user);
+      const newRefreshToken = await this.service.refreshToken(user);
+
+      await this.service.updateSession(session.id, newRefreshToken);
+
+      const accessTokenCookie = createCookie({
+        ...this.service.accessTokenCookieOptions,
+        value: newAccessToken,
+      });
+      const refreshTokenCookie = createCookie({
+        ...this.service.refreshTokenCookieOptions,
+        value: newRefreshToken,
+      });
+
+      return noContent(undefined, {
+        'Content-Type': 'text/plain',
+        'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
+      });
     },
   });
 
@@ -63,10 +107,20 @@ export class AuthController {
     path: '/logout',
     schema: {
       request: {},
-      response: {},
+      response: {
+        204: Type.Undefined(),
+      },
     },
     handler: async () => {
-      return internalServerError({ error: 'Path not implemented' });
+      const accessToken = removeCookie(this.service.accessToken.name);
+      const refreshToken = removeCookie(this.service.refreshToken.name);
+
+      await this.service.deleteSessionByToken(refreshToken);
+
+      return noContent(undefined, {
+        'Content-Type': 'text/plain',
+        'Set-Cookie': [accessToken, refreshToken],
+      });
     },
   });
 }

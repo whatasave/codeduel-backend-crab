@@ -1,6 +1,8 @@
 import { randomUUIDv7 } from 'bun';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
 import {
+  type AuthSession,
+  type CreateAuthSession,
   stateValidator,
   type Auth,
   type JwtAccessToken,
@@ -88,7 +90,7 @@ export class AuthService {
     });
   }
 
-  async verifyAccessToken(token: string): Promise<void> {
+  async verifyAccessToken(token: string): Promise<JwtAccessToken> {
     return new Promise((resolve, reject) => {
       jwt.verify(
         token,
@@ -100,20 +102,28 @@ export class AuthService {
           if (!decode) return reject(new Error('Invalid token'));
           const payload = decode as JwtPayload;
 
-          if (payload.aud !== this.config.jwt.audience) {
-            return reject(new Error('Invalid token audience'));
-          }
-          if (payload.iss !== this.config.jwt.issuer) {
+          if (payload.iss !== this.config.jwt.issuer)
             return reject(new Error('Invalid token issuer'));
-          }
+          if (payload.aud !== this.config.jwt.audience)
+            return reject(new Error('Invalid token audience'));
+          if (typeof payload.exp !== 'number') return reject(new Error('Invalid token exp'));
+          if (typeof payload.sub !== 'number') return reject(new Error('Invalid token sub'));
+          if (typeof payload.username !== 'string')
+            return reject(new Error('Invalid token username'));
 
-          resolve();
+          resolve({
+            iss: payload.iss,
+            aud: payload.aud,
+            exp: payload.exp,
+            sub: payload.sub,
+            username: payload.username,
+          } satisfies JwtAccessToken);
         }
       );
     });
   }
 
-  async verifyRefreshToken(token: string): Promise<void> {
+  async verifyRefreshToken(token: string): Promise<JwtRefreshToken> {
     return new Promise((resolve, reject) => {
       jwt.verify(
         token,
@@ -125,14 +135,21 @@ export class AuthService {
           if (!decode) return reject(new Error('Invalid token'));
           const payload = decode as JwtPayload;
 
-          if (payload.aud !== this.config.jwt.audience) {
-            return reject(new Error('Invalid token audience'));
-          }
-          if (payload.iss !== this.config.jwt.issuer) {
+          if (payload.iss !== this.config.jwt.issuer)
             return reject(new Error('Invalid token issuer'));
-          }
+          if (payload.aud !== this.config.jwt.audience)
+            return reject(new Error('Invalid token audience'));
+          if (typeof payload.exp !== 'number') return reject(new Error('Invalid token exp'));
+          if (typeof payload.jti !== 'string') return reject(new Error('Invalid token jti'));
+          if (typeof payload.sub !== 'number') return reject(new Error('Invalid token sub'));
 
-          resolve();
+          resolve({
+            iss: payload.iss,
+            aud: payload.aud,
+            exp: payload.exp,
+            jti: payload.jti,
+            sub: payload.sub,
+          } satisfies JwtRefreshToken);
         }
       );
     });
@@ -152,5 +169,29 @@ export class AuthService {
     const parsedState = stateValidator.Decode(JSON.parse(jsonState));
 
     return parsedState;
+  }
+
+  async createSession(session: CreateAuthSession): Promise<AuthSession> {
+    return await this.repository.createSession(session);
+  }
+
+  async updateSession(id: AuthSession['id'], token: string): Promise<void> {
+    await this.repository.updateSession(id, token);
+  }
+
+  async findRefreshToken(token: string): Promise<AuthSession | undefined> {
+    return await this.repository.sessionByToken(token);
+  }
+
+  async sessionByToken(token: string): Promise<AuthSession | undefined> {
+    return await this.repository.sessionByToken(token);
+  }
+
+  async deleteSession(id: number): Promise<void> {
+    return await this.repository.deleteSession(id);
+  }
+
+  async deleteSessionByToken(token: string): Promise<void> {
+    return await this.repository.deleteSessionByToken(token);
   }
 }

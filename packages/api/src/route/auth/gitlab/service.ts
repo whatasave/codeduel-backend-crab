@@ -73,4 +73,14 @@ export class GitlabService {
 
     return url.toString();
   }
+
+  async createSession(userId: number, token: string, ip: string, userAgent: string): Promise<void> {
+    await this.authService.createSession({
+      userId,
+      token,
+      ip,
+      userAgent,
+      provider: GitlabService.PROVIDER,
+    });
+  }
 }

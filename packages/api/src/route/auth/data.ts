@@ -48,6 +48,7 @@ export type State = Static<typeof State>;
 export const State = Type.Object({
   csrfToken: Type.String(),
   redirect: Type.String(),
+  ip: Type.String(),
 });
 
 export const stateValidator = TypeCompiler.Compile(State);
@@ -55,18 +56,20 @@ export const stateValidator = TypeCompiler.Compile(State);
 export type AuthSession = Static<typeof AuthSession>;
 export const AuthSession = Type.Object({
   id: Type.Number(),
-  device: Type.String(),
-  ip: Type.String(),
-  user_agent: Type.String(),
+  userId: User.properties.id,
+  token: Type.Optional(Type.String()),
+  ip: Type.Optional(Type.String()),
+  userAgent: Type.Optional(Type.String()),
+  provider: Type.String(),
   createdAt: Type.String({ format: 'date-time' }),
   updatedAt: Type.String({ format: 'date-time' }),
 });
 
 export type CreateAuthSession = Static<typeof CreateAuthSession>;
 export const CreateAuthSession = Type.Object({
-  userId: AuthSession.properties.id,
-  token: Type.String(),
-  device: AuthSession.properties.device,
+  userId: AuthSession.properties.userId,
+  token: AuthSession.properties.token,
   ip: AuthSession.properties.ip,
-  userAgent: AuthSession.properties.user_agent,
+  userAgent: AuthSession.properties.userAgent,
+  provider: AuthSession.properties.provider,
 });

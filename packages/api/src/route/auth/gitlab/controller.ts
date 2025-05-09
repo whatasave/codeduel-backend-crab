@@ -1,10 +1,10 @@
 import { type RouterGroup, temporaryRedirect, badRequest } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
-import type { GitlabService } from './service';
 import { Type } from '@sinclair/typebox';
 import { createCookie, parseCookies } from '../../../utils/cookie';
 import type { AuthService } from '../service';
 import { randomUUIDv7 } from 'bun';
+import type { GitlabService } from './service';
 
 export class GitlabController {
   constructor(
@@ -30,12 +30,13 @@ export class GitlabController {
         307: Type.String(),
       },
     },
-    handler: async ({ query }) => {
+    handler: async ({ query, headers }) => {
       const { redirect } = query;
 
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
         redirect,
+        ip: headers.get('x-forwarded-for') ?? headers.get('x-real-ip') ?? '::1',
       });
       const redirectUrl = this.service.authorizationUrl(state);
 
@@ -73,7 +74,7 @@ export class GitlabController {
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
-      const { redirect } = this.authService.decodeState(state);
+      const { redirect, ip } = this.authService.decodeState(state);
 
       const token = await this.service.exchangeCodeForToken(code);
       const gitlabUser = await this.service.userData(token.access_token);
@@ -82,12 +83,19 @@ export class GitlabController {
       const accessToken = await this.authService.accessToken(user);
       const refreshToken = await this.authService.refreshToken(user);
 
+      await this.service.createSession(
+        user.id,
+        refreshToken,
+        ip,
+        headers.get('user-agent') ?? 'unknown'
+      );
+
       const accessCookie = createCookie({
-        ...this.service.stateCookieOptions,
+        ...this.authService.accessTokenCookieOptions,
         value: accessToken,
       });
       const refreshCookie = createCookie({
-        ...this.service.stateCookieOptions,
+        ...this.authService.refreshTokenCookieOptions,
         value: refreshToken,
       });
 

@@ -71,4 +71,16 @@ export class GithubService {
 
     return url.toString();
   }
+
+  async createSession(userId: number, token: string, ip: string, userAgent: string): Promise<void> {
+    const sessions = {
+      userId,
+      token,
+      ip,
+      userAgent,
+      provider: GithubService.PROVIDER,
+    };
+
+    await this.authService.createSession(sessions);
+  }
 }

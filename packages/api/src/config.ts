@@ -38,12 +38,12 @@ export function loadConfig(): Config {
     },
     auth: {
       jwt: {
-        secret: env.JWT_SECRET,
         issuer: env.JWT_ISSUER,
         audience: env.JWT_AUDIENCE,
       },
       accessToken: {
         expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
+        secret: env.ACCESS_TOKEN_SECRET,
         cookie: {
           name: env.ACCESS_TOKEN_COOKIE_NAME,
           domain: env.ACCESS_TOKEN_COOKIE_DOMAIN,
@@ -56,6 +56,7 @@ export function loadConfig(): Config {
       },
       refreshToken: {
         expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
+        secret: env.REFRESH_TOKEN_SECRET,
         cookie: {
           name: env.REFRESH_TOKEN_COOKIE_NAME,
           domain: env.REFRESH_TOKEN_COOKIE_DOMAIN,

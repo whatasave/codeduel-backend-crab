@@ -54,7 +54,7 @@ export class AuthService {
 
           username: user.username,
         } as JwtAccessToken,
-        this.config.jwt.secret,
+        this.config.accessToken.secret,
         { algorithm: 'HS256' },
         (err, token) => {
           if (err) return reject(err);
@@ -75,7 +75,7 @@ export class AuthService {
           exp: Math.floor(now / 1000) + this.config.refreshToken.expiresIn,
           sub: user.id,
         } as JwtRefreshToken,
-        this.config.jwt.secret,
+        this.config.refreshToken.secret,
         { algorithm: 'HS256' },
         (err, token) => {
           if (err) return reject(err);
@@ -87,23 +87,53 @@ export class AuthService {
     });
   }
 
-  async verifyToken(token: string): Promise<void> {
+  async verifyAccessToken(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      jwt.verify(token, this.config.jwt.secret, { algorithms: ['HS256'] }, (err, decode) => {
-        if (err) return reject(err);
+      jwt.verify(
+        token,
+        this.config.accessToken.secret,
+        { algorithms: ['HS256'] },
+        (err, decode) => {
+          if (err) return reject(err);
 
-        if (!decode) return reject(new Error('Invalid token'));
-        const payload = decode as JwtPayload;
+          if (!decode) return reject(new Error('Invalid token'));
+          const payload = decode as JwtPayload;
 
-        if (payload.aud !== this.config.jwt.audience) {
-          return reject(new Error('Invalid token audience'));
+          if (payload.aud !== this.config.jwt.audience) {
+            return reject(new Error('Invalid token audience'));
+          }
+          if (payload.iss !== this.config.jwt.issuer) {
+            return reject(new Error('Invalid token issuer'));
+          }
+
+          resolve();
         }
-        if (payload.iss !== this.config.jwt.issuer) {
-          return reject(new Error('Invalid token issuer'));
-        }
+      );
+    });
+  }
 
-        resolve();
-      });
+  async verifyRefreshToken(token: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      jwt.verify(
+        token,
+        this.config.refreshToken.secret,
+        { algorithms: ['HS256'] },
+        (err, decode) => {
+          if (err) return reject(err);
+
+          if (!decode) return reject(new Error('Invalid token'));
+          const payload = decode as JwtPayload;
+
+          if (payload.aud !== this.config.jwt.audience) {
+            return reject(new Error('Invalid token audience'));
+          }
+          if (payload.iss !== this.config.jwt.issuer) {
+            return reject(new Error('Invalid token issuer'));
+          }
+
+          resolve();
+        }
+      );
     });
   }
 

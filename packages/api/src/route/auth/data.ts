@@ -51,3 +51,22 @@ export const State = Type.Object({
 });
 
 export const stateValidator = TypeCompiler.Compile(State);
+
+export type AuthSession = Static<typeof AuthSession>;
+export const AuthSession = Type.Object({
+  id: Type.Number(),
+  device: Type.String(),
+  ip: Type.String(),
+  user_agent: Type.String(),
+  createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
+});
+
+export type CreateAuthSession = Static<typeof CreateAuthSession>;
+export const CreateAuthSession = Type.Object({
+  userId: AuthSession.properties.id,
+  token: Type.String(),
+  device: AuthSession.properties.device,
+  ip: AuthSession.properties.ip,
+  userAgent: AuthSession.properties.user_agent,
+});

@@ -109,9 +109,9 @@ export class AuthRepository {
     return {
       id: authSession.id,
       userId: authSession.user_id,
-      token: authSession.token || undefined,
-      ip: authSession.ip || undefined,
-      userAgent: authSession.user_agent || undefined,
+      token: authSession.token ?? undefined,
+      ip: authSession.ip ?? undefined,
+      userAgent: authSession.user_agent ?? undefined,
       provider: authSession.provider,
       createdAt: authSession.created_at.toISOString(),
       updatedAt: authSession.updated_at.toISOString(),

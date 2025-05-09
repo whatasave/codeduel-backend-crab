@@ -17,9 +17,22 @@ import path from 'path';
 
 export type Database = Kysely<DB>;
 
-export type Select<T extends keyof DB> = Selectable<DB[T]>;
-export type Insert<T extends keyof DB> = Insertable<DB[T]>;
-export type Update<T extends keyof DB> = Updateable<DB[T]>;
+type AddPrefix<T, P extends string> = {
+  [K in keyof T as K extends string ? `${P}${K}` : never]: T[K];
+};
+
+export type Select<T extends keyof DB, Prefix extends string = ''> = AddPrefix<
+  Selectable<DB[T]>,
+  Prefix
+>;
+export type Insert<T extends keyof DB, Prefix extends string = ''> = AddPrefix<
+  Insertable<DB[T]>,
+  Prefix
+>;
+export type Update<T extends keyof DB, Prefix extends string = ''> = AddPrefix<
+  Updateable<DB[T]>,
+  Prefix
+>;
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({

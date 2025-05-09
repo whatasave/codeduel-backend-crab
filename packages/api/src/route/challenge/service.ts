@@ -1,14 +1,20 @@
-import type { Challenge, ChallengeDetailed, CreateChallenge, UpdateChallenge } from './data';
+import type {
+  ChallengeDetailed,
+  GameChallenge,
+  CreateChallenge,
+  UpdateChallenge,
+  Challenge,
+} from './data';
 import type { ChallengeRepository } from './repository';
 
 export class ChallengeService {
   constructor(private readonly challengeRepository: ChallengeRepository) {}
 
-  async byId(id: Challenge['id']): Promise<ChallengeDetailed | undefined> {
+  async byId(id: ChallengeDetailed['id']): Promise<GameChallenge | undefined> {
     return await this.challengeRepository.byId(id);
   }
 
-  async all(): Promise<Challenge[]> {
+  async all(): Promise<ChallengeDetailed[]> {
     return await this.challengeRepository.all();
   }
 
@@ -20,11 +26,11 @@ export class ChallengeService {
     return await this.challengeRepository.update(challenge);
   }
 
-  async delete(id: Challenge['id']): Promise<boolean> {
+  async delete(id: ChallengeDetailed['id']): Promise<boolean> {
     return await this.challengeRepository.delete(id);
   }
 
-  async random(): Promise<ChallengeDetailed | undefined> {
+  async random(): Promise<GameChallenge | undefined> {
     return await this.challengeRepository.random();
   }
 }

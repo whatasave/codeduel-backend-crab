@@ -1,6 +1,6 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
 import { ChallengeService } from './service';
-import type { Challenge, ChallengeDetailed, CreateChallenge } from './data';
+import type { ChallengeDetailed, GameChallenge, CreateChallenge, Challenge } from './data';
 import { ChallengeController } from './controller';
 import type { ChallengeRepository } from './repository';
 
@@ -19,7 +19,26 @@ describe('Route.Challenge.Controller', () => {
   };
 
   const mockChallengeDetailed: ChallengeDetailed = {
-    ...mockChallenge,
+    id: 1,
+    owner: {
+      id: 1,
+      username: 'testuser',
+      name: 'Test User',
+      avatar: 'avatar.png',
+      backgroundImage: 'background.png',
+      biography: 'This is a test user',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    title: 'Test Challenge',
+    description: 'This is a test challenge',
+    content: 'print("Hello, World!")',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const mockGameChallenge: GameChallenge = {
+    ...mockChallengeDetailed,
     testCases: [{ input: 'input', output: 'output' }],
   };
 
@@ -54,13 +73,13 @@ describe('Route.Challenge.Controller', () => {
 
       expect(spyCreate).toHaveBeenCalledTimes(1);
       expect(spyCreate).toHaveBeenCalledWith(mockCreateChallenge);
-      expect(challenge).toEqual({ status: 201, body: mockChallenge });
+      expect(challenge).toEqual({ status: 201, body: mockChallengeDetailed });
     });
   });
 
   describe('byId', () => {
     test('should get a challenge by id', async () => {
-      const spyById = spyOn(service, 'byId').mockResolvedValue(mockChallengeDetailed);
+      const spyById = spyOn(service, 'byId').mockResolvedValue(mockGameChallenge);
 
       const challenge = await controller.byId.handler({
         method: 'GET',
@@ -73,7 +92,7 @@ describe('Route.Challenge.Controller', () => {
 
       expect(spyById).toHaveBeenCalledTimes(1);
       expect(spyById).toHaveBeenCalledWith(1);
-      expect(challenge).toEqual({ status: 200, body: mockChallengeDetailed });
+      expect(challenge).toEqual({ status: 200, body: mockGameChallenge });
     });
 
     test('should return undefined if challenge not found', async () => {
@@ -96,7 +115,7 @@ describe('Route.Challenge.Controller', () => {
 
   describe('all', () => {
     test('should get all challenges', async () => {
-      const spyAll = spyOn(service, 'all').mockResolvedValue([mockChallenge]);
+      const spyAll = spyOn(service, 'all').mockResolvedValue([mockChallengeDetailed]);
 
       const challenges = await controller.all.handler({
         method: 'GET',
@@ -109,7 +128,7 @@ describe('Route.Challenge.Controller', () => {
 
       expect(spyAll).toHaveBeenCalledTimes(1);
       expect(spyAll).toHaveBeenCalledWith();
-      expect(challenges).toEqual({ status: 200, body: [mockChallenge] });
+      expect(challenges).toEqual({ status: 200, body: [mockChallengeDetailed] });
     });
   });
 
@@ -135,7 +154,7 @@ describe('Route.Challenge.Controller', () => {
 
       expect(spyUpdate).toHaveBeenCalledTimes(1);
       expect(spyUpdate).toHaveBeenCalledWith(updatedChallenge);
-      expect(challenge).toEqual({ status: 200, body: mockChallenge });
+      expect(challenge).toEqual({ status: 200, body: mockChallengeDetailed });
     });
 
     test('should return undefined on update not found', async () => {
@@ -184,7 +203,7 @@ describe('Route.Challenge.Controller', () => {
 
   describe('random', () => {
     test('should get a random challenge', async () => {
-      const spyRandom = spyOn(service, 'random').mockResolvedValue(mockChallengeDetailed);
+      const spyRandom = spyOn(service, 'random').mockResolvedValue(mockGameChallenge);
 
       const challenge = await controller.random.handler({
         method: 'GET',
@@ -197,7 +216,7 @@ describe('Route.Challenge.Controller', () => {
 
       expect(spyRandom).toHaveBeenCalledTimes(1);
       expect(spyRandom).toHaveBeenCalledWith();
-      expect(challenge).toEqual({ status: 200, body: mockChallengeDetailed });
+      expect(challenge).toEqual({ status: 200, body: mockGameChallenge });
     });
 
     test('should return undefined if no challenges exist', async () => {

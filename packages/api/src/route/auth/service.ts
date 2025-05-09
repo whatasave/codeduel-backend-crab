@@ -73,6 +73,7 @@ export class AuthService {
           iss: this.config.jwt.issuer,
           aud: this.config.jwt.audience,
           exp: Math.floor(now / 1000) + this.config.refreshToken.expiresIn,
+          jti: randomUUIDv7(),
           sub: user.id,
         } as JwtRefreshToken,
         this.config.refreshToken.secret,

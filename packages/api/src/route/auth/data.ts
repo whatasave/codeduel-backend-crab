@@ -40,6 +40,7 @@ export const JwtRefreshToken = Type.Object({
   iss: Type.String(),
   aud: Type.String(),
   exp: Type.Number(),
+  jti: Type.String(),
   sub: User.properties.id,
 });
 

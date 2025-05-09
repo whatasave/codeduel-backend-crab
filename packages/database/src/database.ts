@@ -9,6 +9,18 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
+export type Json = JsonValue;
+
+export type JsonArray = JsonValue[];
+
+export type JsonObject = {
+  [x: string]: JsonValue | undefined;
+};
+
+export type JsonPrimitive = boolean | number | string | null;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Auth {
@@ -40,6 +52,27 @@ export interface Challenge {
   updated_at: Generated<Timestamp>;
 }
 
+export interface Game {
+  allowed_languages: Json;
+  challenge_id: number;
+  created_at: Generated<Timestamp>;
+  duration: number;
+  ended_at: Timestamp | null;
+  host_id: number;
+  id: Generated<number>;
+  max_players: number;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface GameUser {
+  code: string | null;
+  game_id: number;
+  language: string | null;
+  submitted_at: Timestamp | null;
+  tests_passed: Generated<number>;
+  user_id: number;
+}
+
 export interface TestCase {
   challenge_id: number;
   hidden: boolean;
@@ -63,6 +96,8 @@ export interface DB {
   auth: Auth;
   auth_session: AuthSession;
   challenge: Challenge;
+  game: Game;
+  game_user: GameUser;
   test_case: TestCase;
   user: User;
 }

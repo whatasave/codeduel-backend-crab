@@ -1,27 +1,49 @@
 import { BunServer } from '@codeduel-backend-crab/server/bun';
-import { Router } from '@codeduel-backend-crab/server';
+import { movedPermanently, ok, Router, type Middleware } from '@codeduel-backend-crab/server';
 import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
+import { Cors } from '@codeduel-backend-crab/server/cors';
+import { createDatabase } from '@codeduel-backend-crab/database';
+import { defaultErrorHandler, descriptiveErrorHandler } from './errors';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
-  console.error(`Invalid environment: ${error}`);
+  console.error(error);
   process.exit(1);
 }
 
+const database = createDatabase(config.database);
 const router = new Router();
+const middlewares: Middleware[] = [];
 
-const rootController = new RootController();
-rootController.setup(router.group({ prefix: '/v1' }));
+middlewares.push(config.descriptiveErrors ? descriptiveErrorHandler : defaultErrorHandler);
+
+const cors = config.cors && new Cors(config.cors);
+if (cors) {
+  router.route(cors.preflight);
+  middlewares.push(cors.middleware);
+}
+
+const root = router.group({ middlewares });
+
+const controller = new RootController(database, config);
+controller.setup(root.group({ prefix: '/v1' }));
 
 const openapi = router.openapi();
-router.route({
+root.route({
   method: 'GET',
   path: '/openapi',
-  handler: async () => ({
-    status: 200,
-    body: openapi,
-  }),
+  handler: async () => ok(openapi),
+});
+
+root.route({
+  method: 'GET',
+  path: '/',
+  handler: async () =>
+    movedPermanently('Redirecting to /v1/redoc', {
+      Location: '/v1/redoc',
+      'Content-Type': 'text/plain',
+    }),
 });
 
 const server = new BunServer((request) => router.handle(request));

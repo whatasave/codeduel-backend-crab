@@ -1,10 +1,25 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import {
+  Kysely,
+  PostgresDialect,
+  type Selectable,
+  type Insertable,
+  type Updateable,
+  FileMigrationProvider,
+  Migrator,
+} from 'kysely';
 import { Pool } from 'pg';
 import type { DB } from './database';
 import { Type, type Static } from '@sinclair/typebox';
 import { AssertError, Value } from '@sinclair/typebox/value';
+import { NO_MIGRATIONS } from 'kysely';
+import fs from 'fs/promises';
+import path from 'path';
 
 export type Database = Kysely<DB>;
+
+export type Select<T extends keyof DB> = Selectable<DB[T]>;
+export type Insert<T extends keyof DB> = Insertable<DB[T]>;
+export type Update<T extends keyof DB> = Updateable<DB[T]>;
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -13,6 +28,7 @@ export const Config = Type.Object({
   database: Type.Optional(Type.String()),
   user: Type.Optional(Type.String()),
   password: Type.Optional(Type.String()),
+  ssl: Type.Optional(Type.Boolean()),
   maxConnections: Type.Optional(Type.Number({ minimum: 1, default: 10 })),
 });
 
@@ -22,6 +38,7 @@ export function createDatabase({
   database,
   user,
   password,
+  ssl,
   maxConnections,
 }: Config): Database {
   const dialect = new PostgresDialect({
@@ -31,6 +48,7 @@ export function createDatabase({
       user,
       port,
       password,
+      ssl,
       max: maxConnections,
     }),
   });
@@ -53,10 +71,36 @@ export function loadConfig(): Config {
   } catch (error) {
     if (error instanceof AssertError) {
       const errors = Array.from(error.Errors())
-        .map((e) => `\t${e.path}: ${e.message}`)
+        .map((e) => `\t${e.path}: ${e.message}, Received: ${String(e.value)}`)
         .join('\n');
       throw new Error(`Invalid environment:\n${errors}`);
     }
     throw error;
+  }
+}
+
+export async function migrateToLatest(db: Database): Promise<void> {
+  const provider = new FileMigrationProvider({
+    fs,
+    path,
+    migrationFolder: path.join(import.meta.dir, '../migrations'),
+  });
+  const migrator = new Migrator({ db, provider });
+  const { error } = await migrator.migrateToLatest();
+  if (error) {
+    throw new Error('Migration failed', { cause: error });
+  }
+}
+
+export async function rollbackMigrations(db: Kysely<DB>): Promise<void> {
+  const provider = new FileMigrationProvider({
+    fs,
+    path,
+    migrationFolder: path.join(import.meta.dir, '../migrations'),
+  });
+  const migrator = new Migrator({ db, provider });
+  const { error } = await migrator.migrateTo(NO_MIGRATIONS);
+  if (error) {
+    throw new Error('Rollback failed', { cause: error });
   }
 }

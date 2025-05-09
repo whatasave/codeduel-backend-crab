@@ -20,6 +20,8 @@ describe('validation middleware', () => {
       path: '/',
       query: { name: 'John' },
       body: { age: 30 },
+      params: {},
+      headers: new Headers(),
     });
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ age: 30 });
@@ -29,8 +31,34 @@ describe('validation middleware', () => {
     const response = await validatedHandler({
       method: 'POST',
       path: '/',
-      query: { name: 123 },
+      query: { name: {} },
       body: { age: 30 },
+      params: {},
+      headers: new Headers(),
+    });
+    expect(response.status).toBe(400);
+    expect(hasErrors(response.body)).toBe(true);
+  });
+
+  test('should return 400 for invalid body parameters', async () => {
+    const schema: RouteSchema = {
+      request: {
+        params: { id: Type.Number() },
+        query: { name: Type.String() },
+        body: Type.Object({ age: Type.Number() }),
+      },
+      response: Type.Object({ age: Type.Number() }),
+    };
+    const handler: Handler = async (req) => ({ status: 200, body: req.params.id });
+    const validatedHandler = validation(schema, handler);
+
+    const response = await validatedHandler({
+      method: 'POST',
+      path: '/123',
+      query: { name: 'John' },
+      body: { age: 30 },
+      params: { id: 'not a number' },
+      headers: new Headers(),
     });
     expect(response.status).toBe(400);
     expect(hasErrors(response.body)).toBe(true);
@@ -42,6 +70,8 @@ describe('validation middleware', () => {
       path: '/',
       query: { name: 'John' },
       body: { age: 'not a number' },
+      params: {},
+      headers: new Headers(),
     });
     expect(response.status).toBe(400);
     expect(hasErrors(response.body)).toBe(true);
@@ -53,6 +83,8 @@ describe('validation middleware', () => {
       path: '/',
       query: { name: 'John' },
       body: undefined,
+      params: {},
+      headers: new Headers(),
     });
     expect(response.status).toBe(400);
     expect(hasErrors(response.body)).toBe(true);

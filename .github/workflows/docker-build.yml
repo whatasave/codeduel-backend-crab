@@ -1,14 +1,13 @@
 name: Docker Publish
 on:
   push:
-    branches:
-      - release
+    branches: [release]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Login to Docker Hub

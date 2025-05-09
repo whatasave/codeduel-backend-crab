@@ -30,8 +30,8 @@ export class BunServer implements Server {
     });
     return {
       url: server.url,
-      host: server.hostname,
-      port: server.port,
+      host: server.hostname ?? host,
+      port: server.port ?? port,
       stop: () => server.stop(),
     };
   }
@@ -46,8 +46,9 @@ export class BunServer implements Server {
       method: request.method as Method,
       path: url.pathname,
       query: Object.fromEntries(url.searchParams),
-      body: this.getBody(request),
+      body: await this.getBody(request),
       headers: request.headers,
+      params: {},
     };
   }
 
@@ -74,13 +75,21 @@ export class BunServer implements Server {
       case 'number':
       case 'boolean':
       case 'bigint':
-      case 'object':
+      case 'object': {
         response.headers ??= new Headers();
-        response.headers.set('content-type', 'application/json');
-        return new Response(JSON.stringify(response.body), {
+        const contentType = response.headers.get('content-type');
+        if (!contentType) {
+          response.headers.set('content-type', 'application/json');
+          return new Response(JSON.stringify(response.body), {
+            status: response.status,
+            headers: response.headers,
+          });
+        }
+        return new Response(response.body as BodyInit | null, {
           status: response.status,
           headers: response.headers,
         });
+      }
       case 'undefined':
         return new Response(undefined, {
           status: response.status,

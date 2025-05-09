@@ -8,6 +8,7 @@ describe('BunServer', () => {
     const response = await server.handle({
       method: 'GET',
       path: '/',
+      params: {},
       query: {},
       body: null,
       headers: new Headers(),
@@ -28,8 +29,10 @@ describe('BunServer', () => {
     const response = await server.handle({
       method: 'GET',
       path: '/route',
+      params: {},
       query: {},
       body: null,
+      headers: new Headers(),
     });
 
     expect(response.status).toBe(201);
@@ -41,8 +44,10 @@ describe('BunServer', () => {
     const response = await server.handle({
       method: 'GET',
       path: '/',
+      params: {},
       query: {},
       body: null,
+      headers: new Headers(),
     });
 
     expect(response.status).toBe(204);

@@ -9,10 +9,48 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
-export interface Users {
+export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+
+export interface Auth {
+  created_at: Generated<Timestamp>;
+  provider: string;
+  provider_id: Generated<number>;
+  updated_at: Generated<Timestamp>;
+  user_id: Generated<number>;
+}
+
+export interface Challenge {
+  content: string;
+  created_at: Generated<Timestamp>;
+  description: string;
   id: Generated<number>;
+  owner_id: number;
+  title: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface TestCase {
+  challenge_id: number;
+  hidden: boolean;
+  id: Generated<number>;
+  input: string;
+  output: string;
+}
+
+export interface User {
+  avatar: string | null;
+  background_image: string | null;
+  biography: string | null;
+  created_at: Generated<Timestamp>;
+  id: Generated<number>;
+  name: string | null;
+  updated_at: Generated<Timestamp>;
+  username: string;
 }
 
 export interface DB {
-  users: Users;
+  auth: Auth;
+  challenge: Challenge;
+  test_case: TestCase;
+  user: User;
 }

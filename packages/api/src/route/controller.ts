@@ -44,7 +44,7 @@ export class RootController {
     this.healthController = new HealthController(this.healthService);
     this.userController = new UserController(this.userService);
     this.challengeController = new ChallengeController(this.challengeService);
-    this.authController = new AuthController(this.authService, config.auth);
+    this.authController = new AuthController(this.authService, this.userService, config.auth);
   }
 
   setup(group: RouterGroup): void {

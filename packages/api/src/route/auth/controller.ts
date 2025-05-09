@@ -62,8 +62,8 @@ export class AuthController {
     handler: async ({ headers }) => {
       const cookies = parseCookies(headers.get('cookie'));
       const logout = (): ReturnType<typeof noContent> => {
-        const refreshTokenCookie = removeCookie(this.service.refreshToken.name);
-        const accessTokenCookie = removeCookie(this.service.accessToken.name);
+        const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions.name);
+        const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions.name);
 
         return noContent(undefined, {
           'Content-Type': 'text/plain',
@@ -71,7 +71,7 @@ export class AuthController {
         });
       };
 
-      const refreshToken = cookies[this.service.refreshToken.name];
+      const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
       if (!refreshToken) return logout();
       const { sub: userId } = await this.service.verifyRefreshToken(refreshToken);
 
@@ -111,15 +111,18 @@ export class AuthController {
         204: Type.Undefined(),
       },
     },
-    handler: async () => {
-      const accessToken = removeCookie(this.service.accessToken.name);
-      const refreshToken = removeCookie(this.service.refreshToken.name);
+    handler: async ({ headers }) => {
+      const cookies = parseCookies(headers.get('cookie'));
+      const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
 
-      await this.service.deleteSessionByToken(refreshToken);
+      const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions.name);
+      const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions.name);
+
+      if (refreshToken) await this.service.deleteSessionToken(refreshToken);
 
       return noContent(undefined, {
         'Content-Type': 'text/plain',
-        'Set-Cookie': [accessToken, refreshToken],
+        'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
       });
     },
   });

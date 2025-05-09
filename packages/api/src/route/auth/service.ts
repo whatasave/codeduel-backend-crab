@@ -171,16 +171,12 @@ export class AuthService {
     return parsedState;
   }
 
-  async createSession(session: CreateAuthSession): Promise<AuthSession> {
-    return await this.repository.createSession(session);
+  async createSession(session: CreateAuthSession): Promise<void> {
+    await this.repository.createSession(session);
   }
 
   async updateSession(id: AuthSession['id'], token: string): Promise<void> {
     await this.repository.updateSession(id, token);
-  }
-
-  async findRefreshToken(token: string): Promise<AuthSession | undefined> {
-    return await this.repository.sessionByToken(token);
   }
 
   async sessionByToken(token: string): Promise<AuthSession | undefined> {
@@ -191,7 +187,7 @@ export class AuthService {
     return await this.repository.deleteSession(id);
   }
 
-  async deleteSessionByToken(token: string): Promise<void> {
-    return await this.repository.deleteSessionByToken(token);
+  async deleteSessionToken(token: string): Promise<void> {
+    return await this.repository.deleteSessionToken(token);
   }
 }

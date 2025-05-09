@@ -65,9 +65,9 @@ export class AuthRepository {
       .values({
         user_id: session.userId,
         token: session.token,
-        device: session.device,
         ip: session.ip,
         user_agent: session.userAgent,
+        provider: session.provider,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -97,9 +97,10 @@ export class AuthRepository {
     await this.database.deleteFrom('auth_session').where('id', '=', id).executeTakeFirstOrThrow();
   }
 
-  async deleteSessionByToken(token: string): Promise<void> {
+  async deleteSessionToken(token: string): Promise<void> {
     await this.database
-      .deleteFrom('auth_session')
+      .updateTable('auth_session')
+      .set({ token: null })
       .where('token', '=', token)
       .executeTakeFirstOrThrow();
   }
@@ -107,9 +108,11 @@ export class AuthRepository {
   private selectToSession(authSession: Select<'auth_session'>): AuthSession {
     return {
       id: authSession.id,
-      device: authSession.device,
-      ip: authSession.ip,
-      user_agent: authSession.user_agent,
+      userId: authSession.user_id,
+      token: authSession.token || undefined,
+      ip: authSession.ip || undefined,
+      userAgent: authSession.user_agent || undefined,
+      provider: authSession.provider,
       createdAt: authSession.created_at.toISOString(),
       updatedAt: authSession.updated_at.toISOString(),
     };

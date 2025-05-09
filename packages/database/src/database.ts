@@ -21,12 +21,12 @@ export interface Auth {
 
 export interface AuthSession {
   created_at: Generated<Timestamp>;
-  device: string;
   id: Generated<number>;
-  ip: string;
-  token: string;
+  ip: string | null;
+  provider: string;
+  token: string | null;
   updated_at: Generated<Timestamp>;
-  user_agent: string;
+  user_agent: string | null;
   user_id: Generated<number>;
 }
 

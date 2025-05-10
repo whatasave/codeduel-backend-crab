@@ -13,6 +13,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('code', 'text')
     .addColumn('language', 'varchar(64)')
     .addColumn('tests_passed', 'integer', (col) => col.notNull().defaultTo(0))
+    .addColumn('show_code', 'boolean', (col) => col.notNull().defaultTo(false))
     .addColumn('submitted_at', 'timestamp')
     .addPrimaryKeyConstraint('pk_game_user', ['game_id', 'user_id'])
     .execute();

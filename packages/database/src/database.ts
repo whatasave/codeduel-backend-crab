@@ -68,6 +68,7 @@ export interface GameUser {
   code: string | null;
   game_id: number;
   language: string | null;
+  show_code: Generated<boolean>;
   submitted_at: Timestamp | null;
   tests_passed: Generated<number>;
   user_id: number;

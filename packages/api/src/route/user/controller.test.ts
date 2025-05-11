@@ -5,7 +5,7 @@ import { UserController } from './controller';
 import type { UserRepository } from './repository';
 import { Router, type PathString } from '@codeduel-backend-crab/server';
 
-describe('Route.User.Services', () => {
+describe('Route.User.Controller', () => {
   let serv: UserService;
   let controller: UserController;
   const mockUser: User = {

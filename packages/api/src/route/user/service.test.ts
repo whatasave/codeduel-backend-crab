@@ -4,7 +4,7 @@ import type { CreateUser, User } from './data';
 import { UserService } from './service';
 import type { Database } from '@codeduel-backend-crab/database';
 
-describe('Route.User.Services', () => {
+describe('Route.User.Service', () => {
   let db: Database;
   let repo: UserRepository;
   let serv: UserService;

@@ -22,7 +22,7 @@ import type {
   TableExpression,
 } from 'kysely';
 import type { ReferenceExpression } from 'kysely';
-import { jsonObjectFrom } from 'kysely/helpers/postgres';
+import { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
 
 export type Database = Kysely<DB>;
 
@@ -156,4 +156,35 @@ export function populate<
   // @ts-expect-error I'm not able to type this correctly
   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return jsonObjectFrom(cb(eb.selectFrom(table).whereRef(lhs, '=', rhs)));
+}
+
+export function populateArray<
+  DB,
+  FromTable extends keyof DB,
+  TargetTable extends TableExpression<DB, FromTable>,
+  T = ReturnType<
+    SelectQueryBuilder<
+      DB,
+      TargetTable extends keyof DB ? TargetTable : never,
+      Record<never, never>
+    >['selectAll']
+  > extends Expression<infer E>
+    ? E
+    : never,
+>(
+  eb: ExpressionBuilder<DB, FromTable>,
+  table: TargetTable,
+  lhs: ReferenceExpression<DB, TargetTable extends keyof DB ? TargetTable : never>,
+  rhs: ReferenceExpression<DB, FromTable extends keyof DB ? FromTable : never>,
+  cb: (
+    eb: SelectQueryBuilder<
+      DB,
+      TargetTable extends keyof DB ? TargetTable : never,
+      Record<never, never>
+    >
+  ) => Expression<T> = (eb) => eb.selectAll() as Expression<T>
+): RawBuilder<T[]> {
+  // @ts-expect-error I'm not able to type this correctly
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  return jsonArrayFrom(cb(eb.selectFrom(table).whereRef(lhs, '=', rhs)));
 }

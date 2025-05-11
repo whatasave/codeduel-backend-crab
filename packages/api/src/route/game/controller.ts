@@ -1,7 +1,7 @@
 import { created, noContent, notFound, ok, type RouterGroup } from '@codeduel-backend-crab/server';
 import type { GameService } from './service';
 import { validated } from '@codeduel-backend-crab/server/validation';
-import { CreateGame, Game, GameOfUser, ShareCode, UpdateGameUser } from './data';
+import { CreateGame, GameOfUser, GameWithUserData, ShareCode, UpdateGameUser } from './data';
 import { Type } from '@sinclair/typebox';
 import { User } from '../user/data';
 
@@ -27,7 +27,7 @@ export class GameController {
         },
       },
       response: {
-        200: Game,
+        200: GameWithUserData,
         404: Type.Undefined(),
       },
     },
@@ -47,7 +47,7 @@ export class GameController {
         body: CreateGame,
       },
       response: {
-        201: Game,
+        201: GameWithUserData,
       },
     },
     handler: async ({ body }) => {

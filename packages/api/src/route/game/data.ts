@@ -1,11 +1,11 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { ChallengeDetailed } from '../challenge/data';
+import { GameChallenge } from '../challenge/data';
 import { User } from '../user/data';
 
 export type Game = Static<typeof Game>;
 export const Game = Type.Object({
   id: Type.Number(),
-  challenge: ChallengeDetailed,
+  challenge: GameChallenge,
   host: User,
   endedAt: Type.Optional(Type.String({ format: 'date-time' })),
   maxPlayers: Type.Number(),
@@ -20,6 +20,7 @@ export const CreateGame = Type.Object({
   maxPlayers: Type.Number(),
   duration: Type.Number(),
   allowedLanguages: Type.Array(Type.String()),
+  userIds: Type.Array(User.properties.id),
 });
 
 export type UpdateGameUser = Static<typeof UpdateGameUser>;
@@ -50,6 +51,12 @@ export const GameUser = Type.Object({
 
 export type GameOfUser = Static<typeof GameOfUser>;
 export const GameOfUser = Type.Object({
-  ...GameUser.properties,
+  user: GameUser,
   game: Game,
+});
+
+export type GameWithUserData = Static<typeof GameWithUserData>;
+export const GameWithUserData = Type.Object({
+  game: Game,
+  users: Type.Array(GameUser),
 });

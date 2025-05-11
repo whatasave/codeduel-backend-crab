@@ -1,15 +1,22 @@
 import type { User } from '../user/data';
-import type { CreateGame, Game, GameOfUser, ShareCode, UpdateGameUser } from './data';
+import type {
+  CreateGame,
+  Game,
+  GameOfUser,
+  GameWithUserData,
+  ShareCode,
+  UpdateGameUser,
+} from './data';
 import type { GameRepository } from './repository';
 
 export class GameService {
   constructor(private readonly gameRepository: GameRepository) {}
 
-  async byId(id: Game['id']): Promise<Game | undefined> {
+  async byId(id: Game['id']): Promise<GameWithUserData | undefined> {
     return await this.gameRepository.byId(id);
   }
 
-  async create(createGame: CreateGame): Promise<Game> {
+  async create(createGame: CreateGame): Promise<GameWithUserData> {
     return await this.gameRepository.create(createGame);
   }
 

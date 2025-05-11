@@ -66,7 +66,6 @@ export class AuthController {
         const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions.name);
 
         return noContent(undefined, {
-          'Content-Type': 'text/plain',
           'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
         });
       };
@@ -96,7 +95,6 @@ export class AuthController {
       });
 
       return noContent(undefined, {
-        'Content-Type': 'text/plain',
         'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
       });
     },
@@ -121,7 +119,6 @@ export class AuthController {
       if (refreshToken) await this.service.deleteSessionToken(refreshToken);
 
       return noContent(undefined, {
-        'Content-Type': 'text/plain',
         'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
       });
     },

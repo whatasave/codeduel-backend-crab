@@ -36,7 +36,7 @@ export class GithubController {
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
         redirect,
-        ip: headers.get('x-forwarded-for') ?? headers.get('x-real-ip') ?? '::1',
+        ip: headers.get('x-forwarded-for') ?? headers.get('x-real-ip') ?? 'unknown',
       });
       const redirectUrl = this.service.authorizationUrl(state);
 

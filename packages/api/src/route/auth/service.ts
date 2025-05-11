@@ -149,7 +149,7 @@ export class AuthService {
             exp: payload.exp,
             jti: payload.jti,
             sub: payload.sub,
-          } satisfies JwtRefreshToken);
+          });
         }
       );
     });

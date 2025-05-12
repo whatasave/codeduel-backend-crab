@@ -5,6 +5,7 @@ import { createCookie, parseCookies } from '../../../utils/cookie';
 import type { AuthService } from '../service';
 import { randomUUIDv7 } from 'bun';
 import type { GitlabService } from './service';
+import { getIp } from '../../../utils/ip';
 
 export class GitlabController {
   constructor(
@@ -22,9 +23,7 @@ export class GitlabController {
     path: '/',
     schema: {
       request: {
-        query: {
-          redirect: Type.String(),
-        },
+        query: { redirect: Type.String() },
       },
       response: {
         307: Type.String(),
@@ -36,7 +35,7 @@ export class GitlabController {
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
         redirect,
-        ip: headers.get('x-forwarded-for') ?? headers.get('x-real-ip') ?? '::1',
+        ip: getIp(headers),
       });
       const redirectUrl = this.service.authorizationUrl(state);
 
@@ -87,7 +86,7 @@ export class GitlabController {
         user.id,
         refreshToken,
         ip,
-        headers.get('user-agent') ?? 'unknown'
+        headers.get('user-agent') ?? undefined
       );
 
       const accessCookie = createCookie({

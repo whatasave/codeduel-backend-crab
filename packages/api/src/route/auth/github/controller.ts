@@ -36,6 +36,7 @@ export class GithubController {
         csrfToken: randomUUIDv7('base64url'),
         redirect,
         ip: getIp(headers),
+        userAgent: headers.get('user-agent') ?? undefined,
       });
       const redirectUrl = this.service.authorizationUrl(state);
 
@@ -73,7 +74,7 @@ export class GithubController {
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
-      const { redirect, ip } = this.authService.decodeState(state);
+      const { redirect, ip, userAgent } = this.authService.decodeState(state);
 
       const token = await this.service.exchangeCodeForToken(code, state);
       const githubUser = await this.service.userData(token.access_token);
@@ -82,12 +83,7 @@ export class GithubController {
       const accessToken = await this.authService.accessToken(user);
       const refreshToken = await this.authService.refreshToken(user);
 
-      await this.service.createSession(
-        user.id,
-        refreshToken,
-        ip,
-        headers.get('user-agent') ?? undefined
-      );
+      await this.service.createSession(user.id, refreshToken, ip, userAgent);
 
       const accessCookie = createCookie({
         ...this.authService.accessTokenCookieOptions,

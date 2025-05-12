@@ -12,7 +12,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .ifNotExists()
     .addColumn('id', 'serial', (col) => col.primaryKey())
     .addColumn('user_id', 'serial', (col) => col.notNull().references(`${USER_TABLE_NAME}.id`))
-    .addColumn('token', 'varchar(255)')
+    .addColumn('token_id', 'varchar(255)')
     .addColumn('ip', 'varchar(255)')
     .addColumn('user_agent', 'varchar(255)')
     .addColumn('provider', 'varchar(255)', (col) => col.notNull())

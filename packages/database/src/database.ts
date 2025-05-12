@@ -24,7 +24,7 @@ export interface AuthSession {
   id: Generated<number>;
   ip: string | null;
   provider: string;
-  token: string | null;
+  token_id: string | null;
   updated_at: Generated<Timestamp>;
   user_agent: string | null;
   user_id: Generated<number>;

@@ -57,7 +57,7 @@ export type AuthSession = Static<typeof AuthSession>;
 export const AuthSession = Type.Object({
   id: Type.Number(),
   userId: User.properties.id,
-  token: Type.Optional(Type.String()),
+  tokenId: Type.Optional(Type.String()),
   ip: Type.Optional(Type.String()),
   userAgent: Type.Optional(Type.String()),
   provider: Type.String(),
@@ -68,7 +68,7 @@ export const AuthSession = Type.Object({
 export type CreateAuthSession = Static<typeof CreateAuthSession>;
 export const CreateAuthSession = Type.Object({
   userId: AuthSession.properties.userId,
-  token: AuthSession.properties.token,
+  tokenId: AuthSession.properties.tokenId,
   ip: AuthSession.properties.ip,
   userAgent: AuthSession.properties.userAgent,
   provider: AuthSession.properties.provider,

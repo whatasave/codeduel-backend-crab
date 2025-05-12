@@ -117,7 +117,7 @@ export class AuthService {
             exp: payload.exp,
             sub: payload.sub,
             username: payload.username,
-          } satisfies JwtAccessToken);
+          });
         }
       );
     });
@@ -175,19 +175,24 @@ export class AuthService {
     await this.repository.createSession(session);
   }
 
-  async updateSession(id: AuthSession['id'], token: string): Promise<void> {
-    await this.repository.updateSession(id, token);
+  async updateSession(
+    id: AuthSession['id'],
+    tokenId: Exclude<AuthSession['tokenId'], undefined>
+  ): Promise<void> {
+    await this.repository.updateSession(id, tokenId);
   }
 
-  async sessionByToken(token: string): Promise<AuthSession | undefined> {
+  async sessionByToken(
+    token: Exclude<AuthSession['tokenId'], undefined>
+  ): Promise<AuthSession | undefined> {
     return await this.repository.sessionByToken(token);
   }
 
-  async deleteSession(id: number): Promise<void> {
+  async deleteSession(id: AuthSession['id']): Promise<void> {
     return await this.repository.deleteSession(id);
   }
 
-  async deleteSessionToken(token: string): Promise<void> {
-    return await this.repository.deleteSessionToken(token);
+  async deleteSessionToken(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
+    return await this.repository.deleteSessionToken(tokenId);
   }
 }

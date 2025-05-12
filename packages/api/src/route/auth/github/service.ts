@@ -74,7 +74,7 @@ export class GithubService {
 
   async createSession(
     userId: User['id'],
-    token: CreateAuthSession['token'],
+    token: CreateAuthSession['tokenId'],
     ip: CreateAuthSession['ip'],
     userAgent: CreateAuthSession['userAgent']
   ): Promise<void> {

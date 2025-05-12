@@ -55,7 +55,7 @@ describe('Route.User.Services', () => {
   const mockUserAgent = 'codeduel.it/1.0';
   const mockCreateSession = {
     userId: mockUser.id,
-    token: mockRefreshToken,
+    tokenId: mockRefreshToken,
     ip: mockState.ip,
     userAgent: mockUserAgent,
     provider: 'github',

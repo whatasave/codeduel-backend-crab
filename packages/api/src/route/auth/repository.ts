@@ -64,7 +64,7 @@ export class AuthRepository {
       .insertInto('auth_session')
       .values({
         user_id: session.userId,
-        token: session.token,
+        token_id: session.tokenId,
         ip: session.ip,
         user_agent: session.userAgent,
         provider: session.provider,
@@ -75,19 +75,21 @@ export class AuthRepository {
     return this.selectToSession(newSession);
   }
 
-  async updateSession(id: AuthSession['id'], token: string): Promise<void> {
+  async updateSession(id: AuthSession['id'], tokenId: AuthSession['tokenId']): Promise<void> {
     await this.database
       .updateTable('auth_session')
-      .set({ token })
+      .set({ token_id: tokenId })
       .where('id', '=', id)
       .executeTakeFirstOrThrow();
   }
 
-  async sessionByToken(token: string): Promise<AuthSession | undefined> {
+  async sessionByToken(
+    tokenId: Exclude<AuthSession['tokenId'], undefined>
+  ): Promise<AuthSession | undefined> {
     const session = await this.database
       .selectFrom('auth_session')
       .selectAll()
-      .where('token', '=', token)
+      .where('token_id', '=', tokenId)
       .executeTakeFirst();
 
     return session && this.selectToSession(session);
@@ -97,11 +99,11 @@ export class AuthRepository {
     await this.database.deleteFrom('auth_session').where('id', '=', id).executeTakeFirstOrThrow();
   }
 
-  async deleteSessionToken(token: string): Promise<void> {
+  async deleteSessionToken(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
     await this.database
       .updateTable('auth_session')
-      .set({ token: null })
-      .where('token', '=', token)
+      .set({ token_id: null })
+      .where('token_id', '=', tokenId)
       .executeTakeFirstOrThrow();
   }
 
@@ -109,7 +111,7 @@ export class AuthRepository {
     return {
       id: authSession.id,
       userId: authSession.user_id,
-      token: authSession.token ?? undefined,
+      tokenId: authSession.token_id ?? undefined,
       ip: authSession.ip ?? undefined,
       userAgent: authSession.user_agent ?? undefined,
       provider: authSession.provider,

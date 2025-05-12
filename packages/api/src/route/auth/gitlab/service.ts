@@ -1,4 +1,4 @@
-import type { Auth } from '../data';
+import type { Auth, CreateAuthSession } from '../data';
 import type { AuthService } from '../service';
 import type { GitlabAccessToken, GitlabUserData } from './data';
 import type { User } from '../../user/data';
@@ -72,5 +72,22 @@ export class GitlabService {
     }).toString();
 
     return url.toString();
+  }
+
+  async createSession(
+    userId: User['id'],
+    token: CreateAuthSession['tokenId'],
+    ip: CreateAuthSession['ip'],
+    userAgent: CreateAuthSession['userAgent']
+  ): Promise<void> {
+    const sessions = {
+      userId,
+      token,
+      ip,
+      userAgent,
+      provider: GitlabService.PROVIDER,
+    };
+
+    await this.authService.createSession(sessions);
   }
 }

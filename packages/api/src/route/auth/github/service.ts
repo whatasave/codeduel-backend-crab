@@ -1,4 +1,4 @@
-import type { Auth } from '../data';
+import type { Auth, CreateAuthSession } from '../data';
 import type { AuthService } from '../service';
 import type { GithubAccessToken, GithubUserData } from './data';
 import type { User } from '../../user/data';
@@ -70,5 +70,22 @@ export class GithubService {
     }).toString();
 
     return url.toString();
+  }
+
+  async createSession(
+    userId: User['id'],
+    tokenId: CreateAuthSession['tokenId'],
+    ip: CreateAuthSession['ip'],
+    userAgent: CreateAuthSession['userAgent']
+  ): Promise<void> {
+    const sessions: CreateAuthSession = {
+      userId,
+      tokenId,
+      ip,
+      userAgent,
+      provider: GithubService.PROVIDER,
+    };
+
+    await this.authService.createSession(sessions);
   }
 }

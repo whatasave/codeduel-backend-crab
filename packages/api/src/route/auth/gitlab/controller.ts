@@ -1,10 +1,11 @@
 import { type RouterGroup, temporaryRedirect, badRequest } from '@codeduel-backend-crab/server';
 import { validated } from '@codeduel-backend-crab/server/validation';
-import type { GitlabService } from './service';
 import { Type } from '@sinclair/typebox';
 import { createCookie, parseCookies } from '../../../utils/cookie';
 import type { AuthService } from '../service';
 import { randomUUIDv7 } from 'bun';
+import type { GitlabService } from './service';
+import { getIp } from '../../../utils/ip';
 
 export class GitlabController {
   constructor(
@@ -22,20 +23,20 @@ export class GitlabController {
     path: '/',
     schema: {
       request: {
-        query: {
-          redirect: Type.String(),
-        },
+        query: { redirect: Type.String() },
       },
       response: {
         307: Type.String(),
       },
     },
-    handler: async ({ query }) => {
+    handler: async ({ query, headers }) => {
       const { redirect } = query;
 
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
         redirect,
+        ip: getIp(headers),
+        userAgent: headers.get('user-agent') ?? undefined,
       });
       const redirectUrl = this.service.authorizationUrl(state);
 
@@ -73,21 +74,24 @@ export class GitlabController {
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
-      const { redirect } = this.authService.decodeState(state);
+      const { redirect, ip, userAgent } = this.authService.decodeState(state);
 
       const token = await this.service.exchangeCodeForToken(code);
       const gitlabUser = await this.service.userData(token.access_token);
       const [_, user] = await this.service.create(gitlabUser);
 
       const accessToken = await this.authService.accessToken(user);
-      const refreshToken = await this.authService.refreshToken(user);
+      const jti = randomUUIDv7();
+      const refreshToken = await this.authService.refreshToken(user, jti);
+
+      await this.service.createSession(user.id, jti, ip, userAgent);
 
       const accessCookie = createCookie({
-        ...this.service.stateCookieOptions,
+        ...this.authService.accessTokenCookieOptions,
         value: accessToken,
       });
       const refreshCookie = createCookie({
-        ...this.service.stateCookieOptions,
+        ...this.authService.refreshTokenCookieOptions,
         value: refreshToken,
       });
 

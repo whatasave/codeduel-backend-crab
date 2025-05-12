@@ -19,6 +19,17 @@ export interface Auth {
   user_id: Generated<number>;
 }
 
+export interface AuthSession {
+  created_at: Generated<Timestamp>;
+  id: Generated<number>;
+  ip: string | null;
+  provider: string;
+  token_id: string | null;
+  updated_at: Generated<Timestamp>;
+  user_agent: string | null;
+  user_id: Generated<number>;
+}
+
 export interface Challenge {
   content: string;
   created_at: Generated<Timestamp>;
@@ -50,6 +61,7 @@ export interface User {
 
 export interface DB {
   auth: Auth;
+  auth_session: AuthSession;
   challenge: Challenge;
   test_case: TestCase;
   user: User;

@@ -1,6 +1,8 @@
 import { randomUUIDv7 } from 'bun';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
 import {
+  type AuthSession,
+  type CreateAuthSession,
   stateValidator,
   type Auth,
   type JwtAccessToken,
@@ -54,7 +56,7 @@ export class AuthService {
 
           username: user.username,
         } as JwtAccessToken,
-        this.config.jwt.secret,
+        this.config.accessToken.secret,
         { algorithm: 'HS256' },
         (err, token) => {
           if (err) return reject(err);
@@ -66,16 +68,21 @@ export class AuthService {
     });
   }
 
-  refreshToken(user: User, now: number = Date.now()): Promise<string> {
+  refreshToken(
+    user: User,
+    jti: string = randomUUIDv7('base64url'),
+    now: number = Date.now()
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
         {
           iss: this.config.jwt.issuer,
           aud: this.config.jwt.audience,
           exp: Math.floor(now / 1000) + this.config.refreshToken.expiresIn,
+          jti,
           sub: user.id,
         } as JwtRefreshToken,
-        this.config.jwt.secret,
+        this.config.refreshToken.secret,
         { algorithm: 'HS256' },
         (err, token) => {
           if (err) return reject(err);
@@ -87,23 +94,68 @@ export class AuthService {
     });
   }
 
-  async verifyToken(token: string): Promise<void> {
+  async verifyAccessToken(token: string): Promise<JwtAccessToken> {
     return new Promise((resolve, reject) => {
-      jwt.verify(token, this.config.jwt.secret, { algorithms: ['HS256'] }, (err, decode) => {
-        if (err) return reject(err);
+      jwt.verify(
+        token,
+        this.config.accessToken.secret,
+        { algorithms: ['HS256'] },
+        (err, decode) => {
+          if (err) return reject(err);
 
-        if (!decode) return reject(new Error('Invalid token'));
-        const payload = decode as JwtPayload;
+          if (!decode) return reject(new Error('Invalid token'));
+          const payload = decode as JwtPayload;
 
-        if (payload.aud !== this.config.jwt.audience) {
-          return reject(new Error('Invalid token audience'));
+          if (payload.iss !== this.config.jwt.issuer)
+            return reject(new Error('Invalid token issuer'));
+          if (payload.aud !== this.config.jwt.audience)
+            return reject(new Error('Invalid token audience'));
+          if (typeof payload.exp !== 'number') return reject(new Error('Invalid token exp'));
+          if (typeof payload.sub !== 'number') return reject(new Error('Invalid token sub'));
+          if (typeof payload.username !== 'string')
+            return reject(new Error('Invalid token username'));
+
+          resolve({
+            iss: payload.iss,
+            aud: payload.aud,
+            exp: payload.exp,
+            sub: payload.sub,
+            username: payload.username,
+          });
         }
-        if (payload.iss !== this.config.jwt.issuer) {
-          return reject(new Error('Invalid token issuer'));
-        }
+      );
+    });
+  }
 
-        resolve();
-      });
+  async verifyRefreshToken(token: string): Promise<JwtRefreshToken> {
+    return new Promise((resolve, reject) => {
+      jwt.verify(
+        token,
+        this.config.refreshToken.secret,
+        { algorithms: ['HS256'] },
+        (err, decode) => {
+          if (err) return reject(err);
+
+          if (!decode) return reject(new Error('Invalid token'));
+          const payload = decode as JwtPayload;
+
+          if (payload.iss !== this.config.jwt.issuer)
+            return reject(new Error('Invalid token issuer'));
+          if (payload.aud !== this.config.jwt.audience)
+            return reject(new Error('Invalid token audience'));
+          if (typeof payload.exp !== 'number') return reject(new Error('Invalid token exp'));
+          if (typeof payload.jti !== 'string') return reject(new Error('Invalid token jti'));
+          if (typeof payload.sub !== 'number') return reject(new Error('Invalid token sub'));
+
+          resolve({
+            iss: payload.iss,
+            aud: payload.aud,
+            exp: payload.exp,
+            jti: payload.jti,
+            sub: payload.sub,
+          });
+        }
+      );
     });
   }
 
@@ -121,5 +173,32 @@ export class AuthService {
     const parsedState = stateValidator.Decode(JSON.parse(jsonState));
 
     return parsedState;
+  }
+
+  async createSession(session: CreateAuthSession): Promise<void> {
+    console.log('createSession', session);
+    await this.repository.createSession(session);
+  }
+
+  async updateSession(
+    id: AuthSession['id'],
+    tokenId: Exclude<AuthSession['tokenId'], undefined>
+  ): Promise<void> {
+    console.log('updateSession', id, tokenId);
+    await this.repository.updateSession(id, tokenId);
+  }
+
+  async sessionByTokenId(
+    tokenId: Exclude<AuthSession['tokenId'], undefined>
+  ): Promise<AuthSession | undefined> {
+    return await this.repository.sessionByToken(tokenId);
+  }
+
+  async deleteSession(id: AuthSession['id']): Promise<void> {
+    return await this.repository.deleteSession(id);
+  }
+
+  async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
+    return await this.repository.deleteSessionToken(tokenId);
   }
 }

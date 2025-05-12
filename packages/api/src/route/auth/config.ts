@@ -6,15 +6,16 @@ import { Config as GitlabConfig } from './gitlab/config';
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
   jwt: Type.Object({
-    secret: Type.String(),
     issuer: Type.String(),
     audience: Type.String(),
   }),
   accessToken: Type.Object({
+    secret: Type.String(),
     expiresIn: Type.Number(),
     cookie: CookieOptions,
   }),
   refreshToken: Type.Object({
+    secret: Type.String(),
     expiresIn: Type.Number(),
     cookie: CookieOptions,
   }),

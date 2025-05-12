@@ -40,6 +40,7 @@ export const JwtRefreshToken = Type.Object({
   iss: Type.String(),
   aud: Type.String(),
   exp: Type.Number(),
+  jti: Type.String(),
   sub: User.properties.id,
 });
 
@@ -47,6 +48,29 @@ export type State = Static<typeof State>;
 export const State = Type.Object({
   csrfToken: Type.String(),
   redirect: Type.String(),
+  ip: Type.Optional(Type.String()),
+  userAgent: Type.Optional(Type.String()),
 });
 
 export const stateValidator = TypeCompiler.Compile(State);
+
+export type AuthSession = Static<typeof AuthSession>;
+export const AuthSession = Type.Object({
+  id: Type.Number(),
+  userId: User.properties.id,
+  tokenId: Type.Optional(Type.String()),
+  ip: Type.Optional(Type.String()),
+  userAgent: Type.Optional(Type.String()),
+  provider: Type.String(),
+  createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
+});
+
+export type CreateAuthSession = Static<typeof CreateAuthSession>;
+export const CreateAuthSession = Type.Object({
+  userId: AuthSession.properties.userId,
+  tokenId: AuthSession.properties.tokenId,
+  ip: AuthSession.properties.ip,
+  userAgent: AuthSession.properties.userAgent,
+  provider: AuthSession.properties.provider,
+});

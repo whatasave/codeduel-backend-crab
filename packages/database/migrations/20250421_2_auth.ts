@@ -12,7 +12,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .ifNotExists()
     .addColumn('user_id', 'serial', (col) => col.notNull().references(`${USER_TABLE_NAME}.id`))
     .addColumn('provider', 'varchar(255)', (col) => col.notNull())
-    .addColumn('provider_id', 'serial', (col) => col.notNull())
+    .addColumn('provider_id', 'integer', (col) => col.notNull())
     .addColumn('created_at', 'timestamptz', (col) =>
       col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
     )

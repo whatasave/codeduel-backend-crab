@@ -18,8 +18,8 @@ export const Challenge = Type.Object({
   updatedAt: Type.String({ format: 'date-time' }),
 });
 
-export type ChallengeDetailed = Static<typeof ChallengeDetailed>;
-export const ChallengeDetailed = Type.Object({
+export type ChallengeWithUser = Static<typeof ChallengeWithUser>;
+export const ChallengeWithUser = Type.Object({
   id: Type.Integer(),
   owner: User,
   title: Type.String(),
@@ -29,8 +29,8 @@ export const ChallengeDetailed = Type.Object({
   updatedAt: Type.String({ format: 'date-time' }),
 });
 
-export type GameChallenge = Static<typeof GameChallenge>;
-export const GameChallenge = Type.Object({
+export type ChallengeWithUserAndTestCases = Static<typeof ChallengeWithUserAndTestCases>;
+export const ChallengeWithUserAndTestCases = Type.Object({
   id: Type.Integer(),
   owner: User,
   title: Type.String(),

@@ -5,8 +5,8 @@ import {
   type Select,
 } from '@codeduel-backend-crab/database';
 import type {
-  ChallengeDetailed,
-  GameChallenge,
+  ChallengeWithUser,
+  ChallengeWithUserAndTestCases,
   CreateChallenge,
   TestCase,
   UpdateChallenge,
@@ -18,7 +18,7 @@ import { UserRepository } from '../user/repository';
 export class ChallengeRepository {
   constructor(private readonly database: Database) {}
 
-  async byId(id: ChallengeDetailed['id']): Promise<GameChallenge | undefined> {
+  async byId(id: ChallengeWithUser['id']): Promise<ChallengeWithUserAndTestCases | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
       .where('id', '=', id)
@@ -37,7 +37,7 @@ export class ChallengeRepository {
     return challenge && ChallengeRepository.selectToGameChallenge(challenge);
   }
 
-  async all(): Promise<ChallengeDetailed[]> {
+  async all(): Promise<ChallengeWithUser[]> {
     const challenges = await this.database
       .selectFrom('challenge')
       .selectAll()
@@ -83,7 +83,7 @@ export class ChallengeRepository {
     return updated && ChallengeRepository.selectToChallenge(updated);
   }
 
-  async delete(id: ChallengeDetailed['id']): Promise<boolean> {
+  async delete(id: ChallengeWithUser['id']): Promise<boolean> {
     const result = await this.database
       .deleteFrom('challenge')
       .where('id', '=', id)
@@ -91,7 +91,7 @@ export class ChallengeRepository {
     return result.numDeletedRows > 0;
   }
 
-  async random(): Promise<GameChallenge | undefined> {
+  async random(): Promise<ChallengeWithUserAndTestCases | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
       .orderBy(sql`RANDOM()`)
@@ -113,7 +113,7 @@ export class ChallengeRepository {
 
   static selectToGameChallenge(
     challenge: Select<'challenge'> & { owner: Select<'user'> } & { test_cases: TestCase[] }
-  ): GameChallenge {
+  ): ChallengeWithUserAndTestCases {
     return {
       id: challenge.id,
       owner: UserRepository.selectToUser(challenge.owner),
@@ -128,7 +128,7 @@ export class ChallengeRepository {
 
   static selectToChallengeDetailed(
     challenge: Select<'challenge'> & { owner: Select<'user'> }
-  ): ChallengeDetailed {
+  ): ChallengeWithUser {
     return {
       id: challenge.id,
       owner: UserRepository.selectToUser(challenge.owner),

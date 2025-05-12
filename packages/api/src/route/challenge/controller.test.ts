@@ -1,6 +1,11 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
 import { ChallengeService } from './service';
-import type { ChallengeDetailed, GameChallenge, CreateChallenge, Challenge } from './data';
+import type {
+  ChallengeWithUser,
+  ChallengeWithUserAndTestCases,
+  CreateChallenge,
+  Challenge,
+} from './data';
 import { ChallengeController } from './controller';
 import type { ChallengeRepository } from './repository';
 
@@ -18,7 +23,7 @@ describe('Route.Challenge.Controller', () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const mockChallengeDetailed: ChallengeDetailed = {
+  const mockChallengeDetailed: ChallengeWithUser = {
     id: 1,
     owner: {
       id: 1,
@@ -37,7 +42,7 @@ describe('Route.Challenge.Controller', () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const mockGameChallenge: GameChallenge = {
+  const mockGameChallenge: ChallengeWithUserAndTestCases = {
     ...mockChallengeDetailed,
     testCases: [{ input: 'input', output: 'output' }],
   };

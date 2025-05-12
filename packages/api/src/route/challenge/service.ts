@@ -1,6 +1,6 @@
 import type {
-  ChallengeDetailed,
-  GameChallenge,
+  ChallengeWithUser,
+  ChallengeWithUserAndTestCases,
   CreateChallenge,
   UpdateChallenge,
   Challenge,
@@ -10,11 +10,11 @@ import type { ChallengeRepository } from './repository';
 export class ChallengeService {
   constructor(private readonly challengeRepository: ChallengeRepository) {}
 
-  async byId(id: ChallengeDetailed['id']): Promise<GameChallenge | undefined> {
+  async byId(id: ChallengeWithUser['id']): Promise<ChallengeWithUserAndTestCases | undefined> {
     return await this.challengeRepository.byId(id);
   }
 
-  async all(): Promise<ChallengeDetailed[]> {
+  async all(): Promise<ChallengeWithUser[]> {
     return await this.challengeRepository.all();
   }
 
@@ -26,11 +26,11 @@ export class ChallengeService {
     return await this.challengeRepository.update(challenge);
   }
 
-  async delete(id: ChallengeDetailed['id']): Promise<boolean> {
+  async delete(id: ChallengeWithUser['id']): Promise<boolean> {
     return await this.challengeRepository.delete(id);
   }
 
-  async random(): Promise<GameChallenge | undefined> {
+  async random(): Promise<ChallengeWithUserAndTestCases | undefined> {
     return await this.challengeRepository.random();
   }
 }

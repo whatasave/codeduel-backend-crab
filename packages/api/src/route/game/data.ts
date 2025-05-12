@@ -1,5 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { GameChallenge } from '../challenge/data';
+import { Challenge, GameChallenge } from '../challenge/data';
 import { User } from '../user/data';
 
 export type Game = Static<typeof Game>;
@@ -15,18 +15,18 @@ export const Game = Type.Object({
 
 export type CreateGame = Static<typeof CreateGame>;
 export const CreateGame = Type.Object({
-  challengeId: Type.Optional(Type.Number()),
-  hostId: Type.Number(),
+  challengeId: Type.Optional(Challenge.properties.id),
+  hostId: User.properties.id,
   maxPlayers: Type.Number(),
   duration: Type.Number(),
-  allowedLanguages: Type.Array(Type.String()),
-  userIds: Type.Array(User.properties.id),
+  allowedLanguages: Type.Array(Type.String(), { minItems: 1 }),
+  userIds: Type.Array(User.properties.id, { minItems: 1 }),
 });
 
 export type UpdateGameUser = Static<typeof UpdateGameUser>;
 export const UpdateGameUser = Type.Object({
-  gameId: Type.Number(),
-  userId: Type.Number(),
+  gameId: Game.properties.id,
+  userId: User.properties.id,
   code: Type.String(),
   language: Type.String(),
   testsPassed: Type.Number(),
@@ -35,13 +35,14 @@ export const UpdateGameUser = Type.Object({
 
 export type ShareCode = Static<typeof ShareCode>;
 export const ShareCode = Type.Object({
-  gameId: Type.Number(),
-  userId: Type.Number(),
+  gameId: Game.properties.id,
+  userId: User.properties.id,
   showCode: Type.Boolean(),
 });
 
 export type GameUser = Static<typeof GameUser>;
 export const GameUser = Type.Object({
+  userId: User.properties.id,
   code: Type.Optional(Type.String()),
   language: Type.Optional(Type.String()),
   testsPassed: Type.Number(),

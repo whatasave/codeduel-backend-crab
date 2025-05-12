@@ -1,4 +1,9 @@
-import type { Database, Select } from '@codeduel-backend-crab/database';
+import {
+  jsonArrayFrom,
+  jsonObjectFrom,
+  type Database,
+  type Select,
+} from '@codeduel-backend-crab/database';
 import type {
   ChallengeDetailed,
   GameChallenge,
@@ -8,6 +13,7 @@ import type {
   Challenge,
 } from './data';
 import { sql } from 'kysely';
+import { UserRepository } from '../user/repository';
 
 export class ChallengeRepository {
   constructor(private readonly database: Database) {}
@@ -16,55 +22,37 @@ export class ChallengeRepository {
     const challenge = await this.database
       .selectFrom('challenge')
       .where('id', '=', id)
-      .innerJoin('user as owner', (join) => join.onRef('owner_id', '=', 'owner.id'))
-      .select([
-        'challenge.id',
-        'challenge.title',
-        'challenge.description',
-        'challenge.content',
-        'challenge.created_at',
-        'challenge.updated_at',
-        'owner.id as owner_id',
-        'owner.username as owner_username',
-        'owner.name as owner_name',
-        'owner.avatar as owner_avatar',
-        'owner.background_image as owner_background_image',
-        'owner.biography as owner_biography',
-        'owner.created_at as owner_created_at',
-        'owner.updated_at as owner_updated_at',
-      ])
-      .executeTakeFirst();
-    if (!challenge) return undefined;
-    const test_cases = await this.database
-      .selectFrom('test_case')
-      .where('challenge_id', '=', challenge.id)
       .selectAll()
-      .execute();
-    return this.selectToGameChallenge({ ...challenge, test_cases });
+      .select((eb) =>
+        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
+          .$notNull()
+          .as('owner')
+      )
+      .select((eb) =>
+        jsonArrayFrom(
+          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+        ).as('test_cases')
+      )
+      .executeTakeFirst();
+    return challenge && ChallengeRepository.selectToGameChallenge(challenge);
   }
 
   async all(): Promise<ChallengeDetailed[]> {
     const challenges = await this.database
       .selectFrom('challenge')
-      .innerJoin('user as owner', (join) => join.onRef('owner_id', '=', 'owner.id'))
-      .select([
-        'challenge.id',
-        'challenge.title',
-        'challenge.description',
-        'challenge.content',
-        'challenge.created_at',
-        'challenge.updated_at',
-        'owner.id as owner_id',
-        'owner.username as owner_username',
-        'owner.name as owner_name',
-        'owner.avatar as owner_avatar',
-        'owner.background_image as owner_background_image',
-        'owner.biography as owner_biography',
-        'owner.created_at as owner_created_at',
-        'owner.updated_at as owner_updated_at',
-      ])
+      .selectAll()
+      .select((eb) =>
+        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
+          .$notNull()
+          .as('owner')
+      )
+      .select((eb) =>
+        jsonArrayFrom(
+          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+        ).as('test_cases')
+      )
       .execute();
-    return challenges.map(this.selectToChallengeDetailed.bind(this));
+    return challenges.map((challenge) => ChallengeRepository.selectToChallengeDetailed(challenge));
   }
 
   async create(challenge: CreateChallenge): Promise<Challenge> {
@@ -78,7 +66,7 @@ export class ChallengeRepository {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    return this.selectToChallenge(created);
+    return ChallengeRepository.selectToChallenge(created);
   }
 
   async update(challenge: UpdateChallenge): Promise<Challenge | undefined> {
@@ -92,7 +80,7 @@ export class ChallengeRepository {
       .where('id', '=', challenge.id)
       .returningAll()
       .executeTakeFirst();
-    return updated && this.selectToChallenge(updated);
+    return updated && ChallengeRepository.selectToChallenge(updated);
   }
 
   async delete(id: ChallengeDetailed['id']): Promise<boolean> {
@@ -106,51 +94,29 @@ export class ChallengeRepository {
   async random(): Promise<GameChallenge | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
-      .innerJoin('user as owner', (join) => join.onRef('owner_id', '=', 'owner.id'))
-      .select([
-        'challenge.id',
-        'challenge.title',
-        'challenge.description',
-        'challenge.content',
-        'challenge.created_at',
-        'challenge.updated_at',
-        'owner.id as owner_id',
-        'owner.username as owner_username',
-        'owner.name as owner_name',
-        'owner.avatar as owner_avatar',
-        'owner.background_image as owner_background_image',
-        'owner.biography as owner_biography',
-        'owner.created_at as owner_created_at',
-        'owner.updated_at as owner_updated_at',
-      ])
       .orderBy(sql`RANDOM()`)
       .limit(1)
       .selectAll()
+      .select((eb) =>
+        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
+          .$notNull()
+          .as('owner')
+      )
+      .select((eb) =>
+        jsonArrayFrom(
+          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+        ).as('test_cases')
+      )
       .executeTakeFirst();
-    if (!challenge) return undefined;
-    const test_cases = await this.database
-      .selectFrom('test_case')
-      .where('challenge_id', '=', challenge.id)
-      .selectAll()
-      .execute();
-    return this.selectToGameChallenge({ ...challenge, test_cases });
+    return challenge && ChallengeRepository.selectToGameChallenge(challenge);
   }
 
-  private selectToGameChallenge(
-    challenge: Select<'challenge'> & Select<'user', 'owner_'> & { test_cases: TestCase[] }
+  static selectToGameChallenge(
+    challenge: Select<'challenge'> & { owner: Select<'user'> } & { test_cases: TestCase[] }
   ): GameChallenge {
     return {
       id: challenge.id,
-      owner: {
-        id: challenge.owner_id,
-        username: challenge.owner_username,
-        name: challenge.owner_name ?? undefined,
-        avatar: challenge.owner_avatar ?? undefined,
-        backgroundImage: challenge.owner_background_image ?? undefined,
-        biography: challenge.owner_biography ?? undefined,
-        createdAt: challenge.owner_created_at.toISOString(),
-        updatedAt: challenge.owner_updated_at.toISOString(),
-      },
+      owner: UserRepository.selectToUser(challenge.owner),
       title: challenge.title,
       description: challenge.description,
       content: challenge.content,
@@ -160,21 +126,12 @@ export class ChallengeRepository {
     };
   }
 
-  private selectToChallengeDetailed(
-    challenge: Select<'challenge'> & Select<'user', 'owner_'>
+  static selectToChallengeDetailed(
+    challenge: Select<'challenge'> & { owner: Select<'user'> }
   ): ChallengeDetailed {
     return {
       id: challenge.id,
-      owner: {
-        id: challenge.owner_id,
-        username: challenge.owner_username,
-        name: challenge.owner_name ?? undefined,
-        avatar: challenge.owner_avatar ?? undefined,
-        backgroundImage: challenge.owner_background_image ?? undefined,
-        biography: challenge.owner_biography ?? undefined,
-        createdAt: challenge.owner_created_at.toISOString(),
-        updatedAt: challenge.owner_updated_at.toISOString(),
-      },
+      owner: UserRepository.selectToUser(challenge.owner),
       title: challenge.title,
       description: challenge.description,
       content: challenge.content,
@@ -183,7 +140,7 @@ export class ChallengeRepository {
     };
   }
 
-  private selectToChallenge(challenge: Select<'challenge'>): Challenge {
+  static selectToChallenge(challenge: Select<'challenge'>): Challenge {
     return {
       id: challenge.id,
       ownerId: challenge.owner_id,

@@ -14,34 +14,15 @@ import { AssertError, Value } from '@sinclair/typebox/value';
 import { NO_MIGRATIONS } from 'kysely';
 import fs from 'fs/promises';
 import path from 'path';
-import type {
-  Expression,
-  ExpressionBuilder,
-  RawBuilder,
-  SelectQueryBuilder,
-  TableExpression,
-} from 'kysely';
-import type { ReferenceExpression } from 'kysely';
-import { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
 
 export type Database = Kysely<DB>;
 
-type AddPrefix<T, P extends string> = {
-  [K in keyof T as K extends string ? `${P}${K}` : never]: T[K];
-};
+export type Select<T extends keyof DB> = Selectable<DB[T]>;
+export type Insert<T extends keyof DB> = Insertable<DB[T]>;
+export type Update<T extends keyof DB> = Updateable<DB[T]>;
 
-export type Select<T extends keyof DB, Prefix extends string = ''> = AddPrefix<
-  Selectable<DB[T]>,
-  Prefix
->;
-export type Insert<T extends keyof DB, Prefix extends string = ''> = AddPrefix<
-  Insertable<DB[T]>,
-  Prefix
->;
-export type Update<T extends keyof DB, Prefix extends string = ''> = AddPrefix<
-  Updateable<DB[T]>,
-  Prefix
->;
+export { sql } from 'kysely';
+export { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -125,66 +106,4 @@ export async function rollbackMigrations(db: Kysely<DB>): Promise<void> {
   if (error) {
     throw new Error('Rollback failed', { cause: error });
   }
-}
-
-export function populate<
-  DB,
-  FromTable extends keyof DB,
-  TargetTable extends TableExpression<DB, FromTable>,
-  T = ReturnType<
-    SelectQueryBuilder<
-      DB,
-      TargetTable extends keyof DB ? TargetTable : never,
-      Record<never, never>
-    >['selectAll']
-  > extends Expression<infer E>
-    ? E
-    : never,
->(
-  eb: ExpressionBuilder<DB, FromTable>,
-  table: TargetTable,
-  lhs: ReferenceExpression<DB, TargetTable extends keyof DB ? TargetTable : never>,
-  rhs: ReferenceExpression<DB, FromTable extends keyof DB ? FromTable : never>,
-  cb: (
-    eb: SelectQueryBuilder<
-      DB,
-      TargetTable extends keyof DB ? TargetTable : never,
-      Record<never, never>
-    >
-  ) => Expression<T> = (eb) => eb.selectAll() as Expression<T>
-): RawBuilder<T | null> {
-  // @ts-expect-error I'm not able to type this correctly
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  return jsonObjectFrom(cb(eb.selectFrom(table).whereRef(lhs, '=', rhs)));
-}
-
-export function populateArray<
-  DB,
-  FromTable extends keyof DB,
-  TargetTable extends TableExpression<DB, FromTable>,
-  T = ReturnType<
-    SelectQueryBuilder<
-      DB,
-      TargetTable extends keyof DB ? TargetTable : never,
-      Record<never, never>
-    >['selectAll']
-  > extends Expression<infer E>
-    ? E
-    : never,
->(
-  eb: ExpressionBuilder<DB, FromTable>,
-  table: TargetTable,
-  lhs: ReferenceExpression<DB, TargetTable extends keyof DB ? TargetTable : never>,
-  rhs: ReferenceExpression<DB, FromTable extends keyof DB ? FromTable : never>,
-  cb: (
-    eb: SelectQueryBuilder<
-      DB,
-      TargetTable extends keyof DB ? TargetTable : never,
-      Record<never, never>
-    >
-  ) => Expression<T> = (eb) => eb.selectAll() as Expression<T>
-): RawBuilder<T[]> {
-  // @ts-expect-error I'm not able to type this correctly
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  return jsonArrayFrom(cb(eb.selectFrom(table).whereRef(lhs, '=', rhs)));
 }

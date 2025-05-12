@@ -1,6 +1,7 @@
 import {
-  populate,
-  populateArray,
+  jsonArrayFrom,
+  jsonObjectFrom,
+  sql,
   type Database,
   type Select,
 } from '@codeduel-backend-crab/database';
@@ -13,7 +14,8 @@ import type {
   GameWithUserData,
 } from './data';
 import type { User } from '../user/data';
-import { sql } from 'kysely';
+import { UserRepository } from '../user/repository';
+import { ChallengeRepository } from '../challenge/repository';
 
 export class GameRepository {
   constructor(private readonly db: Database) {}
@@ -23,21 +25,39 @@ export class GameRepository {
       .selectFrom('game')
       .where('id', '=', id)
       .selectAll()
-      .select((eb) => populateArray(eb, 'game_user', 'game_id', 'id').as('users'))
-      .select((eb) => populate(eb, 'user', 'id', 'host_id').$notNull().as('host'))
       .select((eb) =>
-        populate(eb, 'challenge', 'id', 'challenge_id', (eb) =>
+        jsonArrayFrom(eb.selectFrom('game_user').whereRef('game_id', '=', 'id').selectAll()).as(
+          'users'
+        )
+      )
+      .select((eb) =>
+        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'host_id').selectAll())
+          .$notNull()
+          .as('host')
+      )
+      .select((eb) =>
+        jsonObjectFrom(
           eb
+            .selectFrom('challenge')
+            .whereRef('id', '=', 'challenge_id')
             .selectAll()
-            .select((eb) => populateArray(eb, 'test_case', 'challenge_id', 'id').as('test_cases'))
-            .select((eb) => populate(eb, 'user', 'id', 'owner_id').$notNull().as('owner'))
+            .select((eb) =>
+              jsonArrayFrom(
+                eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+              ).as('test_cases')
+            )
+            .select((eb) =>
+              jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
+                .$notNull()
+                .as('owner')
+            )
         )
           .$notNull()
           .as('challenge')
       )
       .executeTakeFirst();
 
-    return game && this.selectToGameWithUserData(game);
+    return game && GameRepository.selectToGameWithUserData(game);
   }
 
   async create(createGame: CreateGame): Promise<GameWithUserData> {
@@ -118,18 +138,39 @@ export class GameRepository {
       .where('user_id', '=', userId)
       .selectAll()
       .select((eb) =>
-        populate(eb, 'game', 'id', 'game_id', (eb) =>
+        jsonObjectFrom(
           eb
+            .selectFrom('game')
+            .whereRef('id', '=', 'game_id')
             .selectAll()
-            .select((eb) => populate(eb, 'user', 'id', 'host_id').$notNull().as('host'))
             .select((eb) =>
-              populate(eb, 'challenge', 'id', 'challenge_id', (eb) =>
+              jsonArrayFrom(
+                eb.selectFrom('game_user').whereRef('game_id', '=', 'id').selectAll()
+              ).as('users')
+            )
+            .select((eb) =>
+              jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'host_id').selectAll())
+                .$notNull()
+                .as('host')
+            )
+            .select((eb) =>
+              jsonObjectFrom(
                 eb
+                  .selectFrom('challenge')
+                  .whereRef('id', '=', 'challenge_id')
                   .selectAll()
                   .select((eb) =>
-                    populateArray(eb, 'test_case', 'challenge_id', 'id').as('test_cases')
+                    jsonArrayFrom(
+                      eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+                    ).as('test_cases')
                   )
-                  .select((eb) => populate(eb, 'user', 'id', 'owner_id').$notNull().as('owner'))
+                  .select((eb) =>
+                    jsonObjectFrom(
+                      eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll()
+                    )
+                      .$notNull()
+                      .as('owner')
+                  )
               )
                 .$notNull()
                 .as('challenge')
@@ -139,49 +180,18 @@ export class GameRepository {
           .as('game')
       )
       .execute();
-    return games.map((game) => this.selectToGameOfUser(game));
+    return games.map((game) => GameRepository.selectToGameOfUser(game));
   }
 
-  private selectToGame(
+  static selectToGame(
     game: Select<'game'> & { host: Select<'user'> } & {
       challenge: Select<'challenge'> & { owner: Select<'user'>; test_cases: Select<'test_case'>[] };
     }
   ): Game {
     return {
       id: game.id,
-      host: {
-        id: game.host.id,
-        username: game.host.username,
-        name: game.host.name ?? undefined,
-        avatar: game.host.avatar ?? undefined,
-        backgroundImage: game.host.background_image ?? undefined,
-        biography: game.host.biography ?? undefined,
-        createdAt: game.host.created_at.toISOString(),
-        updatedAt: game.host.updated_at.toISOString(),
-      },
-      challenge: {
-        id: game.challenge_id,
-        owner: {
-          id: game.challenge.owner.id,
-          username: game.challenge.owner.username,
-          name: game.challenge.owner.name ?? undefined,
-          avatar: game.challenge.owner.avatar ?? undefined,
-          backgroundImage: game.challenge.owner.background_image ?? undefined,
-          biography: game.challenge.owner.biography ?? undefined,
-          createdAt: game.challenge.owner.created_at.toISOString(),
-          updatedAt: game.challenge.owner.updated_at.toISOString(),
-        },
-        title: game.challenge.title,
-        description: game.challenge.description,
-        content: game.challenge.content,
-        createdAt: game.challenge.created_at.toISOString(),
-        updatedAt: game.challenge.updated_at.toISOString(),
-        testCases: game.challenge.test_cases.map((testCase) => ({
-          id: testCase.id,
-          input: testCase.input,
-          output: testCase.output,
-        })),
-      },
+      host: UserRepository.selectToUser(game.host),
+      challenge: ChallengeRepository.selectToGameChallenge(game.challenge),
       maxPlayers: game.max_players,
       allowedLanguages: game.allowed_languages as string[],
       duration: game.duration,
@@ -189,8 +199,8 @@ export class GameRepository {
     };
   }
 
-  private selectToGameOfUser(
-    userGame: Select<'game_user'> & {
+  static selectToGameOfUser(
+    gameUser: Select<'game_user'> & {
       game: Select<'game'> & { host: Select<'user'> } & {
         challenge: Select<'challenge'> & {
           owner: Select<'user'>;
@@ -200,31 +210,30 @@ export class GameRepository {
     }
   ): GameOfUser {
     return {
-      user: {
-        code: userGame.code ?? undefined,
-        language: userGame.language ?? undefined,
-        testsPassed: userGame.tests_passed,
-        showCode: userGame.show_code,
-        submittedAt: userGame.submitted_at?.toISOString() ?? undefined,
-      },
-      game: this.selectToGame(userGame.game),
+      user: this.selectToGameUser(gameUser),
+      game: this.selectToGame(gameUser.game),
     };
   }
 
-  private selectToGameWithUserData(
+  static selectToGameWithUserData(
     game: Select<'game'> & { host: Select<'user'> } & {
       challenge: Select<'challenge'> & { owner: Select<'user'>; test_cases: Select<'test_case'>[] };
     } & { users: Select<'game_user'>[] }
   ): GameWithUserData {
     return {
       game: this.selectToGame(game),
-      users: game.users.map((user) => ({
-        code: user.code ?? undefined,
-        language: user.language ?? undefined,
-        testsPassed: user.tests_passed,
-        showCode: user.show_code,
-        submittedAt: user.submitted_at?.toISOString() ?? undefined,
-      })),
+      users: game.users.map((user) => GameRepository.selectToGameUser(user)),
+    };
+  }
+
+  static selectToGameUser(gameUser: Select<'game_user'>): GameOfUser['user'] {
+    return {
+      userId: gameUser.user_id,
+      code: gameUser.code ?? undefined,
+      language: gameUser.language ?? undefined,
+      testsPassed: gameUser.tests_passed,
+      showCode: gameUser.show_code,
+      submittedAt: gameUser.submitted_at?.toISOString() ?? undefined,
     };
   }
 }

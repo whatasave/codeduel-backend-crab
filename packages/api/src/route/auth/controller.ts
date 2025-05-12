@@ -9,6 +9,7 @@ import type { Config } from './config';
 import { createCookie, parseCookies, removeCookie } from '../../utils/cookie';
 import { Type } from '@sinclair/typebox';
 import type { UserService } from '../user/service';
+import { randomUUIDv7 } from 'bun';
 
 export class AuthController {
   private readonly githubController: GithubController;
@@ -72,18 +73,19 @@ export class AuthController {
 
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
       if (!refreshToken) return logout();
-      const { sub: userId } = await this.service.verifyRefreshToken(refreshToken);
+      const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken);
 
-      const session = await this.service.sessionByToken(refreshToken);
+      const session = await this.service.sessionByTokenId(jti);
       if (!session) return logout();
 
       const user = await this.userService.byId(userId);
       if (!user) return logout();
 
       const newAccessToken = await this.service.accessToken(user);
-      const newRefreshToken = await this.service.refreshToken(user);
+      const newJti = randomUUIDv7();
+      const newRefreshToken = await this.service.refreshToken(user, newJti);
 
-      await this.service.updateSession(session.id, newRefreshToken);
+      await this.service.updateSession(session.id, newJti);
 
       const accessTokenCookie = createCookie({
         ...this.service.accessTokenCookieOptions,
@@ -113,10 +115,13 @@ export class AuthController {
       const cookies = parseCookies(headers.get('cookie'));
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
 
+      if (refreshToken) {
+        const { jti } = await this.service.verifyRefreshToken(refreshToken);
+        await this.service.deleteSessionTokenId(jti);
+      }
+
       const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
       const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
-
-      if (refreshToken) await this.service.deleteSessionToken(refreshToken);
 
       return noContent(undefined, {
         'Set-Cookie': [accessTokenCookie, refreshTokenCookie],

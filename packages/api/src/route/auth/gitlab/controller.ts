@@ -81,9 +81,10 @@ export class GitlabController {
       const [_, user] = await this.service.create(gitlabUser);
 
       const accessToken = await this.authService.accessToken(user);
-      const refreshToken = await this.authService.refreshToken(user);
+      const jti = randomUUIDv7();
+      const refreshToken = await this.authService.refreshToken(user, jti);
 
-      await this.service.createSession(user.id, refreshToken, ip, userAgent);
+      await this.service.createSession(user.id, jti, ip, userAgent);
 
       const accessCookie = createCookie({
         ...this.authService.accessTokenCookieOptions,

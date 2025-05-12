@@ -81,7 +81,7 @@ export class GithubController {
       const [_, user] = await this.service.create(githubUser);
 
       const accessToken = await this.authService.accessToken(user);
-      const jti = randomUUIDv7('base64url');
+      const jti = randomUUIDv7();
       const refreshToken = await this.authService.refreshToken(user, jti);
 
       await this.service.createSession(user.id, jti, ip, userAgent);

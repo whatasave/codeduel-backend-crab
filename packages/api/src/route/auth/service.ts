@@ -176,6 +176,7 @@ export class AuthService {
   }
 
   async createSession(session: CreateAuthSession): Promise<void> {
+    console.log('createSession', session);
     await this.repository.createSession(session);
   }
 
@@ -183,20 +184,21 @@ export class AuthService {
     id: AuthSession['id'],
     tokenId: Exclude<AuthSession['tokenId'], undefined>
   ): Promise<void> {
+    console.log('updateSession', id, tokenId);
     await this.repository.updateSession(id, tokenId);
   }
 
-  async sessionByToken(
-    token: Exclude<AuthSession['tokenId'], undefined>
+  async sessionByTokenId(
+    tokenId: Exclude<AuthSession['tokenId'], undefined>
   ): Promise<AuthSession | undefined> {
-    return await this.repository.sessionByToken(token);
+    return await this.repository.sessionByToken(tokenId);
   }
 
   async deleteSession(id: AuthSession['id']): Promise<void> {
     return await this.repository.deleteSession(id);
   }
 
-  async deleteSessionToken(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
+  async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
     return await this.repository.deleteSessionToken(tokenId);
   }
 }

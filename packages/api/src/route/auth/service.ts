@@ -176,7 +176,6 @@ export class AuthService {
   }
 
   async createSession(session: CreateAuthSession): Promise<void> {
-    console.log('createSession', session);
     await this.repository.createSession(session);
   }
 
@@ -184,7 +183,6 @@ export class AuthService {
     id: AuthSession['id'],
     tokenId: Exclude<AuthSession['tokenId'], undefined>
   ): Promise<void> {
-    console.log('updateSession', id, tokenId);
     await this.repository.updateSession(id, tokenId);
   }
 

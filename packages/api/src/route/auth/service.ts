@@ -68,14 +68,18 @@ export class AuthService {
     });
   }
 
-  refreshToken(user: User, now: number = Date.now()): Promise<string> {
+  refreshToken(
+    user: User,
+    jti: string = randomUUIDv7('base64url'),
+    now: number = Date.now()
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
         {
           iss: this.config.jwt.issuer,
           aud: this.config.jwt.audience,
           exp: Math.floor(now / 1000) + this.config.refreshToken.expiresIn,
-          jti: randomUUIDv7(),
+          jti,
           sub: user.id,
         } as JwtRefreshToken,
         this.config.refreshToken.secret,

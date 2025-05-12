@@ -62,8 +62,8 @@ export class AuthController {
     handler: async ({ headers }) => {
       const cookies = parseCookies(headers.get('cookie'));
       const logout = (): ReturnType<typeof noContent> => {
-        const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions.name);
-        const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions.name);
+        const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
+        const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
 
         return noContent(undefined, {
           'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
@@ -113,8 +113,8 @@ export class AuthController {
       const cookies = parseCookies(headers.get('cookie'));
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
 
-      const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions.name);
-      const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions.name);
+      const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
+      const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
 
       if (refreshToken) await this.service.deleteSessionToken(refreshToken);
 

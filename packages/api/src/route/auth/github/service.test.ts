@@ -9,7 +9,7 @@ import type { Auth, CreateAuthSession } from '../data';
 import type { User } from '../../user/data';
 import type { GithubAccessToken, GithubUserData } from './data';
 
-describe('Route.User.Services', () => {
+describe('Route.Auth.Github.Service', () => {
   let authService: AuthService;
   let service: GithubService;
   const config = {

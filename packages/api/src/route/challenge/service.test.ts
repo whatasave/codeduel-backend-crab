@@ -24,7 +24,7 @@ describe('Route.Challenge.Service', () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const mockChallengeDetailed: ChallengeWithUser = {
+  const mockChallengeWithUser: ChallengeWithUser = {
     id: 1,
     owner: {
       id: 1,
@@ -43,8 +43,8 @@ describe('Route.Challenge.Service', () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const mockGameChallenge: ChallengeWithUserAndTestCases = {
-    ...mockChallengeDetailed,
+  const mockChallengeWithUserAndTestCases: ChallengeWithUserAndTestCases = {
+    ...mockChallengeWithUser,
     testCases: [{ input: 'input', output: 'output' }],
   };
 
@@ -78,13 +78,15 @@ describe('Route.Challenge.Service', () => {
 
   describe('byId', () => {
     test('should get a challenge by id', async () => {
-      const spyById = spyOn(repository, 'byId').mockResolvedValue(mockGameChallenge);
+      const spyById = spyOn(repository, 'byId').mockResolvedValue(
+        mockChallengeWithUserAndTestCases
+      );
 
       const challenge = await service.byId(1);
 
       expect(spyById).toHaveBeenCalledTimes(1);
       expect(spyById).toHaveBeenCalledWith(1);
-      expect(challenge).toEqual(mockGameChallenge);
+      expect(challenge).toEqual(mockChallengeWithUserAndTestCases);
     });
 
     test('should return undefined if challenge not found', async () => {
@@ -100,12 +102,12 @@ describe('Route.Challenge.Service', () => {
 
   describe('all', () => {
     test('should get all challenges', async () => {
-      const spyAll = spyOn(repository, 'all').mockResolvedValue([mockChallengeDetailed]);
+      const spyAll = spyOn(repository, 'all').mockResolvedValue([mockChallengeWithUser]);
 
       const allChallenges = await service.all();
 
       expect(spyAll).toHaveBeenCalledTimes(1);
-      expect(allChallenges).toEqual([mockChallengeDetailed]);
+      expect(allChallenges).toEqual([mockChallengeWithUser]);
     });
   });
 
@@ -152,12 +154,14 @@ describe('Route.Challenge.Service', () => {
 
   describe('random', () => {
     test('should get a random challenge', async () => {
-      const spyRandom = spyOn(repository, 'random').mockResolvedValue(mockGameChallenge);
+      const spyRandom = spyOn(repository, 'random').mockResolvedValue(
+        mockChallengeWithUserAndTestCases
+      );
 
       const randomChallenge = await service.random();
 
       expect(spyRandom).toHaveBeenCalledTimes(1);
-      expect(randomChallenge).toEqual(mockGameChallenge);
+      expect(randomChallenge).toEqual(mockChallengeWithUserAndTestCases);
     });
 
     test('should return undefined if no challenges exist', async () => {

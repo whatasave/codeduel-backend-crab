@@ -42,26 +42,6 @@ describe('Route.Auth.Github.Controller', () => {
     expect(routes.sort()).toEqual(expectedRoutes);
   });
 
-  // test('should return all users', async () => {
-  //   const allSpy = spyOn(service, 'all').mockResolvedValue(mockUsers);
-
-  //   const users = await controller.users.handler({
-  //     method: 'GET',
-  //     path: '/',
-  //     query: {},
-  //     params: {},
-  //     body: undefined,
-  //     headers: new Headers(),
-  //   });
-
-  //   expect(allSpy).toHaveBeenCalledWith();
-  //   expect(allSpy).toHaveBeenCalledTimes(1);
-
-  //   expect(users.status).toEqual(200);
-  //   expect(users.headers).toBeUndefined();
-  //   expect(users.body).toEqual(mockUsers);
-  // });
-
   test('should redirect to github login page', async () => {
     const redirectUrl = 'fe.codeduel.it';
     const state = 'state';
@@ -76,7 +56,6 @@ describe('Route.Auth.Github.Controller', () => {
     const spyAuthorizationUrl = spyOn(service, 'authorizationUrl').mockReturnValue(
       authorizationUrl
     );
-    // const spyCreateCookie = spyOn(globalThis, 'createCookie').mockReturnValue('');
 
     const response = await controller.login.handler({
       method: 'GET',
@@ -87,12 +66,12 @@ describe('Route.Auth.Github.Controller', () => {
       headers: new Headers(mockHeader),
     });
 
-    // expect(spyEncodeState).toHaveBeenCalledWith({
-    //   csrfToken: expect.any(String),
-    //   redirect: redirectUrl,
-    //   ip: mockHeader['x-forwarded-for'],
-    //   userAgent: mockHeader['user-agent'],
-    // });
+    expect(spyEncodeState).toHaveBeenCalledWith({
+      csrfToken: expect.any(String) as unknown as string,
+      redirect: redirectUrl,
+      ip: mockHeader['x-forwarded-for'],
+      userAgent: mockHeader['user-agent'],
+    });
     expect(spyEncodeState).toHaveBeenCalledTimes(1);
 
     expect(spyAuthorizationUrl).toHaveBeenCalledWith(state);

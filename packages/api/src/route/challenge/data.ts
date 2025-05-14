@@ -10,7 +10,7 @@ export const TestCase = Type.Object({
 export type Challenge = Static<typeof Challenge>;
 export const Challenge = Type.Object({
   id: Type.Integer(),
-  ownerId: Type.Number(),
+  ownerId: User.properties.id,
   title: Type.String(),
   description: Type.String(),
   content: Type.String(),

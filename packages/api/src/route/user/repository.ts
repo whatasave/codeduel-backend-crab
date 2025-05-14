@@ -7,7 +7,7 @@ export class UserRepository {
   async all(): Promise<User[]> {
     const users = await this.database.selectFrom('user').selectAll().execute();
 
-    return users.map(this.selectToUser.bind(this));
+    return users.map(UserRepository.selectToUser.bind(this));
   }
 
   async byUsername(username: User['username']): Promise<User | undefined> {
@@ -19,7 +19,7 @@ export class UserRepository {
 
     if (!user) return undefined;
 
-    return this.selectToUser(user);
+    return UserRepository.selectToUser(user);
   }
 
   async byId(id: User['id']): Promise<User | undefined> {
@@ -31,7 +31,7 @@ export class UserRepository {
 
     if (!user) return undefined;
 
-    return this.selectToUser(user);
+    return UserRepository.selectToUser(user);
   }
 
   async create(user: CreateUser): Promise<User> {
@@ -47,10 +47,10 @@ export class UserRepository {
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    return this.selectToUser(newUser);
+    return UserRepository.selectToUser(newUser);
   }
 
-  private selectToUser(user: Select<'user'>): User {
+  static selectToUser(user: Select<'user'>): User {
     return {
       id: user.id,
       username: user.username,

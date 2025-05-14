@@ -1,5 +1,11 @@
 import { validated } from '@codeduel-backend-crab/server/validation';
-import { Challenge, ChallengeDetailed, CreateChallenge, UpdateChallenge } from './data';
+import {
+  ChallengeWithUser,
+  ChallengeWithUserAndTestCases,
+  CreateChallenge,
+  UpdateChallenge,
+  Challenge,
+} from './data';
 import type { ChallengeService } from './service';
 import { Type } from '@sinclair/typebox';
 import {
@@ -31,7 +37,7 @@ export class ChallengeController {
         params: { id: Type.Number() },
       },
       response: {
-        200: ChallengeDetailed,
+        200: ChallengeWithUserAndTestCases,
         404: Type.Undefined(),
       },
     },
@@ -49,7 +55,7 @@ export class ChallengeController {
     schema: {
       request: {},
       response: {
-        200: Type.Array(Challenge),
+        200: Type.Array(ChallengeWithUser),
       },
     },
     handler: async () => {
@@ -121,7 +127,7 @@ export class ChallengeController {
     schema: {
       request: {},
       response: {
-        200: ChallengeDetailed,
+        200: ChallengeWithUserAndTestCases,
         404: Type.Undefined(),
       },
     },

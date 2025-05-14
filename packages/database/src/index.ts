@@ -21,6 +21,9 @@ export type Select<T extends keyof DB> = Selectable<DB[T]>;
 export type Insert<T extends keyof DB> = Insertable<DB[T]>;
 export type Update<T extends keyof DB> = Updateable<DB[T]>;
 
+export { sql } from 'kysely';
+export { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
+
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
   host: Type.String(),

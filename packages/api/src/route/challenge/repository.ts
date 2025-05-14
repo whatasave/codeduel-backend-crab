@@ -1,34 +1,58 @@
-import type { Database, Select } from '@codeduel-backend-crab/database';
+import {
+  jsonArrayFrom,
+  jsonObjectFrom,
+  type Database,
+  type Select,
+} from '@codeduel-backend-crab/database';
 import type {
-  Challenge,
-  ChallengeDetailed,
+  ChallengeWithUser,
+  ChallengeWithUserAndTestCases,
   CreateChallenge,
   TestCase,
   UpdateChallenge,
+  Challenge,
 } from './data';
 import { sql } from 'kysely';
+import { UserRepository } from '../user/repository';
 
 export class ChallengeRepository {
   constructor(private readonly database: Database) {}
 
-  async byId(id: Challenge['id']): Promise<ChallengeDetailed | undefined> {
+  async byId(id: ChallengeWithUser['id']): Promise<ChallengeWithUserAndTestCases | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
       .where('id', '=', id)
       .selectAll()
+      .select((eb) =>
+        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
+          .$notNull()
+          .as('owner')
+      )
+      .select((eb) =>
+        jsonArrayFrom(
+          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+        ).as('test_cases')
+      )
       .executeTakeFirst();
-    if (!challenge) return undefined;
-    const test_cases = await this.database
-      .selectFrom('test_case')
-      .where('challenge_id', '=', challenge.id)
-      .selectAll()
-      .execute();
-    return this.selectToChallengeDetailed({ ...challenge, test_cases });
+    return challenge && ChallengeRepository.selectToGameChallenge(challenge);
   }
 
-  async all(): Promise<Challenge[]> {
-    const challenges = await this.database.selectFrom('challenge').selectAll().execute();
-    return challenges.map(this.selectToChallenge.bind(this));
+  async all(): Promise<ChallengeWithUser[]> {
+    const challenges = await this.database
+      .selectFrom('challenge')
+      .selectAll()
+      .select((eb) =>
+        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
+          .$notNull()
+          .as('owner')
+      )
+      .select((eb) =>
+        jsonArrayFrom(
+          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+        ).as('test_cases')
+      )
+      .execute();
+    return challenges.map((challenge) => ChallengeRepository.selectToChallengeDetailed(challenge));
   }
 
   async create(challenge: CreateChallenge): Promise<Challenge> {
@@ -40,10 +64,9 @@ export class ChallengeRepository {
         description: challenge.description,
         content: challenge.content,
       })
-      .onConflict((oc) => oc.doNothing())
       .returningAll()
       .executeTakeFirstOrThrow();
-    return this.selectToChallenge(created);
+    return ChallengeRepository.selectToChallenge(created);
   }
 
   async update(challenge: UpdateChallenge): Promise<Challenge | undefined> {
@@ -57,10 +80,10 @@ export class ChallengeRepository {
       .where('id', '=', challenge.id)
       .returningAll()
       .executeTakeFirst();
-    return updated && this.selectToChallenge(updated);
+    return updated && ChallengeRepository.selectToChallenge(updated);
   }
 
-  async delete(id: Challenge['id']): Promise<boolean> {
+  async delete(id: ChallengeWithUser['id']): Promise<boolean> {
     const result = await this.database
       .deleteFrom('challenge')
       .where('id', '=', id)
@@ -68,28 +91,32 @@ export class ChallengeRepository {
     return result.numDeletedRows > 0;
   }
 
-  async random(): Promise<ChallengeDetailed | undefined> {
+  async random(): Promise<ChallengeWithUserAndTestCases | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
       .orderBy(sql`RANDOM()`)
       .limit(1)
       .selectAll()
+      .select((eb) =>
+        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
+          .$notNull()
+          .as('owner')
+      )
+      .select((eb) =>
+        jsonArrayFrom(
+          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+        ).as('test_cases')
+      )
       .executeTakeFirst();
-    if (!challenge) return undefined;
-    const test_cases = await this.database
-      .selectFrom('test_case')
-      .where('challenge_id', '=', challenge.id)
-      .selectAll()
-      .execute();
-    return this.selectToChallengeDetailed({ ...challenge, test_cases });
+    return challenge && ChallengeRepository.selectToGameChallenge(challenge);
   }
 
-  private selectToChallengeDetailed(
-    challenge: Select<'challenge'> & { test_cases: TestCase[] }
-  ): ChallengeDetailed {
+  static selectToGameChallenge(
+    challenge: Select<'challenge'> & { owner: Select<'user'> } & { test_cases: TestCase[] }
+  ): ChallengeWithUserAndTestCases {
     return {
       id: challenge.id,
-      ownerId: challenge.owner_id,
+      owner: UserRepository.selectToUser(challenge.owner),
       title: challenge.title,
       description: challenge.description,
       content: challenge.content,
@@ -99,7 +126,21 @@ export class ChallengeRepository {
     };
   }
 
-  private selectToChallenge(challenge: Select<'challenge'>): Challenge {
+  static selectToChallengeDetailed(
+    challenge: Select<'challenge'> & { owner: Select<'user'> }
+  ): ChallengeWithUser {
+    return {
+      id: challenge.id,
+      owner: UserRepository.selectToUser(challenge.owner),
+      title: challenge.title,
+      description: challenge.description,
+      content: challenge.content,
+      createdAt: challenge.created_at.toISOString(),
+      updatedAt: challenge.updated_at.toISOString(),
+    };
+  }
+
+  static selectToChallenge(challenge: Select<'challenge'>): Challenge {
     return {
       id: challenge.id,
       ownerId: challenge.owner_id,

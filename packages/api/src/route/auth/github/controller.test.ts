@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, spyOn, test, jest } from 'bun:test';
+import { afterEach, beforeAll, describe, expect, spyOn, test, jest, beforeEach } from 'bun:test';
 import { GithubService } from './service';
 import { AuthService } from '../service';
 import type { AuthRepository } from '../repository';
@@ -56,14 +56,22 @@ describe('Route.Auth.Github.Controller', () => {
     const redirectUrl = 'fe.codeduel.it';
     const state = 'state';
     const stateCookie = `${config.github.stateCookie.name}=${state}`;
-    const authorizationUrl = 'github-login-url';
     const mockHeader = { 'user-agent': 'codeduel.it/1.0', 'x-forwarded-for': '9.11.69.420' };
+    const authorizationUrl = 'github-login-url';
+
+    let spyEncodeState: ReturnType<typeof spyOn>;
+    let spyAuthorizationUrl: ReturnType<typeof spyOn>;
+
+    beforeEach(() => {
+      spyEncodeState = spyOn(authService, 'encodeState').mockReturnValue(state);
+      spyAuthorizationUrl = spyOn(service, 'authorizationUrl').mockReturnValue(authorizationUrl);
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
 
     test('should redirect to github login page', async () => {
-      const spyEncodeState = spyOn(authService, 'encodeState').mockReturnValue(state);
-      const spyAuthorizationUrl = spyOn(service, 'authorizationUrl').mockReturnValue(
-        authorizationUrl
-      );
       const response = await controller.login.handler({
         method: 'GET',
         path: '/',
@@ -92,7 +100,81 @@ describe('Route.Auth.Github.Controller', () => {
       expect(response.body).toEqual(`Redirecting to ${authorizationUrl}`);
     });
 
-    test('should redirect to github login page with default user agent', async () => {});
+    test('should redirect to github login page without ip and useragent', async () => {
+      await controller.login.handler({
+        method: 'GET',
+        path: '/',
+        query: { redirect: redirectUrl },
+        params: {},
+        body: undefined,
+        headers: new Headers({}),
+      });
+
+      expect(spyEncodeState).toHaveBeenCalledWith({
+        csrfToken: expect.any(String) as unknown as string,
+        redirect: redirectUrl,
+        ip: undefined,
+        userAgent: undefined,
+      });
+    });
+
+    test('should redirect to github login page with x-real-ip', async () => {
+      const mockHeader = { 'x-real-ip': '9.11.69.420' };
+      await controller.login.handler({
+        method: 'GET',
+        path: '/',
+        query: { redirect: redirectUrl },
+        params: {},
+        body: undefined,
+        headers: new Headers(mockHeader),
+      });
+
+      expect(spyEncodeState).toHaveBeenCalledWith({
+        csrfToken: expect.any(String) as unknown as string,
+        redirect: redirectUrl,
+        ip: mockHeader['x-real-ip'],
+        userAgent: undefined,
+      });
+    });
+
+    test('should redirect to github login page with right ip', async () => {
+      const mockHeader = { 'x-real-ip': '9.11.69.420', 'x-forwarded-for': '9.11.69.421' };
+      await controller.login.handler({
+        method: 'GET',
+        path: '/',
+        query: { redirect: redirectUrl },
+        params: {},
+        body: undefined,
+        headers: new Headers(mockHeader),
+      });
+
+      expect(spyEncodeState).toHaveBeenCalledWith({
+        csrfToken: expect.any(String) as unknown as string,
+        redirect: redirectUrl,
+        ip: mockHeader['x-real-ip'],
+        userAgent: undefined,
+      });
+    });
+
+    test('should redirect to github login page with right ip from x-forwarded-for', async () => {
+      const rightIp = '9.11.69.420';
+      const mockHeader = { 'x-forwarded-for': `${rightIp},9.11.69.421,9.11.69.422` };
+      await controller.login.handler({
+        method: 'GET',
+        path: '/',
+        query: { redirect: redirectUrl },
+        params: {},
+        body: undefined,
+        headers: new Headers(mockHeader),
+      });
+
+      expect(spyEncodeState).toHaveBeenCalledWith({
+        csrfToken: expect.any(String) as unknown as string,
+        redirect: redirectUrl,
+        ip: rightIp,
+        userAgent: undefined,
+      });
+    });
   });
 
   describe('GET /callback', () => {
@@ -132,17 +214,30 @@ describe('Route.Auth.Github.Controller', () => {
     const mockHeaders = {
       cookie: `${config.github.stateCookie.name}=${mockStateString}`,
     };
-    test('should set the refresh and access token', async () => {
-      const spyDecodeState = spyOn(authService, 'decodeState').mockReturnValue(mockState);
-      const spyExchange = spyOn(service, 'exchangeCodeForToken').mockResolvedValue(mockToken);
-      const spyUserData = spyOn(service, 'userData').mockResolvedValue(mockGithubUser);
-      const spyCreate = spyOn(service, 'create').mockResolvedValue([mockAuth, mockUser]);
-      const spyAccessToken = spyOn(authService, 'accessToken').mockResolvedValue(mockAccessToken);
-      const spyRefreshToken = spyOn(authService, 'refreshToken').mockResolvedValue(
-        mockRefreshToken
-      );
-      const spyCreateSession = spyOn(service, 'createSession').mockResolvedValue();
 
+    let spyDecodeState: ReturnType<typeof spyOn>;
+    let spyExchange: ReturnType<typeof spyOn>;
+    let spyUserData: ReturnType<typeof spyOn>;
+    let spyCreate: ReturnType<typeof spyOn>;
+    let spyAccessToken: ReturnType<typeof spyOn>;
+    let spyRefreshToken: ReturnType<typeof spyOn>;
+    let spyCreateSession: ReturnType<typeof spyOn>;
+
+    beforeEach(() => {
+      spyDecodeState = spyOn(authService, 'decodeState').mockReturnValue(mockState);
+      spyExchange = spyOn(service, 'exchangeCodeForToken').mockResolvedValue(mockToken);
+      spyUserData = spyOn(service, 'userData').mockResolvedValue(mockGithubUser);
+      spyCreate = spyOn(service, 'create').mockResolvedValue([mockAuth, mockUser]);
+      spyAccessToken = spyOn(authService, 'accessToken').mockResolvedValue(mockAccessToken);
+      spyRefreshToken = spyOn(authService, 'refreshToken').mockResolvedValue(mockRefreshToken);
+      spyCreateSession = spyOn(service, 'createSession').mockResolvedValue();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('should set the refresh and access token', async () => {
       const response = await controller.callback.handler({
         method: 'GET',
         path: '/callback',

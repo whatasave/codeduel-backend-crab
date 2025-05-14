@@ -1,7 +1,7 @@
 import { created, noContent, notFound, ok, type RouterGroup } from '@codeduel-backend-crab/server';
 import type { GameService } from './service';
 import { validated } from '@codeduel-backend-crab/server/validation';
-import { CreateGame, GameOfUser, GameWithUserData, ShareCode, UpdateGameUser } from './data';
+import { CreateGame, Game, GameOfUser, GameWithUserData, ShareCode, UpdateGameUser } from './data';
 import { Type } from '@sinclair/typebox';
 import { User } from '../user/data';
 
@@ -23,7 +23,7 @@ export class GameController {
     schema: {
       request: {
         params: {
-          id: User.properties.id,
+          id: Game.properties.id,
         },
       },
       response: {

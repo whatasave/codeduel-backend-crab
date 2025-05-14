@@ -5,7 +5,7 @@ import type { AuthRepository } from '../repository';
 import type { CookieOptions } from '../../../utils/cookie';
 import type { Config as GithubConfig } from './config';
 import type { Config as AuthConfig } from '../config';
-import type { Auth, CreateAuthSession } from '../data';
+import type { Auth } from '../data';
 import type { User } from '../../user/data';
 import type { GithubAccessToken, GithubUserData } from './data';
 import { Router, type PathString } from '@codeduel-backend-crab/server';
@@ -19,6 +19,16 @@ describe('Route.Auth.Github.Controller', () => {
     github: {
       stateCookie: { name: 'github-state-cookie' } as CookieOptions,
     } as GithubConfig,
+    accessToken: {
+      cookie: {
+        name: 'access-token',
+      } as CookieOptions,
+    } as AuthConfig['accessToken'],
+    refreshToken: {
+      cookie: {
+        name: 'refresh-token',
+      } as CookieOptions,
+    } as AuthConfig['refreshToken'],
   } as AuthConfig;
 
   beforeAll(() => {
@@ -78,13 +88,7 @@ describe('Route.Auth.Github.Controller', () => {
     expect(spyAuthorizationUrl).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(307);
-
     if (!response.headers) throw new Error('Response headers are undefined');
-    // expect(response.headers).toMatchObject({
-    //   'content-type': 'text/plain',
-    //   'set-cookie': [stateCookie],
-    //   'location': authorizationUrl,
-    // });
     expect(response.headers.get('location')).toEqual(authorizationUrl);
     expect(response.headers.get('content-type')).toEqual('text/plain');
     expect(response.headers.get('set-cookie')).toEqual(stateCookie);
@@ -92,107 +96,93 @@ describe('Route.Auth.Github.Controller', () => {
   });
 
   test('should set the refresh and access token', async () => {
-    const mockCode = 'code';
-    const mockState = 'state';
-    const mockResponse = {
-      access_token: 'access-token',
-      token_type: 'bearer',
-      scope: 'read:user,user:email',
-    } as unknown as GithubAccessToken;
-    const mockUser = {
-      id: 0,
-      username: 'username',
-      updatedAt: '2023-10-01T00:00:00.000Z',
-      createdAt: '2023-10-01T00:00:00.000Z',
-    } as User;
-    const mockAuth = {
-      userId: mockUser.id,
-      provider: 'github',
-      createdAt: '2023-10-01T00:00:00.000Z',
-      updatedAt: '2023-10-01T00:00:00.000Z',
-    } as Auth;
-
-    const cookies = {
-      [config.github.stateCookie.name]: mockState,
-    };
-    const mockHeader = {
-      cookie: `${config.github.stateCookie.name}=${mockState}`,
-      'user-agent': 'codeduel.it/1.0',
-      'x-forwarded-for': '9.11.69.420',
-    };
-    const mockSession = {
-      userId: mockUser.id,
-      jti: 'jti',
-      ip: mockHeader['x-forwarded-for'],
-      userAgent: mockHeader['user-agent'],
-    } as CreateAuthSession;
-
-    const spyExchangeCodeForToken = spyOn(service, 'exchangeCodeForToken').mockResolvedValue(
-      mockResponse
-    );
-    const spyUserData = spyOn(service, 'userData').mockResolvedValue({
-      id: mockUser.id,
-      login: mockUser.username,
-      name: mockUser.username,
-      avatar_url: 'avatar_url',
-    } as GithubUserData);
-    const spyCreate = spyOn(service, 'create').mockResolvedValue([mockAuth, mockUser]);
-    const spyAccessToken = spyOn(authService, 'accessToken').mockResolvedValue('access-token');
-    const spyRefreshToken = spyOn(authService, 'refreshToken').mockResolvedValue('refresh-token');
-    const spyCreateSession = spyOn(authService, 'createSession').mockResolvedValue(mockSession);
-    const spyDecodeState = spyOn(authService, 'decodeState').mockReturnValue({
+    const mockDate = new Date('2025-05-12T18:39:26.183Z').toString();
+    const mockState = {
       redirect: 'redirect',
-      ip: mockHeader['x-forwarded-for'],
-      userAgent: mockHeader['user-agent'],
+      ip: '9.11.69.420',
+      userAgent: 'codeduel.it/1.0',
       csrfToken: 'csrf-token',
-    });
-    // const spyParseCookies = spyOn(globalThis, 'parseCookies').mockReturnValue(cookies);
-    // const spyBadRequest = spyOn(globalThis, 'badRequest').mockReturnValue({
-    //   status: 400,
-    //   body: { message: 'Invalid or missing state' },
-    //   headers: undefined,
-    // } as Response);
+    };
+    const mockToken: GithubAccessToken = {
+      access_token: 'access_token',
+      token_type: 'Bearer',
+      scope: 'email:user',
+    };
+    const mockGithubUser = {
+      id: 123456,
+      login: 'toretto',
+    } as GithubUserData;
+    const mockAuth: Auth = {
+      userId: 0,
+      provider: 'github',
+      providerId: mockGithubUser.id,
+      createdAt: mockDate,
+      updatedAt: mockDate,
+    };
+    const mockUser: User = {
+      id: 0,
+      username: mockGithubUser.login,
+      createdAt: mockDate,
+      updatedAt: mockDate,
+    };
+    const mockAccessToken = 'access-token';
+    const mockRefreshToken = 'refresh-token';
+    const mockStateString = 'state';
+    const mockCode = 'code';
+    const mockHeaders = {
+      cookie: `${config.github.stateCookie.name}=${mockStateString}`,
+    };
+
+    const spyDecodeState = spyOn(authService, 'decodeState').mockReturnValue(mockState);
+    const spyExchange = spyOn(service, 'exchangeCodeForToken').mockResolvedValue(mockToken);
+    const spyUserData = spyOn(service, 'userData').mockResolvedValue(mockGithubUser);
+    const spyCreate = spyOn(service, 'create').mockResolvedValue([mockAuth, mockUser]);
+    const spyAccessToken = spyOn(authService, 'accessToken').mockResolvedValue(mockAccessToken);
+    const spyRefreshToken = spyOn(authService, 'refreshToken').mockResolvedValue(mockRefreshToken);
+    const spyCreateSession = spyOn(authService, 'createSession').mockResolvedValue();
 
     const response = await controller.callback.handler({
       method: 'GET',
       path: '/callback',
-      query: { code: mockCode, state: mockState },
+      query: { code: mockCode, state: mockStateString },
       params: {},
       body: undefined,
-      headers: new Headers(mockHeader),
+      headers: new Headers(mockHeaders),
     });
-    // expect(spyParseCookies).toHaveBeenCalledWith(mockHeader.cookie);
-    // expect(spyParseCookies).toHaveBeenCalledTimes(1);
-    expect(spyDecodeState).toHaveBeenCalledWith(mockState);
+
+    expect(spyDecodeState).toHaveBeenCalledWith(mockStateString);
     expect(spyDecodeState).toHaveBeenCalledTimes(1);
-    expect(spyExchangeCodeForToken).toHaveBeenCalledWith(mockCode, mockState);
-    expect(spyExchangeCodeForToken).toHaveBeenCalledTimes(1);
-    expect(spyUserData).toHaveBeenCalledWith(mockResponse.access_token);
+
+    expect(spyExchange).toHaveBeenCalledWith(mockCode, mockStateString);
+    expect(spyExchange).toHaveBeenCalledTimes(1);
+
+    expect(spyUserData).toHaveBeenCalledWith(mockToken.access_token);
     expect(spyUserData).toHaveBeenCalledTimes(1);
-    expect(spyCreate).toHaveBeenCalledWith({
-      name: 'github',
-      id: mockUser.id,
-      login: mockUser.username,
-      avatar_url: 'avatar_url',
-    });
+
+    expect(spyCreate).toHaveBeenCalledWith(mockGithubUser);
     expect(spyCreate).toHaveBeenCalledTimes(1);
+
     expect(spyAccessToken).toHaveBeenCalledWith(mockUser);
     expect(spyAccessToken).toHaveBeenCalledTimes(1);
-    expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, mockSession.jti);
+
+    expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));
     expect(spyRefreshToken).toHaveBeenCalledTimes(1);
+
     expect(spyCreateSession).toHaveBeenCalledWith(
       mockUser.id,
-      mockSession.jti,
-      mockHeader['x-forwarded-for'],
-      mockHeader['user-agent']
+      expect.any(String),
+      mockState.ip,
+      mockState.userAgent
     );
     expect(spyCreateSession).toHaveBeenCalledTimes(1);
+
     expect(response.status).toEqual(307);
     if (!response.headers) throw new Error('Response headers are undefined');
-    expect(response.headers.get('location')).toEqual('redirect');
-    expect(response.headers.get('set-cookie')).toEqual([
-      `access-token=access-token;`,
-      `refresh-token=refresh-token;`,
-    ]);
+    expect(response.headers.get('location')).toEqual(mockState.redirect);
+    expect(response.headers.get('content-type')).toEqual('text/plain');
+    expect(response.headers.get('set-cookie')).toEqual(
+      `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
+    );
+    expect(response.body).toEqual(`Redirecting to ${mockState.redirect}`);
   });
 });

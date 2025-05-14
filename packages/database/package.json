@@ -15,7 +15,8 @@
   },
   "scripts": {
     "generate": "kysely-codegen --out-file ./src/database.ts",
-    "reset": "kysely migrate:rollback --all && kysely migrate:latest && bun generate"
+    "reset": "kysely migrate:rollback --all && kysely migrate:latest && bun generate",
+    "seed:mock_challenges": "kysely seed:run --specific mock_challenges"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.29",

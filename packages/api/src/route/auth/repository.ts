@@ -83,7 +83,7 @@ export class AuthRepository {
       .executeTakeFirstOrThrow();
   }
 
-  async sessionByToken(
+  async sessionByTokenId(
     tokenId: Exclude<AuthSession['tokenId'], undefined>
   ): Promise<AuthSession | undefined> {
     const session = await this.database
@@ -99,7 +99,7 @@ export class AuthRepository {
     await this.database.deleteFrom('auth_session').where('id', '=', id).executeTakeFirstOrThrow();
   }
 
-  async deleteSessionToken(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
+  async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
     await this.database
       .updateTable('auth_session')
       .set({ token_id: null })

@@ -6,7 +6,7 @@ import { setupTestDatabase } from '../../utils/test';
 
 describe('Route.User.Repository', () => {
   let db: Database;
-  let repo: UserRepository;
+  let repository: UserRepository;
   const mockUser: User = {
     id: 3,
     username: 'ceasar',
@@ -36,7 +36,7 @@ describe('Route.User.Repository', () => {
 
   beforeAll(async () => {
     db = await setupTestDatabase();
-    repo = new UserRepository(db);
+    repository = new UserRepository(db);
 
     await db.transaction().execute(async (trx) => {
       await trx
@@ -69,7 +69,7 @@ describe('Route.User.Repository', () => {
         biography: 'the best',
       } satisfies CreateUser;
 
-      const createdUser = await repo.create(user);
+      const createdUser = await repository.create(user);
       expect(createdUser).toContainAnyKeys(['id', 'username', 'createdAt', 'updatedAt']);
       expect(createdUser).toMatchObject({
         username: user.username,
@@ -90,12 +90,12 @@ describe('Route.User.Repository', () => {
         biography: 'the best',
       } satisfies CreateUser;
 
-      expect(repo.create(user)).rejects.toThrowError();
+      expect(repository.create(user)).rejects.toThrowError();
     });
   });
 
   test('should return all users', async () => {
-    const users = await repo.all();
+    const users = await repository.all();
     expect(users).toBeArray();
     expect(users).toBeArrayOfSize(5);
 
@@ -115,7 +115,7 @@ describe('Route.User.Repository', () => {
 
   describe('byId', () => {
     test('should return user by id', async () => {
-      const user = await repo.byId(mockUser.id);
+      const user = await repository.byId(mockUser.id);
       expect(user).toMatchObject({
         id: mockUser.id,
         username: mockUser.username,
@@ -127,14 +127,14 @@ describe('Route.User.Repository', () => {
     });
 
     test('should return undefined if user with `id` does not exist', async () => {
-      const user = await repo.byId(99);
+      const user = await repository.byId(99);
       expect(user).toBeUndefined();
     });
   });
 
   describe('byUsername', () => {
     test('should return user by username', async () => {
-      const user = await repo.byUsername(mockUser.username);
+      const user = await repository.byUsername(mockUser.username);
       expect(user).toMatchObject({
         id: mockUser.id,
         username: mockUser.username,
@@ -146,12 +146,12 @@ describe('Route.User.Repository', () => {
     });
 
     test('should return undefined if user with `username` does not exist', async () => {
-      const user = await repo.byUsername('non-existing');
+      const user = await repository.byUsername('non-existing');
       expect(user).toBeUndefined();
     });
 
     test('should return user by username with case insensitive', async () => {
-      const user = await repo.byUsername('CEASAR');
+      const user = await repository.byUsername('CEASAR');
       expect(user).toMatchObject({
         id: mockUser.id,
         username: mockUser.username,

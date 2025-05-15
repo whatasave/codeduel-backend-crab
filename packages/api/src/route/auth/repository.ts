@@ -75,14 +75,6 @@ export class AuthRepository {
     return this.selectToSession(newSession);
   }
 
-  async updateSession(id: AuthSession['id'], tokenId: AuthSession['tokenId']): Promise<void> {
-    await this.database
-      .updateTable('auth_session')
-      .set({ token_id: tokenId })
-      .where('id', '=', id)
-      .executeTakeFirstOrThrow();
-  }
-
   async sessionByTokenId(
     tokenId: Exclude<AuthSession['tokenId'], undefined>
   ): Promise<AuthSession | undefined> {
@@ -93,6 +85,14 @@ export class AuthRepository {
       .executeTakeFirst();
 
     return session && this.selectToSession(session);
+  }
+
+  async updateSession(id: AuthSession['id'], tokenId: AuthSession['tokenId']): Promise<void> {
+    await this.database
+      .updateTable('auth_session')
+      .set({ token_id: tokenId })
+      .where('id', '=', id)
+      .executeTakeFirstOrThrow();
   }
 
   async deleteSession(id: number): Promise<void> {

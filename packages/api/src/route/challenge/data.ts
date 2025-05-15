@@ -1,4 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
+import { User } from '../user/data';
 
 export type TestCase = Static<typeof TestCase>;
 export const TestCase = Type.Object({
@@ -9,7 +10,7 @@ export const TestCase = Type.Object({
 export type Challenge = Static<typeof Challenge>;
 export const Challenge = Type.Object({
   id: Type.Integer(),
-  ownerId: Type.Integer(),
+  ownerId: User.properties.id,
   title: Type.String(),
   description: Type.String(),
   content: Type.String(),
@@ -17,10 +18,21 @@ export const Challenge = Type.Object({
   updatedAt: Type.String({ format: 'date-time' }),
 });
 
-export type ChallengeDetailed = Static<typeof ChallengeDetailed>;
-export const ChallengeDetailed = Type.Object({
+export type ChallengeWithUser = Static<typeof ChallengeWithUser>;
+export const ChallengeWithUser = Type.Object({
   id: Type.Integer(),
-  ownerId: Type.Integer(),
+  owner: User,
+  title: Type.String(),
+  description: Type.String(),
+  content: Type.String(),
+  createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
+});
+
+export type ChallengeWithUserAndTestCases = Static<typeof ChallengeWithUserAndTestCases>;
+export const ChallengeWithUserAndTestCases = Type.Object({
+  id: Type.Integer(),
+  owner: User,
   title: Type.String(),
   description: Type.String(),
   content: Type.String(),

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { setupTestDatabase } from '../../utils/test';
 import { ChallengeRepository } from './repository';
 import { UserRepository } from '../user/repository';
-import type { Challenge, CreateChallenge } from './data';
+import type { CreateChallenge } from './data';
 
 describe('Route.Challenge.Repository', () => {
   let db: Database;
@@ -105,7 +105,7 @@ describe('Route.Challenge.Repository', () => {
 
       const all = await repository.all();
 
-      expect(all).toEqual(created as Challenge[]);
+      expect(all).toEqual(created.map((c) => ({ ...c, owner: user })));
     });
   });
 

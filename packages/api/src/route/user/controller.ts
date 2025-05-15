@@ -3,6 +3,8 @@ import { Type } from '@sinclair/typebox';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { UserService } from './service';
 import { User } from './data';
+import { checkRole } from '../../middleware/checkRole';
+import { createRequireAuth } from '../../middleware/requireAuth';
 
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -66,6 +68,7 @@ export class UserController {
       request: {},
       response: {},
     },
+    middlewares: [createRequireAuth(this.config), checkRole('user')],
     handler: async () => {
       return internalServerError({ error: 'Path not implemented' });
     },

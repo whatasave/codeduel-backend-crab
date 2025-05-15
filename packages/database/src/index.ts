@@ -7,13 +7,22 @@ import {
   FileMigrationProvider,
   Migrator,
 } from 'kysely';
-import { Pool } from 'pg';
-import type { DB } from './database';
+import { Pool, types } from 'pg';
+import type DB from './types/Database';
 import { Type, type Static } from '@sinclair/typebox';
 import { AssertError, Value } from '@sinclair/typebox/value';
 import { NO_MIGRATIONS } from 'kysely';
 import fs from 'fs/promises';
 import path from 'path';
+
+types.setTypeParser(
+  types.builtins.TIMESTAMP,
+  (value) => `${value.slice(0, 10)}T${value.slice(11)}`
+);
+types.setTypeParser(
+  types.builtins.TIMESTAMPTZ,
+  (value) => `${value.slice(0, 10)}T${value.slice(11)}`
+);
 
 export type Database = Kysely<DB>;
 

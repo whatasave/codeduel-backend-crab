@@ -115,8 +115,8 @@ export class AuthRepository {
       ip: authSession.ip ?? undefined,
       userAgent: authSession.user_agent ?? undefined,
       provider: authSession.provider,
-      createdAt: authSession.created_at.toISOString(),
-      updatedAt: authSession.updated_at.toISOString(),
+      createdAt: authSession.created_at,
+      updatedAt: authSession.updated_at,
     };
   }
 
@@ -125,8 +125,8 @@ export class AuthRepository {
       userId: user.user_id,
       provider: user.provider,
       providerId: user.provider_id,
-      createdAt: user.created_at.toISOString(),
-      updatedAt: user.updated_at.toISOString(),
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
     };
   }
 }

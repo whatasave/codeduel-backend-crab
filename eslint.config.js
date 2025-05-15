@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config({
   files: ['**/*.ts'],
-  ignores: ['packages/database/src/database.ts'],
+  ignores: ['packages/database/src/types/**', 'packages/database/.kanelrc.ts'],
   extends: [
     eslint.configs.recommended,
     ...tseslint.configs.strictTypeChecked,

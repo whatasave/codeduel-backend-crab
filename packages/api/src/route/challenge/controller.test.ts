@@ -78,7 +78,7 @@ describe('Route.Challenge.Controller', () => {
 
       expect(spyCreate).toHaveBeenCalledTimes(1);
       expect(spyCreate).toHaveBeenCalledWith(mockCreateChallenge);
-      expect(challenge).toEqual({ status: 201, body: mockChallengeWithUser });
+      expect(challenge).toEqual({ status: 201, body: mockChallenge });
     });
   });
 
@@ -159,7 +159,7 @@ describe('Route.Challenge.Controller', () => {
 
       expect(spyUpdate).toHaveBeenCalledTimes(1);
       expect(spyUpdate).toHaveBeenCalledWith(updatedChallenge);
-      expect(challenge).toEqual({ status: 200, body: mockChallengeWithUser });
+      expect(challenge).toEqual({ status: 200, body: mockChallenge });
     });
 
     test('should return undefined on update not found', async () => {

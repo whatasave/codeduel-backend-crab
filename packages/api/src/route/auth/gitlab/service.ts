@@ -76,13 +76,13 @@ export class GitlabService {
 
   async createSession(
     userId: User['id'],
-    token: CreateAuthSession['tokenId'],
+    tokenId: CreateAuthSession['tokenId'],
     ip: CreateAuthSession['ip'],
     userAgent: CreateAuthSession['userAgent']
   ): Promise<void> {
-    const sessions = {
+    const sessions: CreateAuthSession = {
       userId,
-      token,
+      tokenId,
       ip,
       userAgent,
       provider: GitlabService.PROVIDER,

@@ -20,15 +20,11 @@ describe('Route.Auth.Github.Controller', () => {
       stateCookie: { name: 'github-state-cookie' } as CookieOptions,
     } as GithubConfig,
     accessToken: {
-      cookie: {
-        name: 'access-token',
-      } as CookieOptions,
-    } as AuthConfig['accessToken'],
+      cookie: { name: 'access-token' } as CookieOptions,
+    },
     refreshToken: {
-      cookie: {
-        name: 'refresh-token',
-      } as CookieOptions,
-    } as AuthConfig['refreshToken'],
+      cookie: { name: 'refresh-token' } as CookieOptions,
+    },
   } as AuthConfig;
 
   beforeAll(() => {

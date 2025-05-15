@@ -4,7 +4,7 @@ import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
 import { Cors } from '@codeduel-backend-crab/server/cors';
 import { createDatabase } from '@codeduel-backend-crab/database';
-import { defaultErrorHandler, descriptiveErrorHandler } from './errors';
+import { defaultErrorHandler, descriptiveErrorHandler } from './middleware/errors';
 
 const { config, error } = safeLoadConfig();
 if (!config) {

@@ -6,8 +6,9 @@ import type { AuthRepository } from './repository';
 import type { UserRepository } from '../user/repository';
 import type { Config } from './config';
 import type { CookieOptions } from '../../utils/cookie';
-import type { JwtRefreshToken } from './data';
+import type { AuthSession, JwtRefreshToken } from './data';
 import { Router, type PathString } from '@codeduel-backend-crab/server';
+import type { User } from '../user/data';
 
 describe('Route.Auth.Controller', () => {
   let service: AuthService;
@@ -46,7 +47,80 @@ describe('Route.Auth.Controller', () => {
     expect(filteredRoutes.sort()).toEqual(expectedRoutes);
   });
 
-  test('should refresh access and refresh token', async () => {});
+  test('should refresh access and refresh token', async () => {
+    const mockDate = new Date('2023-10-01T12:00:00Z').toISOString();
+    const mockAccessToken = 'access-token';
+    const mockRefreshToken = 'refresh-token';
+    const mockHeaders = {
+      cookie: `${config.accessToken.cookie.name}=${mockAccessToken}; ${config.refreshToken.cookie.name}=${mockRefreshToken}`,
+    };
+    const mockJti1 = 'jti1';
+    const mockUser: User = {
+      id: 1,
+      username: 'username',
+      createdAt: mockDate,
+      updatedAt: mockDate,
+    };
+    const mockAuthSession: AuthSession = {
+      id: 1,
+      userId: mockUser.id,
+      tokenId: mockJti1,
+      provider: 'github',
+      createdAt: mockDate,
+      updatedAt: mockDate,
+    };
+    const mockJwtRefreshToken: JwtRefreshToken = {
+      iss: 'codeduel.it',
+      aud: 'codeduel.it',
+      exp: 1234567890,
+      jti: mockJti1,
+      sub: mockUser.id,
+    };
+
+    const spyVerifyRefreshToken = spyOn(service, 'verifyRefreshToken').mockResolvedValue(
+      mockJwtRefreshToken
+    );
+    const spySessionByTokenId = spyOn(service, 'sessionByTokenId').mockResolvedValue(
+      mockAuthSession
+    );
+    const spyUserById = spyOn(userService, 'byId').mockResolvedValue(mockUser);
+    const spyAccessToken = spyOn(service, 'accessToken').mockResolvedValue(mockAccessToken);
+    const spyRefreshToken = spyOn(service, 'refreshToken').mockResolvedValue(mockRefreshToken);
+    const spyUpdateSession = spyOn(service, 'updateSession').mockResolvedValue();
+
+    const response = await controller.refresh.handler({
+      method: 'GET',
+      path: '/refresh',
+      query: {},
+      params: {},
+      body: undefined,
+      headers: new Headers(mockHeaders),
+    });
+
+    expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken);
+    expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
+
+    expect(spySessionByTokenId).toHaveBeenCalledWith(mockJwtRefreshToken.jti);
+    expect(spySessionByTokenId).toHaveBeenCalledTimes(1);
+
+    expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub);
+    expect(spyUserById).toHaveBeenCalledTimes(1);
+
+    expect(spyAccessToken).toHaveBeenCalledWith(mockUser);
+    expect(spyAccessToken).toHaveBeenCalledTimes(1);
+
+    expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));
+    expect(spyRefreshToken).toHaveBeenCalledTimes(1);
+
+    expect(spyUpdateSession).toHaveBeenCalledWith(mockAuthSession.id, expect.any(String));
+    expect(spyUpdateSession).toHaveBeenCalledTimes(1);
+
+    expect(response.status).toEqual(204);
+    if (!response.headers) throw new Error('Response headers are undefined');
+    expect(response.headers.get('set-cookie')).toEqual(
+      `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
+    );
+  });
 
   describe('GET /logout', () => {
     const mockJwtRefreshToken: JwtRefreshToken = {

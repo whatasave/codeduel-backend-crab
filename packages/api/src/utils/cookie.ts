@@ -35,13 +35,13 @@ export function createCookie(cookie: ResponseCookie): string {
   ];
 
   const opts = [
-    cookie.expires && `Expires=${new Date(cookie.expires).toUTCString()}`,
-    cookie.maxAge && `Max-Age=${cookie.maxAge}`,
-    cookie.domain && `Domain=${cookie.domain}`,
-    cookie.path && `Path=${cookie.path}`,
-    cookie.secure && 'Secure',
-    cookie.httpOnly && 'HttpOnly',
-    cookie.sameSite && `SameSite=${cookie.sameSite}`,
+    cookie.expires !== undefined && `Expires=${new Date(cookie.expires).toUTCString()}`,
+    cookie.maxAge !== undefined && `Max-Age=${cookie.maxAge}`,
+    cookie.domain !== undefined && `Domain=${cookie.domain}`,
+    cookie.path !== undefined && `Path=${cookie.path}`,
+    cookie.secure !== undefined && cookie.secure && 'Secure',
+    cookie.httpOnly !== undefined && cookie.httpOnly && 'HttpOnly',
+    cookie.sameSite !== undefined && `SameSite=${cookie.sameSite}`,
   ].filter(Boolean);
 
   return [base, ...opts].join('; ');
@@ -61,9 +61,10 @@ function parseCookie(cookieString: string): RequestCookie {
 
 export function parseCookies(cookiesString: string | null): Cookies {
   const cookies: Cookies = {};
-  if (!cookiesString) return cookies;
+  const trimmedCookiesString = cookiesString?.trim();
+  if (!trimmedCookiesString || trimmedCookiesString.length === 0) return cookies;
 
-  for (const cookieString of cookiesString.trim().split(';')) {
+  for (const cookieString of trimmedCookiesString.trim().split(';')) {
     const cookie = parseCookie(cookieString);
     cookies[cookie.name] = cookie.value ?? '';
   }

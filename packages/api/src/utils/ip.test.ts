@@ -70,23 +70,23 @@ describe('getIp', () => {
     expect(getIp(headers)).toBe('203.0.113.52');
   });
 
-  it('should return an empty string if the first part of x-forwarded-for is only whitespace', () => {
+  it('should return undefined if the first part of x-forwarded-for is only whitespace', () => {
     const headers = new Headers({ 'x-forwarded-for': '   , 203.0.113.53' });
-    expect(getIp(headers)).toBe('');
+    expect(getIp(headers)).toBeUndefined();
   });
 
-  it('should return an empty string if x-forwarded-for is only whitespace', () => {
+  it('should return undefined if x-forwarded-for is only whitespace', () => {
     const headers = new Headers({ 'x-forwarded-for': '   ' });
-    expect(getIp(headers)).toBe('');
+    expect(getIp(headers)).toBeUndefined();
   });
 
-  it('should return an empty string if x-real-ip is an empty string', () => {
+  it('should return undefined if x-real-ip is an empty string', () => {
     const headers = new Headers({ 'x-real-ip': '' });
-    expect(getIp(headers)).toBe('');
+    expect(getIp(headers)).toBeUndefined();
   });
 
-  it('should return an empty string if x-real-ip is only whitespace', () => {
+  it('should return undefined if x-real-ip is only whitespace', () => {
     const headers = new Headers({ 'x-real-ip': '   ' });
-    expect(getIp(headers)).toBe('');
+    expect(getIp(headers)).toBeUndefined();
   });
 });

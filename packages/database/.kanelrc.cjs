@@ -12,7 +12,7 @@ module.exports = {
     password: process.env.DATABASE_PASSWORD,
   },
   preDeleteOutputFolder: true,
-  enumStyle: "type",
+  enumStyle: 'type',
   customTypeMap: {
     'pg_catalog.timestamp': 'string',
     'pg_catalog.timestamptz': 'string',
@@ -21,9 +21,9 @@ module.exports = {
   preRenderHooks: [makeKyselyHook()],
   postRenderHooks: [
     (path, lines) => {
-      if (path.endsWith("Database.ts")) {
+      if (path.endsWith('Database.ts')) {
         lines.pop();
-        return [...lines, "export type { Database as default };"];
+        return [...lines, 'export type { Database as default };'];
       }
       return lines;
     },

@@ -47,7 +47,21 @@ describe('Route.Auth.Controller', () => {
     expect(filteredRoutes.sort()).toEqual(expectedRoutes);
   });
 
-  test('should refresh access and refresh token', async () => {
+  test('should verify token', async () => {
+    const response = await controller.validate.handler({
+      method: 'GET',
+      path: '/validate',
+      query: {},
+      params: {},
+      body: undefined,
+      headers: new Headers({}),
+    });
+
+    expect(response.status).toEqual(500);
+    expect(response.body).toEqual({ error: 'Path not implemented' });
+  });
+
+  describe('GET /refresh', () => {
     const mockDate = new Date('2023-10-01T12:00:00Z').toISOString();
     const mockAccessToken = 'access-token';
     const mockRefreshToken = 'refresh-token';
@@ -77,49 +91,76 @@ describe('Route.Auth.Controller', () => {
       sub: mockUser.id,
     };
 
-    const spyVerifyRefreshToken = spyOn(service, 'verifyRefreshToken').mockResolvedValue(
-      mockJwtRefreshToken
-    );
-    const spySessionByTokenId = spyOn(service, 'sessionByTokenId').mockResolvedValue(
-      mockAuthSession
-    );
-    const spyUserById = spyOn(userService, 'byId').mockResolvedValue(mockUser);
-    const spyAccessToken = spyOn(service, 'accessToken').mockResolvedValue(mockAccessToken);
-    const spyRefreshToken = spyOn(service, 'refreshToken').mockResolvedValue(mockRefreshToken);
-    const spyUpdateSession = spyOn(service, 'updateSession').mockResolvedValue();
+    let spyVerifyRefreshToken: ReturnType<typeof spyOn>;
+    let spySessionByTokenId: ReturnType<typeof spyOn>;
+    let spyUserById: ReturnType<typeof spyOn>;
+    let spyAccessToken: ReturnType<typeof spyOn>;
+    let spyRefreshToken: ReturnType<typeof spyOn>;
+    let spyUpdateSession: ReturnType<typeof spyOn>;
 
-    const response = await controller.refresh.handler({
-      method: 'GET',
-      path: '/refresh',
-      query: {},
-      params: {},
-      body: undefined,
-      headers: new Headers(mockHeaders),
+    beforeEach(() => {
+      spyVerifyRefreshToken = spyOn(service, 'verifyRefreshToken').mockResolvedValue(
+        mockJwtRefreshToken
+      );
+      spySessionByTokenId = spyOn(service, 'sessionByTokenId').mockResolvedValue(mockAuthSession);
+      spyUserById = spyOn(userService, 'byId').mockResolvedValue(mockUser);
+      spyAccessToken = spyOn(service, 'accessToken').mockResolvedValue(mockAccessToken);
+      spyRefreshToken = spyOn(service, 'refreshToken').mockResolvedValue(mockRefreshToken);
+      spyUpdateSession = spyOn(service, 'updateSession').mockResolvedValue();
     });
 
-    expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken);
-    expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
+    test('should refresh access and refresh token', async () => {
+      const response = await controller.refresh.handler({
+        method: 'GET',
+        path: '/refresh',
+        query: {},
+        params: {},
+        body: undefined,
+        headers: new Headers(mockHeaders),
+      });
 
-    expect(spySessionByTokenId).toHaveBeenCalledWith(mockJwtRefreshToken.jti);
-    expect(spySessionByTokenId).toHaveBeenCalledTimes(1);
+      expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken);
+      expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
 
-    expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub);
-    expect(spyUserById).toHaveBeenCalledTimes(1);
+      expect(spySessionByTokenId).toHaveBeenCalledWith(mockJwtRefreshToken.jti);
+      expect(spySessionByTokenId).toHaveBeenCalledTimes(1);
 
-    expect(spyAccessToken).toHaveBeenCalledWith(mockUser);
-    expect(spyAccessToken).toHaveBeenCalledTimes(1);
+      expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub);
+      expect(spyUserById).toHaveBeenCalledTimes(1);
 
-    expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));
-    expect(spyRefreshToken).toHaveBeenCalledTimes(1);
+      expect(spyAccessToken).toHaveBeenCalledWith(mockUser);
+      expect(spyAccessToken).toHaveBeenCalledTimes(1);
 
-    expect(spyUpdateSession).toHaveBeenCalledWith(mockAuthSession.id, expect.any(String));
-    expect(spyUpdateSession).toHaveBeenCalledTimes(1);
+      expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));
+      expect(spyRefreshToken).toHaveBeenCalledTimes(1);
 
-    expect(response.status).toEqual(204);
-    if (!response.headers) throw new Error('Response headers are undefined');
-    expect(response.headers.get('set-cookie')).toEqual(
-      `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
-    );
+      expect(spyUpdateSession).toHaveBeenCalledWith(mockAuthSession.id, expect.any(String));
+      expect(spyUpdateSession).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toEqual(204);
+      if (!response.headers) throw new Error('Response headers are undefined');
+      expect(response.headers.get('set-cookie')).toEqual(
+        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
+      );
+    });
+
+    test('should logout user due to a failed refresh token', async () => {
+      const response = await controller.refresh.handler({
+        method: 'GET',
+        path: '/refresh',
+        query: {},
+        params: {},
+        body: undefined,
+        headers: new Headers({}),
+      });
+
+      expect(response.status).toEqual(204);
+      if (!response.headers) throw new Error('Response headers are undefined');
+
+      expect(response.headers.get('set-cookie')).toEqual(
+        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+      );
+    });
   });
 
   describe('GET /logout', () => {

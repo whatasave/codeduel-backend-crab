@@ -71,7 +71,7 @@ describe('Route.Auth.Github.Controller', () => {
       jest.clearAllMocks();
     });
 
-    test('should redirect to github login page', async () => {
+    test('should redirects to github login page', async () => {
       const response = await controller.login.handler({
         method: 'GET',
         path: '/',
@@ -100,7 +100,7 @@ describe('Route.Auth.Github.Controller', () => {
       expect(response.body).toEqual(`Redirecting to ${authorizationUrl}`);
     });
 
-    test('should redirect to github login page without ip and useragent', async () => {
+    test('should redirects without IP and User-Agent', async () => {
       await controller.login.handler({
         method: 'GET',
         path: '/',
@@ -118,7 +118,7 @@ describe('Route.Auth.Github.Controller', () => {
       });
     });
 
-    test('should redirect to github login page with x-real-ip', async () => {
+    test('should redirects using x-real-ip header', async () => {
       const mockHeader = { 'x-real-ip': '9.11.69.420' };
       await controller.login.handler({
         method: 'GET',
@@ -137,7 +137,7 @@ describe('Route.Auth.Github.Controller', () => {
       });
     });
 
-    test('should redirect to github login page with right ip', async () => {
+    test('should prioritizes x-real-ip over x-forwarded-for', async () => {
       const mockHeader = { 'x-real-ip': '9.11.69.420', 'x-forwarded-for': '9.11.69.421' };
       await controller.login.handler({
         method: 'GET',
@@ -156,7 +156,7 @@ describe('Route.Auth.Github.Controller', () => {
       });
     });
 
-    test('should redirect to github login page with right ip from x-forwarded-for', async () => {
+    test('should select correct IP from x-forwarded-for chain', async () => {
       const rightIp = '9.11.69.420';
       const mockHeader = { 'x-forwarded-for': `${rightIp},9.11.69.421,9.11.69.422` };
       await controller.login.handler({
@@ -237,7 +237,7 @@ describe('Route.Auth.Github.Controller', () => {
       jest.clearAllMocks();
     });
 
-    test('should set the refresh and access token', async () => {
+    test('should sets refresh and access token cookies correctly', async () => {
       const response = await controller.callback.handler({
         method: 'GET',
         path: '/callback',

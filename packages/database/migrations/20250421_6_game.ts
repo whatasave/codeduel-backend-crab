@@ -16,12 +16,16 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       col.notNull().references(`${CHALLENGE_TABLE_NAME}.id`)
     )
     .addColumn('host_id', 'integer', (col) => col.notNull().references(`${USER_TABLE_NAME}.id`))
-    .addColumn('ended_at', 'timestamp')
+    .addColumn('ended_at', 'timestamptz')
     .addColumn('max_players', 'integer', (col) => col.notNull())
     .addColumn('duration', 'integer', (col) => col.notNull())
     .addColumn('allowed_languages', 'jsonb', (col) => col.notNull())
-    .addColumn('created_at', 'timestamp', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
-    .addColumn('updated_at', 'timestamp', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+    .addColumn('created_at', 'timestamptz', (col) =>
+      col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+    )
+    .addColumn('updated_at', 'timestamptz', (col) =>
+      col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+    )
     .execute();
 
   await createTrigger(db);

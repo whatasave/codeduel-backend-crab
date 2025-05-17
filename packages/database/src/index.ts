@@ -21,7 +21,7 @@ types.setTypeParser(
 );
 types.setTypeParser(
   types.builtins.TIMESTAMPTZ,
-  (value) => `${value.slice(0, 10)}T${value.slice(11)}`
+  (value) => `${value.slice(0, 10)}T${value.slice(11)}:00`
 );
 
 export type Database = Kysely<DB>;

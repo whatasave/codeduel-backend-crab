@@ -129,6 +129,7 @@ export class ChallengeRepository {
   static selectToChallengeDetailed(
     challenge: Select<'challenge'> & { owner: Select<'user'> }
   ): ChallengeWithUser {
+    console.log(challenge.owner);
     return {
       id: challenge.id,
       owner: UserRepository.selectToUser(challenge.owner),

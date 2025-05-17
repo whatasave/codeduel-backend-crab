@@ -36,9 +36,11 @@ describe('cookieUtils', () => {
     });
 
     it('should include Expires in UTC format if cookie.expires is provided', () => {
-      const expires = new Date('2025-05-15T10:20:30.000Z').toISOString();
-      const cookie = { name: 'a', value: 'b', expires } satisfies ResponseCookie;
-      expect(createCookie(cookie)).toBe(`${cookie.name}=${cookie.value}; Expires=${expires}`);
+      const exp = new Date('2025-05-15T10:20:30.000Z');
+      const cookie = { name: 'a', value: 'b', expires: exp.toISOString() } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(
+        `${cookie.name}=${cookie.value}; Expires=${exp.toUTCString()}`
+      );
     });
 
     it('should include Max-Age if cookie.maxAge is provided', () => {

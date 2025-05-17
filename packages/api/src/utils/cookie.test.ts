@@ -11,86 +11,99 @@ import {
 describe('cookieUtils', () => {
   describe('createCookie', () => {
     it('should create a basic cookie string with name and value', () => {
-      const cookie: ResponseCookie = { name: 'testName', value: 'testValue' };
-      expect(createCookie(cookie)).toBe('testName=testValue');
+      const cookie = { name: 'a', value: 'b' } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=${cookie.value}`);
     });
 
     it('should create a cookie string with an empty value if value is undefined', () => {
-      const cookie: ResponseCookie = { name: 'testName', value: undefined };
-      expect(createCookie(cookie)).toBe('testName=');
+      const cookie = { name: 'a', value: undefined } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=`);
     });
 
-    it('should create a cookie string with an empty value if value is null', () => {
-      const cookie: ResponseCookie = { name: 'testName', value: undefined };
-      expect(createCookie(cookie)).toBe('testName=');
+    it('should create a cookie string with an empty value if value not passed', () => {
+      const cookie = { name: 'a' } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=`);
     });
 
     it('should URI encode name and value', () => {
-      const cookie: ResponseCookie = { name: 'n@me w/ sp@ces', value: 'v@lue w/ sp@ces & =' };
+      const cookie = {
+        name: 'n@me w/ sp@ces',
+        value: 'v@lue w/ sp@ces & =',
+      } satisfies ResponseCookie;
       expect(createCookie(cookie)).toBe(
-        `${encodeURIComponent('n@me w/ sp@ces')}=${encodeURIComponent('v@lue w/ sp@ces & =')}`
+        `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value)}`
       );
     });
 
     it('should include Expires in UTC format if cookie.expires is provided', () => {
       const fixedDate = new Date('2025-05-15T10:20:30.000Z');
-      const cookie: ResponseCookie = {
+      const cookie = {
         name: 'session',
         value: 'abc',
         expires: fixedDate.toISOString(),
-      };
+      } satisfies ResponseCookie;
       expect(createCookie(cookie)).toBe(`session=abc; Expires=${fixedDate.toUTCString()}`);
     });
 
     it('should include Max-Age if cookie.maxAge is provided', () => {
-      const cookie: ResponseCookie = { name: 'data', value: '123', maxAge: 3600 };
-      expect(createCookie(cookie)).toBe('data=123; Max-Age=3600');
+      const cookie = { name: 'a', value: 'b', maxAge: 3600 } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=${cookie.value}; Max-Age=${cookie.maxAge}`);
     });
 
     it('should include Max-Age if cookie.maxAge is 0', () => {
-      const cookie: ResponseCookie = { name: 'data', value: '123', maxAge: 0 };
-      expect(createCookie(cookie)).toBe('data=123; Max-Age=0');
+      const cookie = { name: 'a', value: 'b', maxAge: 0 } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=${cookie.value}; Max-Age=${cookie.maxAge}`);
     });
 
     it('should include Domain if cookie.domain is provided', () => {
-      const cookie: ResponseCookie = { name: 'pref', value: 'xyz', domain: '.example.com' };
-      expect(createCookie(cookie)).toBe('pref=xyz; Domain=.example.com');
+      const cookie = {
+        name: 'a',
+        value: 'b',
+        domain: '.example.com',
+      } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=${cookie.value}; Domain=${cookie.domain}`);
     });
 
     it('should include Path if cookie.path is provided', () => {
-      const cookie: ResponseCookie = { name: 'user', value: 'def', path: '/app' };
-      expect(createCookie(cookie)).toBe('user=def; Path=/app');
+      const cookie = { name: 'a', value: 'b', path: '/app' } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=${cookie.value}; Path=${cookie.path}`);
     });
 
     it('should include Secure flag if cookie.secure is true', () => {
-      const cookie: ResponseCookie = { name: 'token', value: 'secureToken', secure: true };
-      expect(createCookie(cookie)).toBe('token=secureToken; Secure');
+      const cookie = { name: 'a', value: 'b', secure: true } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=${cookie.value}; Secure`);
     });
 
     it('should not include Secure flag if cookie.secure is false or undefined', () => {
-      const cookie1: ResponseCookie = { name: 'token', value: 'secureToken', secure: false };
-      const cookie2: ResponseCookie = { name: 'token', value: 'secureToken' };
-      expect(createCookie(cookie1)).toBe('token=secureToken');
-      expect(createCookie(cookie2)).toBe('token=secureToken');
+      const cookie1 = { name: 'a', value: 'b', secure: false } satisfies ResponseCookie;
+      const cookie2 = { name: 'a', value: 'b' } satisfies ResponseCookie;
+      expect(createCookie(cookie1)).toBe(`${cookie1.name}=${cookie1.value}`);
+      expect(createCookie(cookie2)).toBe(`${cookie2.name}=${cookie2.value}`);
     });
 
     it('should include HttpOnly flag if cookie.httpOnly is true', () => {
-      const cookie: ResponseCookie = { name: 'secret', value: 'supersecret', httpOnly: true };
-      expect(createCookie(cookie)).toBe('secret=supersecret; HttpOnly');
+      const cookie = { name: 'a', value: 'b', httpOnly: true } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(`${cookie.name}=${cookie.value}; HttpOnly`);
     });
 
     it('should include SameSite if cookie.sameSite is provided', () => {
-      const cookieLax: ResponseCookie = { name: 'sId', value: 'laxVal', sameSite: 'Lax' };
-      const cookieStrict: ResponseCookie = { name: 'sId', value: 'strictVal', sameSite: 'Strict' };
-      const cookieNone: ResponseCookie = { name: 'sId', value: 'noneVal', sameSite: 'None' };
-      expect(createCookie(cookieLax)).toBe('sId=laxVal; SameSite=Lax');
-      expect(createCookie(cookieStrict)).toBe('sId=strictVal; SameSite=Strict');
-      expect(createCookie(cookieNone)).toBe('sId=noneVal; SameSite=None');
+      const cookieLax = { name: 'a', value: 'b', sameSite: 'Lax' } satisfies ResponseCookie;
+      const cookieStrict = { name: 'a', value: 'b', sameSite: 'Strict' } satisfies ResponseCookie;
+      const cookieNone = { name: 'a', value: 'b', sameSite: 'None' } satisfies ResponseCookie;
+      expect(createCookie(cookieLax)).toBe(
+        `${cookieLax.name}=${cookieLax.value}; SameSite=${cookieLax.sameSite}`
+      );
+      expect(createCookie(cookieStrict)).toBe(
+        `${cookieStrict.name}=${cookieStrict.value}; SameSite=${cookieStrict.sameSite}`
+      );
+      expect(createCookie(cookieNone)).toBe(
+        `${cookieNone.name}=${cookieNone.value}; SameSite=${cookieNone.sameSite}`
+      );
     });
 
     it('should create a full cookie string with all options', () => {
       const fixedDate = new Date('2025-06-01T00:00:00.000Z');
-      const cookie: ResponseCookie = {
+      const cookie = {
         name: 'full',
         value: 'example',
         expires: fixedDate.toISOString(),
@@ -100,28 +113,25 @@ describe('cookieUtils', () => {
         secure: true,
         httpOnly: true,
         sameSite: 'Strict',
-      };
+      } as ResponseCookie;
       const expected = [
-        'full=example',
+        `${cookie.name}=${cookie.value}`,
         `Expires=${fixedDate.toUTCString()}`,
-        'Max-Age=86400',
-        'Domain=test.com',
-        'Path=/',
+        `Max-Age=${cookie.maxAge}`,
+        `Domain=${cookie.domain}`,
+        `Path=${cookie.path}`,
         'Secure',
         'HttpOnly',
-        'SameSite=Strict',
+        `SameSite=${cookie.sameSite}`,
       ].join('; ');
       expect(createCookie(cookie)).toBe(expected);
     });
 
     it('should only include specified options', () => {
-      const cookie: ResponseCookie = {
-        name: 'partial',
-        value: 'opts',
-        maxAge: 100,
-        secure: true,
-      };
-      expect(createCookie(cookie)).toBe('partial=opts; Max-Age=100; Secure');
+      const cookie = { name: 'a', value: 'b', maxAge: 100, secure: true } satisfies ResponseCookie;
+      expect(createCookie(cookie)).toBe(
+        `${cookie.name}=${cookie.value}; Max-Age=${cookie.maxAge}; Secure`
+      );
     });
   });
 
@@ -246,13 +256,15 @@ describe('cookieUtils', () => {
     });
 
     it('should URI decode names and values', () => {
-      const key1 = encodeURIComponent('k e y 1');
-      const val1 = encodeURIComponent('v a l 1');
-      const key2 = encodeURIComponent('k e y 2');
-      const val2 = encodeURIComponent('v a l 2');
+      const cookie1 = { name: 'k e y 1', value: 'v a l 1' } satisfies RequestCookie;
+      const cookie2 = { name: 'k e y 2', value: 'v a l 2' } satisfies RequestCookie;
+      const key1 = encodeURIComponent(cookie1.name);
+      const val1 = encodeURIComponent(cookie1.value);
+      const key2 = encodeURIComponent(cookie2.name);
+      const val2 = encodeURIComponent(cookie2.value);
       expect(parseCookies(`${key1}=${val1}; ${key2}=${val2}`)).toEqual({
-        'k e y 1': 'v a l 1',
-        'k e y 2': 'v a l 2',
+        [cookie1.name]: cookie1.value,
+        [cookie2.name]: cookie2.value,
       });
     });
 
@@ -286,46 +298,45 @@ describe('cookieUtils', () => {
 
   describe('removeCookie', () => {
     it('should return a cookie string that expires the cookie with basic options', () => {
-      const options: CookieOptions = { name: 'session' };
+      const options: CookieOptions = { name: 'a' };
       const result = removeCookie(options);
-      expect(result).toContain('session=');
+      expect(result).toContain(`${options.name}=;`);
       expect(result).toContain('Max-Age=-1');
     });
 
     it('should preserve other options like path and domain', () => {
       const options: CookieOptions = {
-        name: 'userToken',
+        name: 'a',
         path: '/app',
         domain: '.example.com',
       };
       const result = removeCookie(options);
-      expect(result).toContain('userToken=');
+      expect(result).toContain(`${options.name}=;`);
       expect(result).toContain('Max-Age=-1');
       expect(result).toContain('Path=/app');
       expect(result).toContain('Domain=.example.com');
     });
 
     it('should also set expires to a past date implicitly via Max-Age=-1', () => {
-      const options: CookieOptions = { name: 'oldCookie', secure: true };
+      const options: CookieOptions = { name: 'a', secure: true };
       const result = removeCookie(options);
-      expect(result).toBe('oldCookie=; Max-Age=-1; Secure');
+      expect(result).toBe(`${options.name}=; Max-Age=-1; Secure`);
     });
 
-    // TODO: check if this is correct
-    // it('should overwrite existing value and maxAge/expires if passed in options', () => {
-    //   const options: CookieOptions = {
-    //     name: 'toBeRemoved',
-    //     maxAge: 3600,
-    //     expires: new Date(Date.now() + 100000).toISOString(),
-    //     path: '/test',
-    //   };
-    //   const result = removeCookie(options);
+    it('should overwrite existing value and maxAge/expires if passed in options', () => {
+      const options: CookieOptions = {
+        name: 'a',
+        maxAge: 3600,
+        expires: new Date(Date.now() + 100000).toISOString(),
+        path: '/test',
+      };
+      const result = removeCookie(options);
 
-    //   expect(result).toContain('toBeRemoved=');
-    //   expect(result).toContain('Max-Age=-1');
-    //   expect(result).toContain('Path=/test');
-    //   expect(result).not.toContain('Expires=');
-    //   expect(result).not.toContain('someImportantValue');
-    // });
+      expect(result).toContain(`${options.name}=;`);
+      expect(result).toContain('Max-Age=-1');
+      expect(result).toContain(`Path=${options.path}`);
+      expect(result).toContain('Expires=');
+      expect(result).not.toContain('someImportantValue');
+    });
   });
 });

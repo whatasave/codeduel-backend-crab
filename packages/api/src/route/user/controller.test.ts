@@ -6,7 +6,7 @@ import type { UserRepository } from './repository';
 import { Router, type PathString } from '@codeduel-backend-crab/server';
 
 describe('Route.User.Controller', () => {
-  let serv: UserService;
+  let service: UserService;
   let controller: UserController;
   const mockUser: User = {
     id: 3,
@@ -36,9 +36,9 @@ describe('Route.User.Controller', () => {
   ];
 
   beforeAll(() => {
-    const repo = {} as UserRepository;
-    serv = new UserService(repo);
-    controller = new UserController(serv);
+    const repository = {} as UserRepository;
+    service = new UserService(repository);
+    controller = new UserController(service);
   });
 
   afterEach(() => {
@@ -56,7 +56,7 @@ describe('Route.User.Controller', () => {
   });
 
   test('should return all the users', async () => {
-    const allSpy = spyOn(serv, 'all').mockResolvedValue(mockUsers);
+    const allSpy = spyOn(service, 'all').mockResolvedValue(mockUsers);
 
     const users = await controller.users.handler({
       method: 'GET',
@@ -76,7 +76,7 @@ describe('Route.User.Controller', () => {
   });
 
   test('should return a user by username', async () => {
-    const byUsernameSpy = spyOn(serv, 'byUsername').mockResolvedValue(mockUser);
+    const byUsernameSpy = spyOn(service, 'byUsername').mockResolvedValue(mockUser);
 
     const users = await controller.users.handler({
       method: 'GET',
@@ -96,7 +96,7 @@ describe('Route.User.Controller', () => {
   });
 
   test('should return a user by id', async () => {
-    const byIdSpy = spyOn(serv, 'byId').mockResolvedValue(mockUser);
+    const byIdSpy = spyOn(service, 'byId').mockResolvedValue(mockUser);
 
     const users = await controller.byId.handler({
       method: 'GET',
@@ -116,7 +116,7 @@ describe('Route.User.Controller', () => {
   });
 
   test('should return a user profile', async () => {
-    const byId = spyOn(serv, 'byId').mockResolvedValue(mockUser);
+    const byIdSpy = spyOn(service, 'byId').mockResolvedValue(mockUser);
 
     const users = await controller.profile.handler({
       method: 'GET',
@@ -124,13 +124,11 @@ describe('Route.User.Controller', () => {
       query: {},
       params: {},
       body: undefined,
-      headers: new Headers({
-        authorization: 'Bearer token_value',
-      }),
+      headers: new Headers({ authorization: 'Bearer token_value' }),
     });
 
-    expect(byId).toHaveBeenCalledWith(mockUser.id);
-    expect(byId).toHaveBeenCalledTimes(1);
+    expect(byIdSpy).toHaveBeenCalledWith(mockUser.id);
+    expect(byIdSpy).toHaveBeenCalledTimes(1);
 
     expect(users.status).toEqual(200);
     expect(users.headers).toBeUndefined();

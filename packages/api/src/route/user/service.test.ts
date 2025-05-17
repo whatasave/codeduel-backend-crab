@@ -6,8 +6,8 @@ import type { Database } from '@codeduel-backend-crab/database';
 
 describe('Route.User.Service', () => {
   let db: Database;
-  let repo: UserRepository;
-  let serv: UserService;
+  let repository: UserRepository;
+  let service: UserService;
   const mockUser: User = {
     id: 3,
     username: 'ceasar',
@@ -37,8 +37,8 @@ describe('Route.User.Service', () => {
 
   beforeAll(() => {
     db = {} as Database;
-    repo = new UserRepository(db);
-    serv = new UserService(repo);
+    repository = new UserRepository(db);
+    service = new UserService(repository);
   });
 
   afterEach(() => {
@@ -46,8 +46,8 @@ describe('Route.User.Service', () => {
   });
 
   test('should return all the users', async () => {
-    const spyAll = spyOn(repo, 'all').mockResolvedValue(mockUsers);
-    const users = await serv.all();
+    const spyAll = spyOn(repository, 'all').mockResolvedValue(mockUsers);
+    const users = await service.all();
 
     expect(spyAll).toHaveBeenCalledWith();
     expect(spyAll).toHaveBeenCalledTimes(1);
@@ -55,8 +55,8 @@ describe('Route.User.Service', () => {
   });
 
   test('should return a user with the same username', async () => {
-    const spyByUsername = spyOn(repo, 'byUsername').mockResolvedValue(mockUser);
-    const user = await serv.byUsername(mockUser.username);
+    const spyByUsername = spyOn(repository, 'byUsername').mockResolvedValue(mockUser);
+    const user = await service.byUsername(mockUser.username);
 
     expect(spyByUsername).toHaveBeenCalledWith(mockUser.username);
     expect(spyByUsername).toHaveBeenCalledTimes(1);
@@ -64,8 +64,8 @@ describe('Route.User.Service', () => {
   });
 
   test('should return the user with the same id', async () => {
-    const spyById = spyOn(repo, 'byId').mockResolvedValue(mockUser);
-    const user = await serv.byId(mockUser.id);
+    const spyById = spyOn(repository, 'byId').mockResolvedValue(mockUser);
+    const user = await service.byId(mockUser.id);
 
     expect(spyById).toHaveBeenCalledWith(mockUser.id);
     expect(spyById).toHaveBeenCalledTimes(1);
@@ -75,8 +75,8 @@ describe('Route.User.Service', () => {
   describe('should create user', () => {
     test('with only required attributes', async () => {
       const newUser = { username: mockUser.username } satisfies CreateUser;
-      const spyCreate = spyOn(repo, 'create').mockResolvedValue(mockUser);
-      const savedUser = await serv.create(newUser);
+      const spyCreate = spyOn(repository, 'create').mockResolvedValue(mockUser);
+      const savedUser = await service.create(newUser);
 
       expect(spyCreate).toHaveBeenCalledWith(newUser);
       expect(spyCreate).toHaveBeenCalledTimes(1);
@@ -93,8 +93,8 @@ describe('Route.User.Service', () => {
         biography: mockUser.biography,
       } satisfies CreateUser;
 
-      const spyCreate = spyOn(repo, 'create').mockResolvedValue(mockUser);
-      const savedUser = await serv.create(newUser);
+      const spyCreate = spyOn(repository, 'create').mockResolvedValue(mockUser);
+      const savedUser = await service.create(newUser);
 
       expect(spyCreate).toHaveBeenCalledWith(newUser);
       expect(spyCreate).toHaveBeenCalledTimes(1);

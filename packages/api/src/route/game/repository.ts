@@ -195,7 +195,7 @@ export class GameRepository {
       maxPlayers: game.max_players,
       allowedLanguages: game.allowed_languages as string[],
       duration: game.duration,
-      endedAt: game.ended_at ? game.ended_at.toISOString() : undefined,
+      endedAt: game.ended_at ?? undefined,
     };
   }
 
@@ -233,7 +233,7 @@ export class GameRepository {
       language: gameUser.language ?? undefined,
       testsPassed: gameUser.tests_passed,
       showCode: gameUser.show_code,
-      submittedAt: gameUser.submitted_at?.toISOString() ?? undefined,
+      submittedAt: gameUser.submitted_at ?? undefined,
     };
   }
 }

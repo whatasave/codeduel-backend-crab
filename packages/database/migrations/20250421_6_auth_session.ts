@@ -16,8 +16,12 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('ip', 'varchar(255)')
     .addColumn('user_agent', 'varchar(255)')
     .addColumn('provider', 'varchar(255)', (col) => col.notNull())
-    .addColumn('created_at', 'timestamp', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
-    .addColumn('updated_at', 'timestamp', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+    .addColumn('created_at', 'timestamptz', (col) =>
+      col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+    )
+    .addColumn('updated_at', 'timestamptz', (col) =>
+      col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+    )
     .execute();
 
   await createTrigger(db);

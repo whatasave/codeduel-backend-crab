@@ -120,8 +120,8 @@ export class ChallengeRepository {
       title: challenge.title,
       description: challenge.description,
       content: challenge.content,
-      createdAt: challenge.created_at.toISOString(),
-      updatedAt: challenge.updated_at.toISOString(),
+      createdAt: challenge.created_at,
+      updatedAt: challenge.updated_at,
       testCases: challenge.test_cases,
     };
   }
@@ -135,8 +135,8 @@ export class ChallengeRepository {
       title: challenge.title,
       description: challenge.description,
       content: challenge.content,
-      createdAt: challenge.created_at.toISOString(),
-      updatedAt: challenge.updated_at.toISOString(),
+      createdAt: challenge.created_at,
+      updatedAt: challenge.updated_at,
     };
   }
 
@@ -147,8 +147,8 @@ export class ChallengeRepository {
       title: challenge.title,
       description: challenge.description,
       content: challenge.content,
-      createdAt: challenge.created_at.toISOString(),
-      updatedAt: challenge.updated_at.toISOString(),
+      createdAt: challenge.created_at,
+      updatedAt: challenge.updated_at,
     };
   }
 }

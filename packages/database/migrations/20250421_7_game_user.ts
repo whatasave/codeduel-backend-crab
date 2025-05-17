@@ -14,7 +14,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('language', 'varchar(64)')
     .addColumn('tests_passed', 'integer', (col) => col.notNull().defaultTo(0))
     .addColumn('show_code', 'boolean', (col) => col.notNull().defaultTo(false))
-    .addColumn('submitted_at', 'timestamp')
+    .addColumn('submitted_at', 'timestamptz')
     .addPrimaryKeyConstraint('pk_game_user', ['game_id', 'user_id'])
     .execute();
 }

@@ -21,7 +21,8 @@ export class GameService {
   }
 
   async updateSubmission(updateGameUser: UpdateGameUser): Promise<void> {
-    await this.gameRepository.updateUser(updateGameUser, new Date().toISOString());
+    const submittedAt = new Date().toISOString();
+    await this.gameRepository.updateUser(updateGameUser, submittedAt);
   }
 
   async shareCode(shareCode: ShareCode): Promise<void> {

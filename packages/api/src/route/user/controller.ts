@@ -3,16 +3,22 @@ import { Type } from '@sinclair/typebox';
 import { validated } from '@codeduel-backend-crab/server/validation';
 import type { UserService } from './service';
 import { User } from './data';
-import { checkRole } from '../../middleware/checkRole';
-import { createRequireAuth } from '../../middleware/requireAuth';
+import type { AuthService } from '../auth/service';
+import { requireAuth } from '../auth/middleware';
 
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly authService: AuthService
+  ) {}
 
   setup(group: RouterGroup): void {
+    const authGroup = group.group({ middlewares: [requireAuth(this.authService)] });
+
     group.route(this.byId);
     group.route(this.users);
-    group.route(this.profile);
+
+    authGroup.route(this.profile);
   }
 
   users = validated({
@@ -68,7 +74,6 @@ export class UserController {
       request: {},
       response: {},
     },
-    middlewares: [createRequireAuth(this.config), checkRole('user')],
     handler: async () => {
       return internalServerError({ error: 'Path not implemented' });
     },

@@ -8,13 +8,17 @@ import type { Config as AuthConfig } from '../config';
 import type { Auth } from '../data';
 import type { User } from '../../user/data';
 import type { GitlabAccessToken, GitlabUserData } from './data';
-import { Router, type PathString } from '@codeduel-backend-crab/server';
 import { GitlabController } from './controller';
+import { Router } from '@glass-cannon/router';
+import { typebox } from '@glass-cannon/typebox';
+import { ReadableStream } from 'node:stream/web';
+import { responseBodyToJson } from '../../../utils/stream';
 
 describe('Route.Auth.Gitlab.Controller', () => {
   let service: GitlabService;
   let authService: AuthService;
   let controller: GitlabController;
+  let router: Router;
   const config = {
     gitlab: {
       stateCookie: { name: 'gitlab-state-cookie' } as CookieOptions,
@@ -36,20 +40,16 @@ describe('Route.Auth.Gitlab.Controller', () => {
     authService = new AuthService(authRepository, config);
     service = new GitlabService(authService, config.gitlab);
     controller = new GitlabController(service, authService);
+    router = new Router({
+      fallback: () => {
+        throw new Error('Route not handled');
+      },
+    });
+    controller.setup(typebox(router));
   });
 
   afterEach(() => {
     jest.clearAllMocks();
-  });
-
-  test('should set up routes', async () => {
-    const router = new Router();
-    controller.setup(router.group({ prefix: '/' }));
-    const routes = [...router.allRoutes()].map((r) => r.path);
-    const expectedRoutes = ['/', '/callback'].sort() as PathString[];
-
-    expect(routes).toHaveLength(expectedRoutes.length);
-    expect(routes.sort()).toEqual(expectedRoutes);
   });
 
   describe('GET /', () => {
@@ -72,12 +72,12 @@ describe('Route.Auth.Gitlab.Controller', () => {
     });
 
     test('should redirects to gitlab login page', async () => {
-      const response = await controller.login.handler({
+      const response = await router.handle({
         method: 'GET',
-        path: '/',
-        query: { redirect: redirectUrl },
-        params: {},
-        body: undefined,
+        url: new URL(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
+        ),
+        stream: new ReadableStream(),
         headers: new Headers(mockHeader),
       });
 
@@ -95,18 +95,17 @@ describe('Route.Auth.Gitlab.Controller', () => {
       expect(response.status).toEqual(307);
       if (!response.headers) throw new Error('Response headers are undefined');
       expect(response.headers.get('location')).toEqual(authorizationUrl);
-      expect(response.headers.get('content-type')).toEqual('text/plain');
       expect(response.headers.get('set-cookie')).toEqual(stateCookie);
-      expect(response.body).toEqual(`Redirecting to ${authorizationUrl}`);
+      expect(await responseBodyToJson(response.body)).toEqual(`Redirecting to ${authorizationUrl}`);
     });
 
     test('should redirects without IP and User-Agent', async () => {
-      await controller.login.handler({
+      await router.handle({
         method: 'GET',
-        path: '/',
-        query: { redirect: redirectUrl },
-        params: {},
-        body: undefined,
+        url: new URL(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
+        ),
+        stream: new ReadableStream(),
         headers: new Headers({}),
       });
 
@@ -120,12 +119,12 @@ describe('Route.Auth.Gitlab.Controller', () => {
 
     test('should redirects using x-real-ip header', async () => {
       const mockHeader = { 'x-real-ip': '9.11.69.420' };
-      await controller.login.handler({
+      await router.handle({
         method: 'GET',
-        path: '/',
-        query: { redirect: redirectUrl },
-        params: {},
-        body: undefined,
+        url: new URL(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
+        ),
+        stream: new ReadableStream(),
         headers: new Headers(mockHeader),
       });
 
@@ -139,12 +138,12 @@ describe('Route.Auth.Gitlab.Controller', () => {
 
     test('should prioritizes x-real-ip over x-forwarded-for', async () => {
       const mockHeader = { 'x-real-ip': '9.11.69.420', 'x-forwarded-for': '9.11.69.421' };
-      await controller.login.handler({
+      await router.handle({
         method: 'GET',
-        path: '/',
-        query: { redirect: redirectUrl },
-        params: {},
-        body: undefined,
+        url: new URL(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
+        ),
+        stream: new ReadableStream(),
         headers: new Headers(mockHeader),
       });
 
@@ -159,12 +158,12 @@ describe('Route.Auth.Gitlab.Controller', () => {
     test('should select correct IP from x-forwarded-for chain', async () => {
       const rightIp = '9.11.69.420';
       const mockHeader = { 'x-forwarded-for': `${rightIp},9.11.69.421,9.11.69.422` };
-      await controller.login.handler({
+      await router.handle({
         method: 'GET',
-        path: '/',
-        query: { redirect: redirectUrl },
-        params: {},
-        body: undefined,
+        url: new URL(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
+        ),
+        stream: new ReadableStream(),
         headers: new Headers(mockHeader),
       });
 
@@ -240,12 +239,13 @@ describe('Route.Auth.Gitlab.Controller', () => {
     });
 
     test('should sets refresh and access token cookies correctly', async () => {
-      const response = await controller.callback.handler({
+      const response = await router.handle({
         method: 'GET',
-        path: '/callback',
-        query: { code: mockCode, state: mockStateString },
-        params: {},
-        body: undefined,
+        url: new URL(
+          'http://localhost/callback?' +
+            new URLSearchParams({ code: mockCode, state: mockStateString }).toString()
+        ),
+        stream: new ReadableStream(),
         headers: new Headers(mockHeaders),
       });
 
@@ -278,11 +278,12 @@ describe('Route.Auth.Gitlab.Controller', () => {
       expect(response.status).toEqual(307);
       if (!response.headers) throw new Error('Response headers are undefined');
       expect(response.headers.get('location')).toEqual(mockState.redirect);
-      expect(response.headers.get('content-type')).toEqual('text/plain');
       expect(response.headers.get('set-cookie')).toEqual(
         `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
       );
-      expect(response.body).toEqual(`Redirecting to ${mockState.redirect}`);
+      expect(await responseBodyToJson(response.body)).toEqual(
+        `Redirecting to ${mockState.redirect}`
+      );
     });
   });
 });

@@ -5,7 +5,7 @@ import type { AuthRepository } from '../repository';
 import type { CookieOptions } from '../../../utils/cookie';
 import type { Config as GithubConfig } from './config';
 import type { Config as AuthConfig } from '../config';
-import type { Auth, CreateAuthSession } from '../data';
+import type { Auth, AuthSession, CreateAuthSession } from '../data';
 import type { User } from '../../user/data';
 import type { GithubAccessToken, GithubUserData } from './data';
 
@@ -197,7 +197,9 @@ describe('Route.Auth.Github.Service', () => {
       provider: 'github',
     } satisfies CreateAuthSession;
 
-    const spyCreateSession = spyOn(authService, 'createSession').mockResolvedValue();
+    const spyCreateSession = spyOn(authService, 'createSession').mockResolvedValue(
+      {} as unknown as AuthSession
+    );
     await service.createSession(
       mockCreateSession.userId,
       mockCreateSession.tokenId,

@@ -7,13 +7,17 @@ import type { UserRepository } from '../user/repository';
 import type { Config } from './config';
 import type { CookieOptions } from '../../utils/cookie';
 import type { AuthSession, JwtRefreshToken } from './data';
-import { Router, type PathString } from '@codeduel-backend-crab/server';
 import type { User } from '../user/data';
+import { Router } from '@glass-cannon/router';
+import { typebox } from '@glass-cannon/typebox';
+import { ReadableStream } from 'node:stream/web';
+import { responseBodyToJson } from '../../utils/stream';
 
 describe('Route.Auth.Controller', () => {
   let service: AuthService;
   let userService: UserService;
   let controller: AuthController;
+  let router: Router;
   const config = {
     accessToken: {
       cookie: { name: 'access-token' } as CookieOptions,
@@ -29,39 +33,27 @@ describe('Route.Auth.Controller', () => {
     service = new AuthService(repository, config);
     userService = new UserService(userRepository);
     controller = new AuthController(service, userService, config);
+    router = new Router();
+    controller.setup(typebox(router));
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  test('should set up routes', async () => {
-    const router = new Router();
-    controller.setup(router.group({ prefix: '/' }));
-    const routes = [...router.allRoutes()].map((r) => r.path);
-    const filteredRoutes = routes.filter(
-      (r) => r && !r.includes('/github') && !r.includes('/gitlab')
-    );
-    const expectedRoutes = ['/validate', '/refresh', '/logout'].sort() as PathString[];
-    expect(filteredRoutes).toHaveLength(expectedRoutes.length);
-    expect(filteredRoutes.sort()).toEqual(expectedRoutes);
-  });
-
   test('should verify token', async () => {
-    const response = await controller.validate.handler({
+    const response = await router.handle({
       method: 'GET',
-      path: '/validate',
-      query: {},
-      params: {},
-      body: undefined,
+      url: new URL('http://localhost/validate'),
+      stream: new ReadableStream(),
       headers: new Headers({}),
     });
 
     expect(response.status).toEqual(500);
-    expect(response.body).toEqual({ error: 'Path not implemented' });
+    expect(await responseBodyToJson(response.body)).toEqual({ error: 'Path not implemented' });
   });
 
-  describe('GET /refresh', () => {
+  describe('POST /refresh', () => {
     const mockDate = new Date('2023-10-01T12:00:00Z').toISOString();
     const mockAccessToken = 'access-token';
     const mockRefreshToken = 'refresh-token';
@@ -110,12 +102,10 @@ describe('Route.Auth.Controller', () => {
     });
 
     test('should refresh access and refresh token', async () => {
-      const response = await controller.refresh.handler({
-        method: 'GET',
-        path: '/refresh',
-        query: {},
-        params: {},
-        body: undefined,
+      const response = await router.handle({
+        method: 'POST',
+        url: new URL('http://localhost/refresh'),
+        stream: new ReadableStream(),
         headers: new Headers(mockHeaders),
       });
 
@@ -145,12 +135,10 @@ describe('Route.Auth.Controller', () => {
     });
 
     test('should logout user due to a failed refresh token', async () => {
-      const response = await controller.refresh.handler({
-        method: 'GET',
-        path: '/refresh',
-        query: {},
-        params: {},
-        body: undefined,
+      const response = await router.handle({
+        method: 'POST',
+        url: new URL('http://localhost/refresh'),
+        stream: new ReadableStream(),
         headers: new Headers({}),
       });
 
@@ -163,7 +151,7 @@ describe('Route.Auth.Controller', () => {
     });
   });
 
-  describe('GET /logout', () => {
+  describe('POST /logout', () => {
     const mockJwtRefreshToken: JwtRefreshToken = {
       iss: 'codeduel.it',
       aud: 'codeduel.it',
@@ -188,12 +176,10 @@ describe('Route.Auth.Controller', () => {
       const mockHeaders = {
         cookie: `${config.accessToken.cookie.name}=${mockAccessToken}; ${config.refreshToken.cookie.name}=${mockRefreshToken}`,
       };
-      const response = await controller.logout.handler({
-        method: 'GET',
-        path: '/logout',
-        query: {},
-        params: {},
-        body: undefined,
+      const response = await router.handle({
+        method: 'POST',
+        url: new URL('http://localhost/logout'),
+        stream: new ReadableStream(),
         headers: new Headers(mockHeaders),
       });
 
@@ -211,12 +197,10 @@ describe('Route.Auth.Controller', () => {
         cookie: `${config.accessToken.cookie.name}=${mockAccessToken}; ${config.refreshToken.cookie.name}=${mockRefreshToken}`,
       };
 
-      const response = await controller.logout.handler({
-        method: 'GET',
-        path: '/logout',
-        query: {},
-        params: {},
-        body: undefined,
+      const response = await router.handle({
+        method: 'POST',
+        url: new URL('http://localhost/logout'),
+        stream: new ReadableStream(),
         headers: new Headers(mockHeaders),
       });
 

@@ -1,4 +1,5 @@
-import { validated } from '@codeduel-backend-crab/server/validation';
+import type { TypeBoxGroup } from '@glass-cannon/typebox';
+import { route } from '../../utils/route';
 import {
   ChallengeWithUser,
   ChallengeWithUserAndTestCases,
@@ -8,34 +9,24 @@ import {
 } from './data';
 import type { ChallengeService } from './service';
 import { Type } from '@sinclair/typebox';
-import {
-  conflict,
-  created,
-  noContent,
-  notFound,
-  ok,
-  type RouterGroup,
-} from '@codeduel-backend-crab/server';
 
 export class ChallengeController {
   constructor(private readonly challengeService: ChallengeService) {}
 
-  setup(group: RouterGroup): void {
-    group.route(this.byId);
-    group.route(this.all);
-    group.route(this.create);
-    group.route(this.update);
-    group.route(this.delete);
-    group.route(this.random);
+  setup(group: TypeBoxGroup): void {
+    this.byId(group);
+    this.all(group);
+    this.create(group);
+    this.update(group);
+    this.delete(group);
+    this.random(group);
   }
 
-  byId = validated({
+  byId = route({
     method: 'GET',
     path: '/:id',
     schema: {
-      request: {
-        params: { id: Type.Number() },
-      },
+      params: { id: Type.Number() },
       response: {
         200: ChallengeWithUserAndTestCases,
         404: Type.Undefined(),
@@ -44,12 +35,12 @@ export class ChallengeController {
     handler: async ({ params }) => {
       const { id } = params;
       const challenge = await this.challengeService.byId(id);
-      if (!challenge) return notFound();
-      return ok(challenge);
+      if (!challenge) return { status: 404 };
+      return { status: 200, body: challenge };
     },
   });
 
-  all = validated({
+  all = route({
     method: 'GET',
     path: '/',
     schema: {
@@ -59,17 +50,15 @@ export class ChallengeController {
       },
     },
     handler: async () => {
-      return ok(await this.challengeService.all());
+      return { status: 200, body: await this.challengeService.all() };
     },
   });
 
-  create = validated({
+  create = route({
     method: 'POST',
     path: '/',
     schema: {
-      request: {
-        body: CreateChallenge,
-      },
+      body: CreateChallenge,
       response: {
         201: Challenge,
         409: Type.Undefined(),
@@ -77,18 +66,16 @@ export class ChallengeController {
     },
     handler: async ({ body }) => {
       const challenge = await this.challengeService.create(body);
-      if (!challenge) return conflict();
-      return created(challenge);
+      if (!challenge) return { status: 409 };
+      return { status: 201, body: challenge };
     },
   });
 
-  update = validated({
+  update = route({
     method: 'PUT',
     path: '/',
     schema: {
-      request: {
-        body: UpdateChallenge,
-      },
+      body: UpdateChallenge,
       response: {
         200: Challenge,
         404: Type.Undefined(),
@@ -96,18 +83,16 @@ export class ChallengeController {
     },
     handler: async ({ body }) => {
       const challenge = await this.challengeService.update(body);
-      if (!challenge) return notFound();
-      return ok(challenge);
+      if (!challenge) return { status: 404 };
+      return { status: 200, body: challenge };
     },
   });
 
-  delete = validated({
+  delete = route({
     method: 'DELETE',
     path: '/:id',
     schema: {
-      request: {
-        params: { id: Type.Number() },
-      },
+      params: { id: Type.Number() },
       response: {
         204: Type.Undefined(),
         404: Type.Undefined(),
@@ -116,16 +101,15 @@ export class ChallengeController {
     handler: async ({ params }) => {
       const { id } = params;
       const deleted = await this.challengeService.delete(id);
-      if (!deleted) return notFound();
-      return noContent();
+      if (!deleted) return { status: 404 };
+      return { status: 204 };
     },
   });
 
-  random = validated({
+  random = route({
     method: 'GET',
     path: '/random',
     schema: {
-      request: {},
       response: {
         200: ChallengeWithUserAndTestCases,
         404: Type.Undefined(),
@@ -133,8 +117,8 @@ export class ChallengeController {
     },
     handler: async () => {
       const challenge = await this.challengeService.random();
-      if (!challenge) return notFound();
-      return ok(challenge);
+      if (!challenge) return { status: 404 };
+      return { status: 200, body: challenge };
     },
   });
 }

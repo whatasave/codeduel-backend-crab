@@ -35,6 +35,7 @@ export class RootController {
   private readonly challengeController: ChallengeController;
   private readonly authController: AuthController;
   private readonly gameController: GameController;
+  private readonly authMiddleware: AuthMiddleware;
 
   constructor(database: Database, config: Config) {
     this.userRepository = new UserRepository(database);
@@ -48,9 +49,11 @@ export class RootController {
     this.authService = new AuthService(this.authRepository, config.auth);
     this.gameService = new GameService(this.gameRepository);
 
+    this.authMiddleware = new AuthMiddleware(this.authService);
+
     this.redocController = new RedocController();
     this.healthController = new HealthController(this.healthService);
-    this.userController = new UserController(this.userService);
+    this.userController = new UserController(this.userService, this.authMiddleware);
     this.challengeController = new ChallengeController(this.challengeService);
     this.authController = new AuthController(this.authService, this.userService, config.auth);
     this.gameController = new GameController(this.gameService);

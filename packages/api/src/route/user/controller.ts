@@ -9,16 +9,13 @@ import { requireAuth } from '../auth/middleware';
 export class UserController {
   constructor(
     private readonly userService: UserService,
-    private readonly authService: AuthService
+    private readonly authMiddleware: AuthMiddleware
   ) {}
 
   setup(group: RouterGroup): void {
-    const authGroup = group.group({ middlewares: [requireAuth(this.authService)] });
-
     group.route(this.byId);
     group.route(this.users);
-
-    authGroup.route(this.profile);
+    group.route(this.profile);
   }
 
   users = validated({
@@ -70,6 +67,7 @@ export class UserController {
   profile = validated({
     method: 'GET',
     path: '/profile',
+    middlewares: [this.authMiddleware.requireAuth(), this.authMiddleware.requireRole('user:read')],
     schema: {
       request: {},
       response: {},

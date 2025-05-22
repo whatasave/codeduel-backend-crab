@@ -71,9 +71,10 @@ export class GameRepository {
             eb
               .selectFrom('challenge')
               .orderBy(sql`RANDOM()`)
-              .limit(1),
+              .limit(1)
+              .select('id'),
           max_players: createGame.maxPlayers,
-          allowed_languages: createGame.allowedLanguages,
+          allowed_languages: JSON.stringify(createGame.allowedLanguages),
           duration: createGame.duration,
         }))
         .returningAll()
@@ -99,7 +100,7 @@ export class GameRepository {
     });
   }
 
-  async updateUser(updateGameUser: UpdateGameUser): Promise<void> {
+  async updateUser(updateGameUser: UpdateGameUser, submittedAt: string): Promise<void> {
     await this.db
       .updateTable('game_user')
       .where('game_id', '=', updateGameUser.gameId)
@@ -108,7 +109,7 @@ export class GameRepository {
         code: updateGameUser.code,
         language: updateGameUser.language,
         tests_passed: updateGameUser.testsPassed,
-        submitted_at: updateGameUser.submittedAt,
+        submitted_at: submittedAt,
       })
       .execute();
   }
@@ -123,10 +124,10 @@ export class GameRepository {
 
   async shareCode(shareCode: ShareCode): Promise<void> {
     await this.db
-      .insertInto('game_user')
-      .values({
-        game_id: shareCode.gameId,
-        user_id: shareCode.userId,
+      .updateTable('game_user')
+      .where('game_id', '=', shareCode.gameId)
+      .where('user_id', '=', shareCode.userId)
+      .set({
         show_code: shareCode.showCode,
       })
       .execute();
@@ -195,7 +196,7 @@ export class GameRepository {
       maxPlayers: game.max_players,
       allowedLanguages: game.allowed_languages as string[],
       duration: game.duration,
-      endedAt: game.ended_at ? game.ended_at.toISOString() : undefined,
+      endedAt: game.ended_at ?? undefined,
     };
   }
 
@@ -233,7 +234,7 @@ export class GameRepository {
       language: gameUser.language ?? undefined,
       testsPassed: gameUser.tests_passed,
       showCode: gameUser.show_code,
-      submittedAt: gameUser.submitted_at?.toISOString() ?? undefined,
+      submittedAt: gameUser.submitted_at ?? undefined,
     };
   }
 }

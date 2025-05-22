@@ -1,30 +1,28 @@
-import { created, noContent, notFound, ok, type RouterGroup } from '@codeduel-backend-crab/server';
 import type { GameService } from './service';
-import { validated } from '@codeduel-backend-crab/server/validation';
 import { CreateGame, Game, GameOfUser, GameWithUserData, ShareCode, UpdateGameUser } from './data';
 import { Type } from '@sinclair/typebox';
 import { User } from '../user/data';
+import { route } from '../../utils/route';
+import type { TypeBoxGroup } from '@glass-cannon/typebox';
 
 export class GameController {
   constructor(private readonly gameService: GameService) {}
 
-  setup(group: RouterGroup): void {
-    group.route(this.byId);
-    group.route(this.create);
-    group.route(this.submit);
-    group.route(this.endGame);
-    group.route(this.shareCode);
-    group.route(this.byUserId);
+  setup(group: TypeBoxGroup): void {
+    this.byId(group);
+    this.create(group);
+    this.submit(group);
+    this.endGame(group);
+    this.shareCode(group);
+    this.byUserId(group);
   }
 
-  byId = validated({
+  byId = route({
     method: 'GET',
     path: '/:id',
     schema: {
-      request: {
-        params: {
-          id: Game.properties.id,
-        },
+      params: {
+        id: Game.properties.id,
       },
       response: {
         200: GameWithUserData,
@@ -33,19 +31,17 @@ export class GameController {
     },
     handler: async ({ params }) => {
       const game = await this.gameService.byId(params.id);
-      if (!game) return notFound();
+      if (!game) return { status: 404 };
 
-      return ok(game);
+      return { status: 200, body: game };
     },
   });
 
-  create = validated({
+  create = route({
     method: 'POST',
     path: '/',
     schema: {
-      request: {
-        body: CreateGame,
-      },
+      body: CreateGame,
       response: {
         201: GameWithUserData,
       },
@@ -53,35 +49,32 @@ export class GameController {
     handler: async ({ body }) => {
       const game = await this.gameService.create(body);
 
-      return created(game);
+      return { status: 201, body: game };
     },
   });
 
-  submit = validated({
+  submit = route({
     method: 'POST',
     path: '/submit',
     schema: {
-      request: {
-        body: UpdateGameUser,
-      },
+      body: UpdateGameUser,
       response: {
         204: Type.Undefined(),
       },
     },
     handler: async ({ body }) => {
       await this.gameService.updateSubmission(body);
-      return noContent();
+
+      return { status: 204 };
     },
   });
 
-  endGame = validated({
+  endGame = route({
     method: 'POST',
     path: '/:id/end',
     schema: {
-      request: {
-        params: {
-          id: User.properties.id,
-        },
+      params: {
+        id: User.properties.id,
       },
       response: {
         204: Type.Undefined(),
@@ -89,35 +82,33 @@ export class GameController {
     },
     handler: async ({ params }) => {
       await this.gameService.endGame(params.id);
-      return noContent();
+
+      return { status: 204 };
     },
   });
 
-  shareCode = validated({
+  shareCode = route({
     method: 'POST',
     path: '/sharecode',
     schema: {
-      request: {
-        body: ShareCode,
-      },
+      body: ShareCode,
       response: {
         204: Type.Undefined(),
       },
     },
     handler: async ({ body }) => {
       await this.gameService.shareCode(body);
-      return noContent();
+
+      return { status: 204 };
     },
   });
 
-  byUserId = validated({
+  byUserId = route({
     method: 'GET',
     path: '/user/:id',
     schema: {
-      request: {
-        params: {
-          id: User.properties.id,
-        },
+      params: {
+        id: User.properties.id,
       },
       response: {
         200: Type.Array(GameOfUser),
@@ -125,7 +116,8 @@ export class GameController {
     },
     handler: async ({ params }) => {
       const games = await this.gameService.byUserId(params.id);
-      return ok(games);
+
+      return { status: 200, body: games };
     },
   });
 }

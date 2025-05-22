@@ -1,42 +1,48 @@
 import type { HealthService } from './service';
 import { Type } from '@sinclair/typebox';
 import { LivenessStatus, ReadinessStatus } from './data';
-import { validated } from '@codeduel-backend-crab/server/validation';
-import { ok, type RouterGroup } from '@codeduel-backend-crab/server';
+import type { TypeBoxGroup } from '@glass-cannon/typebox';
+import { route } from '../../utils/route';
 
 export class HealthController {
   constructor(private readonly HealthService: HealthService) {}
 
-  setup(group: RouterGroup): void {
-    group.route(this.livenessCheck);
-    group.route(this.readinessCheck);
+  setup(group: TypeBoxGroup): void {
+    this.livenessCheck(group);
+    this.readinessCheck(group);
   }
 
-  livenessCheck = validated({
+  livenessCheck = route({
     method: 'GET',
     path: '/liveness',
     schema: {
-      request: {},
       response: {
         200: Type.Object({
           status: LivenessStatus,
         }),
       },
     },
-    handler: async () => ok({ status: this.HealthService.livenessCheck() }),
+    handler: async () => {
+      const status = this.HealthService.livenessCheck();
+
+      return { status: 200, body: { status } };
+    },
   });
 
-  readinessCheck = validated({
+  readinessCheck = route({
     method: 'GET',
     path: '/readiness',
     schema: {
-      request: {},
       response: {
         200: Type.Object({
           status: ReadinessStatus,
         }),
       },
     },
-    handler: async () => ok({ status: this.HealthService.readinessCheck() }),
+    handler: async () => {
+      const status = this.HealthService.readinessCheck();
+
+      return { status: 200, body: { status } };
+    },
   });
 }

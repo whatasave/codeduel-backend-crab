@@ -1,10 +1,9 @@
-import { internalServerError, notFound, ok, type RouterGroup } from '@codeduel-backend-crab/server';
 import { Type } from '@sinclair/typebox';
-import { validated } from '@codeduel-backend-crab/server/validation';
 import type { UserService } from './service';
 import { User } from './data';
-import type { AuthService } from '../auth/service';
-import { requireAuth } from '../auth/middleware';
+import type { AuthMiddleware } from '../auth/middleware';
+import type { TypeBoxGroup } from '@glass-cannon/typebox';
+import { route } from '../../utils/route';
 
 export class UserController {
   constructor(
@@ -12,68 +11,60 @@ export class UserController {
     private readonly authMiddleware: AuthMiddleware
   ) {}
 
-  setup(group: RouterGroup): void {
-    group.route(this.byId);
-    group.route(this.users);
-    group.route(this.profile);
+  setup(group: TypeBoxGroup): void {
+    this.byId(group);
+    this.users(group);
+    this.profile(group);
   }
 
-  users = validated({
+  users = route({
     method: 'GET',
     path: '/',
     schema: {
-      request: {
-        query: { username: Type.Optional(Type.String()) },
-      },
+      query: { username: Type.Optional(Type.String()) },
       response: {
         200: Type.Union([User, Type.Array(User)]),
-        404: Type.Object({
-          error: Type.String(),
-        }),
+        404: Type.Undefined(),
       },
     },
     handler: async ({ query }) => {
       const { username } = query;
-      if (!username) return ok(await this.userService.all());
+      if (!username) return { status: 200, body: await this.userService.all() };
 
       const user = await this.userService.byUsername(username);
-      if (!user) return notFound({ error: 'User not found' });
-      return ok(user);
+      if (!user) return { status: 404 };
+      return { status: 200, body: user };
     },
   });
 
-  byId = validated({
+  byId = route({
     method: 'GET',
     path: '/:id',
     schema: {
-      request: {
-        params: { id: Type.Number() },
-      },
+      params: { id: Type.Number() },
       response: {
         200: User,
-        404: Type.Object({
-          error: Type.String(),
-        }),
+        404: Type.Undefined(),
       },
     },
     handler: async ({ params }) => {
       const { id } = params;
       const user = await this.userService.byId(id);
-      if (!user) return notFound({ error: 'User not found' });
-      return ok(user);
+      if (!user) return { status: 404 };
+
+      return { status: 200, body: user };
     },
   });
 
-  profile = validated({
+  profile = route({
     method: 'GET',
     path: '/profile',
     middlewares: [this.authMiddleware.requireAuth(), this.authMiddleware.requireRole('user:read')],
     schema: {
-      request: {},
       response: {},
     },
     handler: async () => {
-      return internalServerError({ error: 'Path not implemented' });
+      throw new Error('not implemented');
     },
   });
 }

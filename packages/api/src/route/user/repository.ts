@@ -55,11 +55,11 @@ export class UserRepository {
       id: user.id,
       username: user.username,
       name: user.name ?? undefined,
-      updatedAt: user.updated_at.toISOString(),
+      updatedAt: user.updated_at,
       avatar: user.avatar ?? undefined,
       backgroundImage: user.background_image ?? undefined,
       biography: user.biography ?? undefined,
-      createdAt: user.created_at.toISOString(),
+      createdAt: user.created_at,
     };
   }
 }

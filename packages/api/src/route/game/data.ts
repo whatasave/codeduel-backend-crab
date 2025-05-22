@@ -30,7 +30,6 @@ export const UpdateGameUser = Type.Object({
   code: Type.String(),
   language: Type.String(),
   testsPassed: Type.Number(),
-  submittedAt: Type.String({ format: 'date-time' }),
 });
 
 export type ShareCode = Static<typeof ShareCode>;

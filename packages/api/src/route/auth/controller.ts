@@ -1,5 +1,3 @@
-import { internalServerError, noContent, type RouterGroup } from '@codeduel-backend-crab/server';
-import { validated } from '@codeduel-backend-crab/server/validation';
 import type { AuthService } from './service';
 import { GithubController } from './github/controller';
 import { GitlabController } from './gitlab/controller';
@@ -10,6 +8,8 @@ import { createCookie, parseCookies, removeCookie } from '../../utils/cookie';
 import { Type } from '@sinclair/typebox';
 import type { UserService } from '../user/service';
 import { randomUUIDv7 } from 'bun';
+import type { Response, TypeBoxGroup } from '@glass-cannon/typebox';
+import { route } from '../../utils/route';
 
 export class AuthController {
   private readonly githubController: GithubController;
@@ -30,45 +30,48 @@ export class AuthController {
     );
   }
 
-  setup(group: RouterGroup): void {
-    group.route(this.validate);
-    group.route(this.refresh);
-    group.route(this.logout);
+  setup(group: TypeBoxGroup): void {
+    this.validate(group);
+    this.refresh(group);
+    this.logout(group);
 
     this.githubController.setup(group.group({ prefix: '/github' }));
     this.gitlabController.setup(group.group({ prefix: '/gitlab' }));
   }
 
-  validate = validated({
+  validate = route({
     method: 'GET',
     path: '/validate',
     schema: {
-      request: {},
       response: {},
     },
     handler: async () => {
-      return internalServerError({ error: 'Path not implemented' });
+      throw new Error('not implemented');
     },
   });
 
-  refresh = validated({
-    method: 'GET',
+  refresh = route({
+    method: 'POST',
     path: '/refresh',
     schema: {
-      request: {},
       response: {
         204: Type.Undefined(),
       },
     },
     handler: async ({ headers }) => {
       const cookies = parseCookies(headers.get('cookie'));
-      const logout = (): ReturnType<typeof noContent> => {
+      const logout = (): Response<204, undefined> => {
         const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
         const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
 
-        return noContent(undefined, {
-          'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
-        });
+        const headers = new Headers();
+        headers.append('Set-Cookie', accessTokenCookie);
+        headers.append('Set-Cookie', refreshTokenCookie);
+
+        return {
+          status: 204,
+          headers,
+        };
       };
 
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
@@ -96,17 +99,21 @@ export class AuthController {
         value: newRefreshToken,
       });
 
-      return noContent(undefined, {
-        'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
-      });
+      const responseHeaders = new Headers();
+      responseHeaders.append('Set-Cookie', accessTokenCookie);
+      responseHeaders.append('Set-Cookie', refreshTokenCookie);
+
+      return {
+        status: 204,
+        headers: responseHeaders,
+      };
     },
   });
 
-  logout = validated({
-    method: 'GET',
+  logout = route({
+    method: 'POST',
     path: '/logout',
     schema: {
-      request: {},
       response: {
         204: Type.Undefined(),
       },
@@ -123,9 +130,14 @@ export class AuthController {
       const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
       const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
 
-      return noContent(undefined, {
-        'Set-Cookie': [accessTokenCookie, refreshTokenCookie],
-      });
+      const responseHeaders = new Headers();
+      responseHeaders.append('Set-Cookie', accessTokenCookie);
+      responseHeaders.append('Set-Cookie', refreshTokenCookie);
+
+      return {
+        status: 204,
+        headers: responseHeaders,
+      };
     },
   });
 }

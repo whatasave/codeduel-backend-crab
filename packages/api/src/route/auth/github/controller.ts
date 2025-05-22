@@ -1,11 +1,11 @@
-import { type RouterGroup, temporaryRedirect, badRequest } from '@codeduel-backend-crab/server';
-import { validated } from '@codeduel-backend-crab/server/validation';
 import type { GithubService } from './service';
 import { Type } from '@sinclair/typebox';
 import { createCookie, parseCookies } from '../../../utils/cookie';
 import type { AuthService } from '../service';
 import { randomUUIDv7 } from 'bun';
 import { getIp } from '../../../utils/ip';
+import type { TypeBoxGroup } from '@glass-cannon/typebox';
+import { route } from '../../../utils/route';
 
 export class GithubController {
   constructor(
@@ -13,18 +13,16 @@ export class GithubController {
     private readonly authService: AuthService
   ) {}
 
-  setup(group: RouterGroup): void {
-    group.route(this.login);
-    group.route(this.callback);
+  setup(group: TypeBoxGroup): void {
+    this.login(group);
+    this.callback(group);
   }
 
-  login = validated({
+  login = route({
     method: 'GET',
     path: '/',
     schema: {
-      request: {
-        query: { redirect: Type.String() },
-      },
+      query: { redirect: Type.String() },
       response: {
         307: Type.String(),
       },
@@ -42,29 +40,28 @@ export class GithubController {
 
       const stateCookie = createCookie({ ...this.service.stateCookieOptions, value: state });
 
-      return temporaryRedirect(`Redirecting to ${redirectUrl}`, {
-        'Content-Type': 'text/plain',
-        'Set-Cookie': stateCookie,
-        Location: redirectUrl,
-      });
+      return {
+        status: 307,
+        body: `Redirecting to ${redirectUrl}`,
+        headers: {
+          'Set-Cookie': stateCookie,
+          Location: redirectUrl,
+        },
+      };
     },
   });
 
-  callback = validated({
+  callback = route({
     method: 'GET',
     path: '/callback',
     schema: {
-      request: {
-        query: {
-          code: Type.String(),
-          state: Type.String(),
-        },
+      query: {
+        code: Type.String(),
+        state: Type.String(),
       },
       response: {
         307: Type.String(),
-        400: Type.Object({
-          message: Type.String(),
-        }),
+        400: Type.String(),
       },
     },
     handler: async ({ query, headers }) => {
@@ -73,7 +70,7 @@ export class GithubController {
       const cookies = parseCookies(headers.get('cookie'));
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
-      if (state !== cookieState) return badRequest({ message: 'Invalid or missing state' });
+      if (state !== cookieState) return { status: 400, body: 'Invalid or missing state' };
       const { redirect, ip, userAgent } = this.authService.decodeState(state);
 
       const token = await this.service.exchangeCodeForToken(code, state);
@@ -95,11 +92,16 @@ export class GithubController {
         value: refreshToken,
       });
 
-      return temporaryRedirect(`Redirecting to ${redirect}`, {
-        'Content-Type': 'text/plain',
-        Location: redirect,
-        'Set-Cookie': [accessCookie, refreshCookie],
-      });
+      const responseHeaders = new Headers();
+      responseHeaders.append('Set-Cookie', accessCookie);
+      responseHeaders.append('Set-Cookie', refreshCookie);
+      responseHeaders.append('Location', redirect);
+
+      return {
+        status: 307,
+        body: `Redirecting to ${redirect}`,
+        headers: responseHeaders,
+      };
     },
   });
 }

@@ -1,4 +1,3 @@
-import type { RouterGroup } from '@codeduel-backend-crab/server';
 import type { Database } from '@codeduel-backend-crab/database';
 import type { Config } from '../config';
 import { HealthController } from './health/controller';
@@ -16,6 +15,7 @@ import { AuthController } from './auth/controller';
 import { GameRepository } from './game/repository';
 import { GameService } from './game/service';
 import { GameController } from './game/controller';
+import type { TypeBoxGroup } from '@glass-cannon/typebox';
 
 export class RootController {
   private readonly userRepository: UserRepository;
@@ -59,7 +59,7 @@ export class RootController {
     this.gameController = new GameController(this.gameService);
   }
 
-  setup(group: RouterGroup): void {
+  setup(group: TypeBoxGroup): void {
     this.redocController.setup(group.group({ prefix: '/redoc' }));
     this.healthController.setup(group.group({ prefix: '/health' }));
     this.userController.setup(group.group({ prefix: '/user' }));

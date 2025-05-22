@@ -12,7 +12,6 @@ import { Router } from '@glass-cannon/router';
 import { typebox } from '@glass-cannon/typebox';
 import { jsonToRequestBody, responseBodyToJson } from '../../utils/stream';
 import { ReadableStream } from 'node:stream/web';
-import { json } from '@glass-cannon/server-bun';
 
 describe('Route.Challenge.Controller', () => {
   let service: ChallengeService;
@@ -57,9 +56,7 @@ describe('Route.Challenge.Controller', () => {
     service = new ChallengeService({} as ChallengeRepository);
     controller = new ChallengeController(service);
     router = new Router();
-    controller.setup(
-      typebox(router, { onInvalidRequest: ({ errors }) => json({ status: 400, body: { errors } }) })
-    );
+    controller.setup(typebox(router));
   });
 
   afterEach(() => {

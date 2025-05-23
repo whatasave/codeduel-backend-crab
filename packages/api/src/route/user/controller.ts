@@ -56,15 +56,15 @@ export class UserController {
     },
   });
 
-  profile = route({
+  profile = route(() => ({
     method: 'GET',
     path: '/profile',
-    middlewares: [this.authMiddleware.requireAuth(), this.authMiddleware.requireRole('user:read')],
+    middleware: this.authMiddleware.requireAuth(),
     schema: {
       response: {},
     },
     handler: async () => {
       throw new Error('not implemented');
     },
-  });
+  }));
 }

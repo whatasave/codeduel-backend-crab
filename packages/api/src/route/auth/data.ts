@@ -74,3 +74,10 @@ export const CreateAuthSession = Type.Object({
   userAgent: AuthSession.properties.userAgent,
   provider: AuthSession.properties.provider,
 });
+
+export type SessionUser = Static<typeof SessionUser>;
+export const SessionUser = Type.Object({
+  id: User.properties.id,
+  username: User.properties.username,
+  roles: Type.Array(Type.String()),
+});

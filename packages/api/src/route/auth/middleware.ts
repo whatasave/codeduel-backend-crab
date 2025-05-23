@@ -1,35 +1,47 @@
-import { unauthorized, type Middleware } from '@codeduel-backend-crab/server';
+import type { Middleware } from '@glass-cannon/router/middleware';
 import type { AuthService } from './service';
+import { json } from '@glass-cannon/server-bun';
+import type { SessionUser } from './data';
+import type { RouteContext } from '@glass-cannon/router';
 
 export class AuthMiddleware {
   constructor(private readonly service: AuthService) {}
 
-  requireAuth(): Middleware {
-    return (route) => ({
-      ...route,
-      handler: async (request) => {
-        const token = request.headers.get('Authorization')?.split(' ')[1];
-        if (!token) {
-          return unauthorized('Missing token');
-        }
-        const user = await this.service.verifyAccessToken(token);
-        request.user = {
-          id: user.sub,
-          username: user.username,
-        };
-        return await route.handler(request);
-      },
-    });
+  requireAuth(): Middleware<{ user: SessionUser }> {
+    return async (next, context) => {
+      const user = await this.userSession(context);
+      if (!user) {
+        return json({ status: 401, body: 'Missing access token' });
+      }
+
+      return await next({ user });
+    };
   }
 
-  requireRole(role: string): Middleware {
-    return (route) => ({
-      ...route,
-      handler: async (request) => {
-        if (!request.user) return unauthorized('Missing user');
-        if (!request.user.roles.includes(role)) return unauthorized('Insufficient permissions');
-        return await route.handler(request);
-      },
-    });
+  requirePermission(resource: string | null, name: string): Middleware<{ user: SessionUser }> {
+    return async (next, context) => {
+      const user =
+        'user' in context ? (context.user as SessionUser | null) : await this.userSession(context);
+      if (!user) {
+        return json({ status: 401, body: 'Missing access token' });
+      }
+
+      if (!context.user.roles.includes(role)) {
+        return json({ status: 403, body: 'Insufficient permissions' });
+      }
+      return next({ user });
+    };
+  }
+
+  private async userSession(context: RouteContext): Promise<SessionUser | null> {
+    const token = context.headers.get('Authorization')?.split(' ')[1];
+    if (!token) return null;
+
+    const payload = await this.service.verifyAccessToken(token);
+    return {
+      id: payload.sub,
+      username: payload.username,
+      roles: [],
+    };
   }
 }

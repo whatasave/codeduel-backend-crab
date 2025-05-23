@@ -56,8 +56,7 @@ typeboxRoot.route({
       status: 301,
       body: 'Redirecting to /v1/redoc',
       headers: {
-        Location: '/v1/redoc',
-        'Content-Type': 'text/plain',
+        Location: '/v1/scalar',
       },
     }),
 });

@@ -80,6 +80,16 @@ export class PermissionRepository {
       .onConflict((oc) => oc.column('user_id').doUpdateSet({ role_id: roleId }))
       .execute();
 
+    await this.database
+      .deleteFrom('user_permission')
+      .where('user_id', '=', userId)
+      .where(
+        'permission_id',
+        'in',
+        permissions.map((p) => p.id)
+      )
+      .execute();
+
     return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
   }
 

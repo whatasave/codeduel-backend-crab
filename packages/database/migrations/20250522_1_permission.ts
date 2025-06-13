@@ -18,6 +18,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('updated_at', 'timestamptz', (col) =>
       col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
     )
+    .addUniqueConstraint(`uq_${PERMISSION_TABLE_NAME}_resource_name`, ['resource', 'name'])
     .execute();
 
   await createTrigger(db);

@@ -20,8 +20,7 @@ export class AuthMiddleware {
   }
 
   requirePermission(
-    resource: string | undefined,
-    name: string
+    ...requiredPermissions: { resource?: string; name: string }[]
   ): Middleware<{ user: SessionUser; permissions: Permissions }> {
     return async (next, context) => {
       const user =
@@ -34,7 +33,11 @@ export class AuthMiddleware {
           ? (context.permissions as Permissions)
           : new Permissions(user.permissions);
 
-      if (!permissions.has(resource, name)) {
+      if (
+        !requiredPermissions.every((permission) =>
+          permissions.has(permission.resource, permission.name)
+        )
+      ) {
         return json({ status: 403, body: 'Insufficient permissions' });
       }
       return next({ user, permissions });

@@ -16,18 +16,23 @@ import { GameRepository } from './game/repository';
 import { GameService } from './game/service';
 import { GameController } from './game/controller';
 import type { TypeBoxGroup } from '@glass-cannon/typebox';
+import { AuthMiddleware } from './auth/middleware';
+import { PermissionRepository } from './permission/repository';
+import { PermissionService } from './permission/service';
 
 export class RootController {
   private readonly userRepository: UserRepository;
   private readonly challengeRepository: ChallengeRepository;
   private readonly authRepository: AuthRepository;
   private readonly gameRepository: GameRepository;
+  private readonly permissionRepository: PermissionRepository;
 
   private readonly healthService: HealthService;
   private readonly userService: UserService;
   private readonly challengeService: ChallengeService;
   private readonly authService: AuthService;
   private readonly gameService: GameService;
+  private readonly permissionService: PermissionService;
 
   private readonly redocController: RedocController;
   private readonly healthController: HealthController;
@@ -42,11 +47,13 @@ export class RootController {
     this.challengeRepository = new ChallengeRepository(database);
     this.authRepository = new AuthRepository(database);
     this.gameRepository = new GameRepository(database);
+    this.permissionRepository = new PermissionRepository(database);
 
     this.healthService = new HealthService();
     this.userService = new UserService(this.userRepository);
     this.challengeService = new ChallengeService(this.challengeRepository);
-    this.authService = new AuthService(this.authRepository, config.auth);
+    this.permissionService = new PermissionService(this.permissionRepository);
+    this.authService = new AuthService(this.authRepository, this.permissionService, config.auth);
     this.gameService = new GameService(this.gameRepository);
 
     this.authMiddleware = new AuthMiddleware(this.authService);
@@ -55,7 +62,12 @@ export class RootController {
     this.healthController = new HealthController(this.healthService);
     this.userController = new UserController(this.userService, this.authMiddleware);
     this.challengeController = new ChallengeController(this.challengeService);
-    this.authController = new AuthController(this.authService, this.userService, config.auth);
+    this.authController = new AuthController(
+      this.authService,
+      this.userService,
+      this.permissionService,
+      config.auth
+    );
     this.gameController = new GameController(this.gameService);
   }
 

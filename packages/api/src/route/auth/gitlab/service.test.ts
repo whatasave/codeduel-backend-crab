@@ -8,9 +8,12 @@ import type { Config as AuthConfig } from '../config';
 import type { Auth, AuthSession, CreateAuthSession } from '../data';
 import type { User } from '../../user/data';
 import type { GitlabAccessToken, GitlabUserData } from './data';
+import { PermissionService } from '../../permission/service';
+import type { PermissionRepository } from '../../permission/repository';
 
 describe('Route.Auth.Gitlab.Service', () => {
   let authService: AuthService;
+  let permissionService: PermissionService;
   let service: GitlabService;
   const config = {
     gitlab: {
@@ -23,7 +26,9 @@ describe('Route.Auth.Gitlab.Service', () => {
 
   beforeAll(() => {
     const authRepository = {} as AuthRepository;
-    authService = new AuthService(authRepository, config);
+    const permissionRepository = {} as PermissionRepository;
+    permissionService = new PermissionService(permissionRepository);
+    authService = new AuthService(authRepository, permissionService, config);
     service = new GitlabService(authService, config.gitlab);
   });
 
@@ -52,11 +57,12 @@ describe('Route.Auth.Gitlab.Service', () => {
         createdAt: mockDate,
         updatedAt: mockDate,
       } as Auth;
-      const spyCreateForce = spyOn(authService, 'createForce').mockResolvedValue([
-        mockAuth,
-        mockUser,
-      ]);
-      const [auth, user] = await service.create(mockGitlabUserData);
+      const spyCreateForce = spyOn(authService, 'createForce').mockResolvedValue({
+        auth: mockAuth,
+        user: mockUser,
+        permissions: [],
+      });
+      const { auth, user } = await service.create(mockGitlabUserData);
 
       expect(spyCreateForce).toHaveBeenCalledWith(
         { name: 'gitlab', userId: mockGitlabUserData.id },
@@ -92,11 +98,12 @@ describe('Route.Auth.Gitlab.Service', () => {
         createdAt: mockDate,
         updatedAt: mockDate,
       } as Auth;
-      const spyCreateForce = spyOn(authService, 'createForce').mockResolvedValue([
-        mockAuth,
-        mockUser,
-      ]);
-      const [auth, user] = await service.create(mockGitlabUserData);
+      const spyCreateForce = spyOn(authService, 'createForce').mockResolvedValue({
+        auth: mockAuth,
+        user: mockUser,
+        permissions: [],
+      });
+      const { auth, user } = await service.create(mockGitlabUserData);
 
       expect(spyCreateForce).toHaveBeenCalledWith(
         { name: 'gitlab', userId: mockGitlabUserData.id },

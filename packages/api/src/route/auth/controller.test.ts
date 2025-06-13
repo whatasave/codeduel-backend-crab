@@ -11,11 +11,13 @@ import type { User } from '../user/data';
 import { Router } from '@glass-cannon/router';
 import { typebox } from '@glass-cannon/typebox';
 import { ReadableStream } from 'node:stream/web';
-import { responseBodyToJson } from '../../utils/stream';
+import { PermissionService } from '../permission/service';
+import type { PermissionRepository } from '../permission/repository';
 
 describe('Route.Auth.Controller', () => {
   let service: AuthService;
   let userService: UserService;
+  let permissionService: PermissionService;
   let controller: AuthController;
   let router: Router;
   const config = {
@@ -30,9 +32,11 @@ describe('Route.Auth.Controller', () => {
   beforeAll(() => {
     const repository = {} as AuthRepository;
     const userRepository = {} as UserRepository;
-    service = new AuthService(repository, config);
+    const permissionRepository = {} as PermissionRepository;
     userService = new UserService(userRepository);
-    controller = new AuthController(service, userService, config);
+    permissionService = new PermissionService(permissionRepository);
+    service = new AuthService(repository, permissionService, config);
+    controller = new AuthController(service, userService, permissionService, config);
     router = new Router();
     controller.setup(typebox(router));
   });

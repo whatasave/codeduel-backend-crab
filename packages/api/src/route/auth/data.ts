@@ -1,6 +1,7 @@
 import { Type, type Static } from '@sinclair/typebox';
 import { User } from '../user/data';
 import { TypeCompiler } from '@sinclair/typebox/compiler';
+import { Permission } from '../permission/data';
 
 export type Auth = Static<typeof Auth>;
 export const Auth = Type.Object({
@@ -33,6 +34,7 @@ export const JwtAccessToken = Type.Object({
   sub: User.properties.id,
 
   username: User.properties.username,
+  permissions: Type.Array(Permission.properties.id),
 });
 
 export type JwtRefreshToken = Static<typeof JwtRefreshToken>;
@@ -79,5 +81,12 @@ export type SessionUser = Static<typeof SessionUser>;
 export const SessionUser = Type.Object({
   id: User.properties.id,
   username: User.properties.username,
-  roles: Type.Array(Type.String()),
+  permissions: Type.Array(Permission),
+});
+
+export type CreateContext = Static<typeof CreateContext>;
+export const CreateContext = Type.Object({
+  auth: Auth,
+  user: User,
+  permissions: Type.Array(Permission),
 });

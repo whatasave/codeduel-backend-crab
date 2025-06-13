@@ -9,10 +9,6 @@ export class Permissions implements Iterable<Permission> {
     );
   }
 
-  ids(): number[] {
-    return this.permissions.map((permission) => permission.id);
-  }
-
   [Symbol.iterator](): Iterator<Permission> {
     return this.permissions[Symbol.iterator]();
   }

@@ -75,9 +75,12 @@ export class GitlabController {
 
       const token = await this.service.exchangeCodeForToken(code);
       const gitlabUser = await this.service.userData(token.access_token);
-      const [_, user] = await this.service.create(gitlabUser);
+      const { user, permissions } = await this.service.create(gitlabUser);
 
-      const accessToken = await this.authService.accessToken(user);
+      const accessToken = await this.authService.accessToken(
+        user,
+        permissions.map((p) => p.id)
+      );
       const jti = randomUUIDv7();
       const refreshToken = await this.authService.refreshToken(user, jti);
 

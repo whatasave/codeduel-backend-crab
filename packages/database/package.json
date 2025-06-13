@@ -17,7 +17,8 @@
   "scripts": {
     "generate": "kanel --output ./src/types",
     "reset": "kysely migrate:rollback --all && kysely migrate:latest && bun generate",
-    "seed:mock_challenges": "kysely seed:run --specific mock_challenges"
+    "seed:mock_challenges": "kysely seed:run --specific mock_challenges",
+    "seed:role": "kysely seed:run --specific role"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.29",

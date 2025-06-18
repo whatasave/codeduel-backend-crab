@@ -1,14 +1,16 @@
 import type { Database, Select } from '@codeduel-backend-crab/database';
-import type { Auth, AuthSession, CreateAuthSession, Provider } from './data';
-import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
+import type { Auth, AuthSession, CreateAuthSession, CreateContext, Provider } from './data';
+import { UserNameAlreadyExistsError, type CreateUser } from '../user/data';
 import { UserRepository } from '../user/repository';
+import { PermissionRepository } from '../permission/repository';
 
 export class AuthRepository {
   constructor(private readonly database: Database) {}
 
-  async create(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
+  async create(provider: Provider, user: CreateUser, role: string): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
-      const userRepo = new UserRepository(tx);
+      const userRepository = new UserRepository(tx);
+      const permissionsRepository = new PermissionRepository(tx);
 
       const existingUser = await tx
         .selectFrom('user')
@@ -17,7 +19,7 @@ export class AuthRepository {
         .executeTakeFirst();
       if (existingUser) throw new UserNameAlreadyExistsError(user.username);
 
-      const newUser = await userRepo.create(user);
+      const newUser = await userRepository.create(user);
 
       const newAuth = await tx
         .insertInto('auth')
@@ -29,13 +31,24 @@ export class AuthRepository {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      return [this.selectToAuth(newAuth), newUser] as [Auth, User];
+      const roleId = await permissionsRepository.assignRole(newUser.id, role);
+      const permissions = await permissionsRepository.rolePermissions(roleId);
+
+      return {
+        auth: this.selectToAuth(newAuth),
+        user: newUser,
+        permissions,
+      };
     });
 
     return authUser;
   }
 
-  async createIfNotExists(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
+  async createIfNotExists(
+    provider: Provider,
+    user: CreateUser,
+    role: string
+  ): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
       const userRepo = new UserRepository(tx);
 
@@ -50,10 +63,16 @@ export class AuthRepository {
         const existingUser = await userRepo.byId(existingAuth.user_id);
         if (!existingUser) throw new Error('Failed to find user');
 
-        return [this.selectToAuth(existingAuth), existingUser] as [Auth, User];
+        const permissions = await new PermissionRepository(tx).byUserId(existingUser.id);
+
+        return {
+          auth: this.selectToAuth(existingAuth),
+          user: existingUser,
+          permissions,
+        };
       }
 
-      return this.create(provider, user);
+      return this.create(provider, user, role);
     });
 
     return authUser;

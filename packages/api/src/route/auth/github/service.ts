@@ -1,4 +1,4 @@
-import type { Auth, CreateAuthSession } from '../data';
+import type { CreateAuthSession, CreateContext } from '../data';
 import type { AuthService } from '../service';
 import type { GithubAccessToken, GithubUserData } from './data';
 import type { User } from '../../user/data';
@@ -17,7 +17,7 @@ export class GithubService {
     return this.config.stateCookie;
   }
 
-  async create(githubUser: GithubUserData): Promise<[Auth, User]> {
+  async create(githubUser: GithubUserData): Promise<CreateContext> {
     return await this.authService.createForce(
       { name: GithubService.PROVIDER, userId: githubUser.id },
       {

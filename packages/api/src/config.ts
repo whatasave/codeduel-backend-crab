@@ -83,6 +83,7 @@ export function loadConfig(): Config {
           sameSite: env.REFRESH_TOKEN_COOKIE_SAME_SITE,
         },
       },
+      userDefaultRole: env.USER_DEFAULT_ROLE,
       github: {
         clientId: env.GITHUB_CLIENT_ID,
         clientSecret: env.GITHUB_CLIENT_SECRET,

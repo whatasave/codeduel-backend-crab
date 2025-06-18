@@ -13,9 +13,12 @@ import { Router } from '@glass-cannon/router';
 import { typebox } from '@glass-cannon/typebox';
 import { ReadableStream } from 'node:stream/web';
 import { responseBodyToJson } from '../../../utils/stream';
+import type { PermissionRepository } from '../../permission/repository';
+import { PermissionService } from '../../permission/service';
 
 describe('Route.Auth.Github.Controller', () => {
   let service: GithubService;
+  let permissionService: PermissionService;
   let authService: AuthService;
   let controller: GithubController;
   let router: Router;
@@ -33,7 +36,9 @@ describe('Route.Auth.Github.Controller', () => {
 
   beforeAll(() => {
     const authRepository = {} as AuthRepository;
-    authService = new AuthService(authRepository, config);
+    const permissionRepository = {} as PermissionRepository;
+    permissionService = new PermissionService(permissionRepository);
+    authService = new AuthService(authRepository, permissionService, config);
     service = new GithubService(authService, config.github);
     controller = new GithubController(service, authService);
     router = new Router({
@@ -222,7 +227,11 @@ describe('Route.Auth.Github.Controller', () => {
       spyDecodeState = spyOn(authService, 'decodeState').mockReturnValue(mockState);
       spyExchange = spyOn(service, 'exchangeCodeForToken').mockResolvedValue(mockToken);
       spyUserData = spyOn(service, 'userData').mockResolvedValue(mockGithubUser);
-      spyCreate = spyOn(service, 'create').mockResolvedValue([mockAuth, mockUser]);
+      spyCreate = spyOn(service, 'create').mockResolvedValue({
+        auth: mockAuth,
+        user: mockUser,
+        permissions: [],
+      });
       spyAccessToken = spyOn(authService, 'accessToken').mockResolvedValue(mockAccessToken);
       spyRefreshToken = spyOn(authService, 'refreshToken').mockResolvedValue(mockRefreshToken);
       spyCreateSession = spyOn(service, 'createSession').mockResolvedValue();

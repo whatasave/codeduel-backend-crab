@@ -75,9 +75,12 @@ export class GithubController {
 
       const token = await this.service.exchangeCodeForToken(code, state);
       const githubUser = await this.service.userData(token.access_token);
-      const [_, user] = await this.service.create(githubUser);
+      const { user, permissions } = await this.service.create(githubUser);
 
-      const accessToken = await this.authService.accessToken(user);
+      const accessToken = await this.authService.accessToken(
+        user,
+        permissions.map((p) => p.id)
+      );
       const jti = randomUUIDv7();
       const refreshToken = await this.authService.refreshToken(user, jti);
 

@@ -5,11 +5,14 @@ import { AuthService } from './service';
 import type { Config } from './config';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
 import type { Auth, AuthSession, CreateAuthSession, Provider, State } from './data';
+import type { PermissionRepository } from '../permission/repository';
+import { PermissionService } from '../permission/service';
 
 describe('Route.Auth.Service', () => {
   let db: Database;
   let repository: AuthRepository;
   let service: AuthService;
+  let permissionService: PermissionService;
 
   const config = {
     jwt: { issuer: 'issuer', audience: 'audience' },
@@ -20,7 +23,9 @@ describe('Route.Auth.Service', () => {
   beforeAll(() => {
     db = {} as Database;
     repository = new AuthRepository(db);
-    service = new AuthService(repository, config);
+    const permissionRepository = {} as PermissionRepository;
+    permissionService = new PermissionService(permissionRepository);
+    service = new AuthService(repository, permissionService, config);
   });
 
   afterEach(() => {
@@ -53,11 +58,12 @@ describe('Route.Auth.Service', () => {
       createdAt: mockDate,
       updatedAt: mockDate,
     };
-    const spyCreateIfNotExists = spyOn(repository, 'createIfNotExists').mockResolvedValue([
-      mockAuth,
-      mockUser,
-    ]);
-    const [auth, user] = await service.createIfNotExists(mockProvider, mockCreateUser);
+    const spyCreateIfNotExists = spyOn(repository, 'createIfNotExists').mockResolvedValue({
+      auth: mockAuth,
+      user: mockUser,
+      permissions: [],
+    });
+    const { auth, user } = await service.createIfNotExists(mockProvider, mockCreateUser);
 
     expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser);
     expect(spyCreateIfNotExists).toHaveBeenCalledTimes(1);
@@ -94,8 +100,12 @@ describe('Route.Auth.Service', () => {
     const spyCreateIfNotExists = spyOn(repository, 'createIfNotExists').mockRejectedValue(
       new UserNameAlreadyExistsError(`Username already exists: ${mockCreateUser.username}`)
     );
-    const spyCreate = spyOn(repository, 'create').mockResolvedValue([mockAuth, mockUser]);
-    const [auth, user] = await service.createForce(mockProvider, mockCreateUser);
+    const spyCreate = spyOn(repository, 'create').mockResolvedValue({
+      auth: mockAuth,
+      user: mockUser,
+      permissions: [],
+    });
+    const { auth, user } = await service.createForce(mockProvider, mockCreateUser);
 
     expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser);
     expect(spyCreateIfNotExists).toHaveBeenCalledTimes(1);
@@ -112,7 +122,7 @@ describe('Route.Auth.Service', () => {
   test('should create access token', async () => {
     const mockUser = { id: 1, username: 'username' } as User;
 
-    const token = await service.accessToken(mockUser);
+    const token = await service.accessToken(mockUser, []);
     expect(token).toBeString();
     expect(token).toContain('.');
   });
@@ -128,7 +138,7 @@ describe('Route.Auth.Service', () => {
 
   test('should verify access token', async () => {
     const mockUser = { id: 1, username: 'username' } as User;
-    const token = await service.accessToken(mockUser);
+    const token = await service.accessToken(mockUser, []);
     const decoded = await service.verifyAccessToken(token);
 
     expect(decoded).toBeDefined();

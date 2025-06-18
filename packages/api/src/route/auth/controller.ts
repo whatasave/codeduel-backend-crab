@@ -10,6 +10,7 @@ import type { UserService } from '../user/service';
 import { randomUUIDv7 } from 'bun';
 import type { Response, TypeBoxGroup } from '@glass-cannon/typebox';
 import { route } from '../../utils/route';
+import type { PermissionService } from '../permission/service';
 
 export class AuthController {
   private readonly githubController: GithubController;
@@ -18,6 +19,7 @@ export class AuthController {
   constructor(
     private readonly service: AuthService,
     private readonly userService: UserService,
+    private readonly permissionService: PermissionService,
     config: Config
   ) {
     this.githubController = new GithubController(
@@ -84,7 +86,12 @@ export class AuthController {
       const user = await this.userService.byId(userId);
       if (!user) return logout();
 
-      const newAccessToken = await this.service.accessToken(user);
+      const permissions = await this.permissionService.byUserId(user.id);
+
+      const newAccessToken = await this.service.accessToken(
+        user,
+        permissions.map((p) => p.id)
+      );
       const newJti = randomUUIDv7();
       const newRefreshToken = await this.service.refreshToken(user, newJti);
 

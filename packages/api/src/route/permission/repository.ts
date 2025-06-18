@@ -1,4 +1,4 @@
-import { jsonArrayFrom, type Database, type Select } from '@codeduel-backend-crab/database';
+import { type Database, type Select } from '@codeduel-backend-crab/database';
 import type { Permission } from './data';
 
 export class PermissionRepository {
@@ -55,20 +55,11 @@ export class PermissionRepository {
     return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
   }
 
-  async assignRole(userId: number, role: string): Promise<Permission[]> {
-    const { id: roleId, permissions } = await this.database
+  async assignRole(userId: number, role: string): Promise<number> {
+    const { id: roleId } = await this.database
       .selectFrom('role')
       .where('name', '=', role)
       .select('id')
-      .select((eb) =>
-        jsonArrayFrom(
-          eb
-            .selectFrom('role_permission')
-            .innerJoin('permission', 'permission.id', 'role_permission.permission_id')
-            .whereRef('role_id', '=', 'id')
-            .selectAll()
-        ).as('permissions')
-      )
       .executeTakeFirstOrThrow();
 
     await this.database
@@ -77,16 +68,22 @@ export class PermissionRepository {
       .onConflict((oc) => oc.column('user_id').doUpdateSet({ role_id: roleId }))
       .execute();
 
-    await this.database
-      .deleteFrom('user_permission')
-      .where('user_id', '=', userId)
-      .where(
-        'permission_id',
-        'in',
-        permissions.map((p) => p.id)
-      )
-      .execute();
+    return roleId;
+  }
 
+  async rolePermissions(roleId: number): Promise<Permission[]> {
+    const permissions = await this.database
+      .selectFrom('role_permission')
+      .innerJoin('permission', 'permission.id', 'role_permission.permission_id')
+      .where('role_permission.role_id', '=', roleId)
+      .select([
+        'permission.id',
+        'permission.resource',
+        'permission.name',
+        'permission.created_at',
+        'permission.updated_at',
+      ])
+      .execute();
     return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
   }
 

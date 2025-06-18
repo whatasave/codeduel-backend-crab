@@ -31,7 +31,8 @@ export class AuthRepository {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      const permissions = await permissionsRepository.assignRole(newUser.id, role);
+      const roleId = await permissionsRepository.assignRole(newUser.id, role);
+      const permissions = await permissionsRepository.rolePermissions(roleId);
 
       return {
         auth: this.selectToAuth(newAuth),

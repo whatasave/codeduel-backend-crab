@@ -8,11 +8,14 @@ export class PermissionRepository {
     const rolePermissions = this.database
       .selectFrom('user_role')
       .innerJoin('role_permission', 'role_permission.role_id', 'user_role.role_id')
+      .leftJoin('user_permission', (join) =>
+        join
+          .onRef('user_permission.permission_id', '=', 'role_permission.permission_id')
+          .on('user_permission.user_id', '=', userId)
+      )
       .innerJoin('permission', 'permission.id', 'role_permission.permission_id')
       .where('user_role.user_id', '=', userId)
-      .where('permission_id', 'not in', (eb) =>
-        eb.selectFrom('user_permission').where('user_id', '=', userId).select('permission_id')
-      )
+      .where('user_permission.allow', '=', null)
       .select([
         'permission.id',
         'permission.resource',
@@ -25,13 +28,7 @@ export class PermissionRepository {
       .selectFrom('user_permission')
       .innerJoin('permission', 'permission.id', 'user_permission.permission_id')
       .where('user_permission.user_id', '=', userId)
-      .where('permission.id', 'not in', (eb) =>
-        eb
-          .selectFrom('user_role')
-          .innerJoin('role_permission', 'role_permission.role_id', 'user_role.role_id')
-          .where('user_role.user_id', '=', userId)
-          .select('role_permission.permission_id')
-      )
+      .where('user_permission.allow', '=', true)
       .select([
         'permission.id as id',
         'permission.resource as resource',
@@ -96,6 +93,7 @@ export class PermissionRepository {
   static selectToPermission(permission: Select<'permission'>): Permission {
     return {
       id: permission.id,
+      resource: permission.resource ?? undefined,
       name: permission.name,
       createdAt: permission.created_at,
       updatedAt: permission.updated_at,

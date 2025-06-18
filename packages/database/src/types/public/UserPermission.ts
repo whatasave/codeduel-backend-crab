@@ -8,6 +8,8 @@ export default interface UserPermissionTable {
 
   permission_id: ColumnType<PermissionId, PermissionId, PermissionId>;
 
+  allow: ColumnType<boolean, boolean, boolean>;
+
   updated_at: ColumnType<string, string | undefined, string>;
 }
 

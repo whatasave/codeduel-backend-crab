@@ -2,7 +2,7 @@ import type { RouteOptions } from '@glass-cannon/router';
 import { html } from '@glass-cannon/server-bun';
 import type { TypeBoxGroup } from '@glass-cannon/typebox';
 
-export class RedocController {
+export class ScalarController {
   setup(group: TypeBoxGroup): void {
     group.route(this.redoc);
   }
@@ -13,14 +13,21 @@ export class RedocController {
     handler: async () =>
       html({
         status: 200,
-        body: `<!DOCTYPE html>
+        body: `<!doctype html>
 <html>
   <head>
+    <title>Scalar API Reference</title>
     <meta charset="utf-8" />
-    <script type="module" src="https://unpkg.com/rapidoc/dist/rapidoc-min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
   <body>
-    <rapi-doc spec-url="/openapi"></rapi-doc>
+    <div id="app"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script>
+      Scalar.createApiReference('#app', {
+        url: '/openapi',
+      })
+    </script>
   </body>
 </html>`,
       }),

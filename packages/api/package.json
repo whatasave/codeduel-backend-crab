@@ -7,10 +7,10 @@
   },
   "dependencies": {
     "@codeduel-backend-crab/database": "workspace:*",
-    "@glass-cannon/cors": "^0.8.6",
-    "@glass-cannon/router": "^0.8.6",
-    "@glass-cannon/server-bun": "^0.8.6",
-    "@glass-cannon/typebox": "^0.8.6",
+    "@glass-cannon/cors": "^0.9.1",
+    "@glass-cannon/router": "^0.9.1",
+    "@glass-cannon/server-bun": "^0.9.1",
+    "@glass-cannon/typebox": "^0.9.1",
     "@sinclair/typebox": "^0.34.29",
     "jsonwebtoken": "^9.0.2"
   },

@@ -54,10 +54,9 @@ typeboxRoot.route({
   handler: async () =>
     text({
       status: 301,
-      body: 'Redirecting to /v1/redoc',
+      body: 'Redirecting to /v1/scalar',
       headers: {
-        Location: '/v1/redoc',
-        'Content-Type': 'text/plain',
+        Location: '/v1/scalar',
       },
     }),
 });

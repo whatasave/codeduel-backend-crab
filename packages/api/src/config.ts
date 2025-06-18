@@ -4,7 +4,7 @@ import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
 import { Config as AuthConfig } from './route/auth/config';
 
 export const CorsOptions = Type.Object({
-  allowedOrigins: Type.Optional(Type.Array(Type.String())),
+  allowedOrigins: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
   allowedMethods: Type.Optional(Type.Array(Type.String())),
   allowedHeaders: Type.Optional(Type.Array(Type.String())),
   allowCredentials: Type.Optional(Type.Boolean()),
@@ -41,7 +41,7 @@ export function loadConfig(): Config {
       allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
       allowCredentials: env.CORS_ALLOW_CREDENTIALS,
       exposeHeaders: env.CORS_EXPOSE_HEADERS?.split(',').filter(Boolean),
-      maxAge: env.CORS_MAX_AGE,
+      maxAge: env.CORS_MAX_AGE === '' ? undefined : env.CORS_MAX_AGE,
     },
     database: {
       host: env.DATABASE_HOST,

@@ -2,7 +2,7 @@ import type { Database } from '@codeduel-backend-crab/database';
 import type { Config } from '../config';
 import { HealthController } from './health/controller';
 import { HealthService } from './health/service';
-import { RedocController } from './redoc/controller';
+import { ScalarController } from './scalar/controller';
 import { UserController } from './user/controller';
 import { UserRepository } from './user/repository';
 import { UserService } from './user/service';
@@ -29,7 +29,7 @@ export class RootController {
   private readonly authService: AuthService;
   private readonly gameService: GameService;
 
-  private readonly redocController: RedocController;
+  private readonly scalarController: ScalarController;
   private readonly healthController: HealthController;
   private readonly userController: UserController;
   private readonly challengeController: ChallengeController;
@@ -48,7 +48,7 @@ export class RootController {
     this.authService = new AuthService(this.authRepository, config.auth);
     this.gameService = new GameService(this.gameRepository);
 
-    this.redocController = new RedocController();
+    this.scalarController = new ScalarController();
     this.healthController = new HealthController(this.healthService);
     this.userController = new UserController(this.userService);
     this.challengeController = new ChallengeController(this.challengeService);
@@ -57,7 +57,7 @@ export class RootController {
   }
 
   setup(group: TypeBoxGroup): void {
-    this.redocController.setup(group.group({ prefix: '/redoc' }));
+    this.scalarController.setup(group.group({ prefix: '/scalar' }));
     this.healthController.setup(group.group({ prefix: '/health' }));
     this.userController.setup(group.group({ prefix: '/user' }));
     this.challengeController.setup(group.group({ prefix: '/challenge' }));

@@ -8,6 +8,7 @@ export class PermissionService {
     return await this.repository.byUserId(userId);
   }
 
+  // TODO: cache permissions by ID to avoid DB calls in auth middleware
   async byIds(ids: number[]): Promise<Permission[]> {
     return await this.repository.byIds(ids);
   }

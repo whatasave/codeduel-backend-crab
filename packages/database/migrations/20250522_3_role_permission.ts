@@ -15,6 +15,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('permission_id', 'integer', (col) =>
       col.notNull().references(`${PERMISSION_TABLE_NAME}.id`)
     )
+    .addColumn('created_at', 'timestamptz', (col) =>
+      col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+    )
     .addColumn('updated_at', 'timestamptz', (col) =>
       col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
     )

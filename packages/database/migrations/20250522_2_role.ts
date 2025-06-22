@@ -10,7 +10,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .createTable(ROLE_TABLE_NAME)
     .ifNotExists()
     .addColumn('id', 'serial', (col) => col.primaryKey())
-    .addColumn('name', 'varchar(255)', (col) => col.notNull())
+    .addColumn('name', 'varchar(255)', (col) => col.notNull().unique())
     .addColumn('created_at', 'timestamptz', (col) =>
       col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
     )

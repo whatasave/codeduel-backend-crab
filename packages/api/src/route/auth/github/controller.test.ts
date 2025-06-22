@@ -264,7 +264,7 @@ describe('Route.Auth.Github.Controller', () => {
       expect(spyCreate).toHaveBeenCalledWith(mockGithubUser);
       expect(spyCreate).toHaveBeenCalledTimes(1);
 
-      expect(spyAccessToken).toHaveBeenCalledWith(mockUser);
+      expect(spyAccessToken).toHaveBeenCalledWith(mockUser, []);
       expect(spyAccessToken).toHaveBeenCalledTimes(1);
 
       expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));

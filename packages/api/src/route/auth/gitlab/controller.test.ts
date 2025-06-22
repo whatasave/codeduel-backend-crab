@@ -270,7 +270,7 @@ describe('Route.Auth.Gitlab.Controller', () => {
       expect(spyCreate).toHaveBeenCalledWith(mockGitlabUser);
       expect(spyCreate).toHaveBeenCalledTimes(1);
 
-      expect(spyAccessToken).toHaveBeenCalledWith(mockUser);
+      expect(spyAccessToken).toHaveBeenCalledWith(mockUser, []);
       expect(spyAccessToken).toHaveBeenCalledTimes(1);
 
       expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));

@@ -35,7 +35,7 @@ export class AuthMiddleware {
 
       if (
         !requiredPermissions.every((permission) =>
-          permissions.has(permission.resource, permission.name)
+          permissions.has(permission.name, permission.resource)
         )
       ) {
         return json({ status: 403, body: 'Insufficient permissions' });

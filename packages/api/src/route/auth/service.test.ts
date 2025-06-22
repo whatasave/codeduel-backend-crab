@@ -18,6 +18,7 @@ describe('Route.Auth.Service', () => {
     jwt: { issuer: 'issuer', audience: 'audience' },
     accessToken: { secret: 'access-token-secret', expiresIn: 3600 },
     refreshToken: { secret: 'refresh-token-secret', expiresIn: 86400 },
+    userDefaultRole: 'user',
   } as Config;
 
   beforeAll(() => {
@@ -65,7 +66,7 @@ describe('Route.Auth.Service', () => {
     });
     const { auth, user } = await service.createIfNotExists(mockProvider, mockCreateUser);
 
-    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser);
+    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 'user');
     expect(spyCreateIfNotExists).toHaveBeenCalledTimes(1);
     expect(auth).toEqual(mockAuth);
     expect(user).toEqual(mockUser);
@@ -107,13 +108,17 @@ describe('Route.Auth.Service', () => {
     });
     const { auth, user } = await service.createForce(mockProvider, mockCreateUser);
 
-    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser);
+    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 'user');
     expect(spyCreateIfNotExists).toHaveBeenCalledTimes(1);
 
-    expect(spyCreate).toHaveBeenCalledWith(mockProvider, {
-      ...mockCreateUser,
-      username: expect.stringContaining('-') as string,
-    });
+    expect(spyCreate).toHaveBeenCalledWith(
+      mockProvider,
+      {
+        ...mockCreateUser,
+        username: expect.stringContaining('-') as string,
+      },
+      'user'
+    );
     expect(spyCreate).toHaveBeenCalledTimes(1);
     expect(auth).toEqual(mockAuth);
     expect(user).toEqual(mockUser);

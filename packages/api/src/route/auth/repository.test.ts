@@ -67,6 +67,8 @@ describe('Route.Auth.Repository', () => {
         )
         .returningAll()
         .executeTakeFirstOrThrow();
+
+      await trx.insertInto('role').values({ name: 'user' }).executeTakeFirstOrThrow();
     });
   });
 

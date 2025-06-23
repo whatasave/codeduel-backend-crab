@@ -50,8 +50,6 @@ export class AuthRepository {
     role: string
   ): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
-      const userRepo = new UserRepository(tx);
-
       const existingAuth = await tx
         .selectFrom('auth')
         .selectAll()
@@ -60,10 +58,13 @@ export class AuthRepository {
         .executeTakeFirst();
 
       if (existingAuth) {
-        const existingUser = await userRepo.byId(existingAuth.user_id);
+        const userRepository = new UserRepository(tx);
+        const permissionRepository = new PermissionRepository(tx);
+
+        const existingUser = await userRepository.byId(existingAuth.user_id);
         if (!existingUser) throw new Error('Failed to find user');
 
-        const permissions = await new PermissionRepository(tx).byUserId(existingUser.id);
+        const permissions = await permissionRepository.byUserId(existingUser.id);
 
         return {
           auth: this.selectToAuth(existingAuth),

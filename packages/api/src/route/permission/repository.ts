@@ -15,7 +15,7 @@ export class PermissionRepository {
       )
       .innerJoin('permission', 'permission.id', 'role_permission.permission_id')
       .where('user_role.user_id', '=', userId)
-      .where('user_permission.allow', '=', null)
+      .where('user_permission.allow', 'is', null)
       .select([
         'permission.id',
         'permission.resource',

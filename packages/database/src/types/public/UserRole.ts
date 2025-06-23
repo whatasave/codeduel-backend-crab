@@ -8,6 +8,8 @@ export default interface UserRoleTable {
 
   role_id: ColumnType<RoleId, RoleId, RoleId>;
 
+  created_at: ColumnType<string, string | undefined, string>;
+
   updated_at: ColumnType<string, string | undefined, string>;
 }
 

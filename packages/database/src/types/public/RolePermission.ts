@@ -8,6 +8,8 @@ export default interface RolePermissionTable {
 
   permission_id: ColumnType<PermissionId, PermissionId, PermissionId>;
 
+  created_at: ColumnType<string, string | undefined, string>;
+
   updated_at: ColumnType<string, string | undefined, string>;
 }
 

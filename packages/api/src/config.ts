@@ -5,10 +5,10 @@ import { Config as AuthConfig } from './route/auth/config';
 
 export const CorsOptions = Type.Object({
   allowedOrigins: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
-  allowedMethods: Type.Optional(Type.Array(Type.String())),
-  allowedHeaders: Type.Optional(Type.Array(Type.String())),
+  allowedMethods: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
+  allowedHeaders: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
   allowCredentials: Type.Optional(Type.Boolean()),
-  exposeHeaders: Type.Optional(Type.Array(Type.String())),
+  exposeHeaders: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
   maxAge: Type.Optional(Type.Number()),
 });
 

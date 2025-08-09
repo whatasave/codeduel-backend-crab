@@ -12,7 +12,10 @@ export class AuthMiddleware {
     return async (next, context) => {
       const user = await this.userSession(context);
       if (!user) {
-        return json({ status: 401, body: 'Missing access token' });
+        return json({
+          status: 401,
+          body: { error: 'Authentication required', code: 'MISSING_TOKEN' },
+        });
       }
 
       return await next({ user, permissions: new Permissions(user.permissions) });
@@ -26,28 +29,43 @@ export class AuthMiddleware {
       const user =
         'user' in context ? (context.user as SessionUser | null) : await this.userSession(context);
       if (!user) {
-        return json({ status: 401, body: 'Missing access token' });
+        return json({
+          status: 401,
+          body: { error: 'Authentication required', code: 'MISSING_TOKEN' },
+        });
       }
       const permissions =
         'permissions' in context
           ? (context.permissions as Permissions)
           : new Permissions(user.permissions);
 
-      if (
-        !requiredPermissions.every((permission) =>
-          permissions.has(permission.name, permission.resource)
-        )
-      ) {
-        return json({ status: 403, body: 'Insufficient permissions' });
+      if (!permissions.hasAll(requiredPermissions)) {
+        return json({
+          status: 403,
+          body: {
+            error: 'Insufficient permissions',
+            code: 'INSUFFICIENT_PERMISSIONS',
+            required: requiredPermissions,
+            userPermissions: permissions.toArray(),
+          },
+        });
       }
       return next({ user, permissions });
     };
   }
 
   private async userSession(context: RouteContext): Promise<SessionUser | null> {
-    const token = context.headers.get('Authorization')?.split(' ')[1];
-    if (!token) return null;
+    try {
+      const authHeader = context.headers.get('Authorization');
+      if (!authHeader) return null;
 
-    return await this.service.verifySession(token);
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+      if (!token) return null;
+
+      return await this.service.verifySession(token);
+    } catch (error) {
+      console.error('Auth error:', error);
+      return null;
+    }
   }
 }

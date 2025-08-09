@@ -9,7 +9,7 @@
     "@types/pg": "^8.11.11",
     "kanel": "^3.14.1",
     "kanel-kysely": "^0.7.1",
-    "kysely-ctl": "^0.12.1"
+    "kysely-ctl": "^0.15.1"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -20,11 +20,11 @@
     "migrate": "bun --env-file ../../.env kysely migrate:latest",
     "reset": "bun rollback && bun migrate && bun generate",
     "seed:mock_challenges": "bun --env-file ../../.env kysely seed:run --specific mock_challenges",
-    "seed:role": "bun --env-file ../../.env kysely seed:run --specific role"
+    "seed:roles": "bun --env-file ../../.env kysely seed:run --specific roles"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.29",
-    "kysely": "^0.28.1",
+    "kysely": "^0.28.4",
     "pg": "^8.13.3"
   }
 }

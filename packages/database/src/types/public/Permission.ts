@@ -6,7 +6,7 @@ export type PermissionId = number;
 export default interface PermissionTable {
   id: ColumnType<PermissionId, PermissionId | undefined, PermissionId>;
 
-  resource: ColumnType<string | null, string | null, string | null>;
+  resource: ColumnType<string, string, string>;
 
   name: ColumnType<string, string, string>;
 

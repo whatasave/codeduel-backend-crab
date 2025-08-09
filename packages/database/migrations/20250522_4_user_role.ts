@@ -11,7 +11,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable(USER_ROLE_TABLE_NAME)
     .ifNotExists()
-    .addColumn('user_id', 'integer', (col) => col.primaryKey().references(`${USER_TABLE_NAME}.id`))
+    .addColumn('user_id', 'integer', (col) => col.notNull().references(`${USER_TABLE_NAME}.id`))
     .addColumn('role_id', 'integer', (col) => col.notNull().references(`${ROLE_TABLE_NAME}.id`))
     .addColumn('created_at', 'timestamptz', (col) =>
       col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
@@ -19,6 +19,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('updated_at', 'timestamptz', (col) =>
       col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
     )
+    .addPrimaryKeyConstraint(`pk_${USER_ROLE_TABLE_NAME}`, ['user_id', 'role_id'])
     .execute();
 
   await createTrigger(db);

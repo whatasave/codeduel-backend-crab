@@ -9,6 +9,7 @@ export const LoggerConfig = Type.Object({
   type: Type.Union([Type.Literal('console')]),
   options: Type.Record(Type.String(), Type.Any(), { default: {} }),
   enabled: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
+  disabled: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
 });
 
 export type ConsoleLoggerConfig = Static<typeof ConsoleLoggerConfig>;
@@ -19,15 +20,16 @@ export const ConsoleLoggerConfig = Type.Object({
 });
 
 export class LoggerFactory {
-  create(type: string, options: unknown, enabled?: string[]): Logger<Log<unknown>> {
+  create({ type, options, enabled, disabled }: LoggerConfig): Logger<Log<unknown>> {
     try {
       const factories: Record<string, () => Logger<Log<unknown>>> = {
         console: () => this.createConsoleLogger(Value.Parse(ConsoleLoggerConfig, options)),
       };
 
-      const logger = factories[type]?.();
+      let logger = factories[type]?.();
       if (!logger) throw new Error(`Unknown logger type: ${type}`);
-      if (enabled) return new LoggerFilter(logger, (_, log) => enabled.includes(log.type));
+      if (enabled) logger = this.createFilterEnabled(logger, enabled);
+      if (disabled) logger = this.createFilterDisabled(logger, disabled);
       return logger;
     } catch (error) {
       if (error instanceof AssertError) {
@@ -41,7 +43,25 @@ export class LoggerFactory {
   }
 
   createComposite(loggers: LoggerConfig[]): Logger<Log<unknown>>[] {
-    return loggers.map((config) => this.create(config.type, config.options, config.enabled));
+    return loggers.map((config) => this.create(config));
+  }
+
+  createFilterEnabled(logger: Logger<Log<unknown>>, enabled: string[]): Logger<Log<unknown>> {
+    const enabledRegex = enabled.map(
+      (e) => new RegExp(`^(${escapeRegExp(e)}|${escapeRegExp(e)}\\..*)$`)
+    );
+
+    return new LoggerFilter(logger, (_, log) => enabledRegex.some((regex) => regex.test(log.type)));
+  }
+
+  createFilterDisabled(logger: Logger<Log<unknown>>, disabled: string[]): Logger<Log<unknown>> {
+    const disabledRegex = disabled.map(
+      (e) => new RegExp(`^(${escapeRegExp(e)}|${escapeRegExp(e)}\\..*)$`)
+    );
+
+    return new LoggerFilter(logger, (_, log) =>
+      disabledRegex.every((regex) => !regex.test(log.type))
+    );
   }
 
   createConsoleLogger(options: ConsoleLoggerConfig): ConsoleLogger {
@@ -54,4 +74,8 @@ export class LoggerFactory {
   private dateFormatterFromLocale(locale?: string): (date: number) => string {
     return (date) => new Date(date).toLocaleString(locale);
   }
+}
+
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

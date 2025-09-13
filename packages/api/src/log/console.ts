@@ -2,17 +2,21 @@ import type { Logger } from './logger';
 import type { Log } from './service';
 
 export interface ConsoleLoggerOptions {
-  formatDate: (date: number) => string;
+  formatDate?: (date: number) => string;
+  showType: boolean;
 }
 
 export class ConsoleLogger implements Logger<Log<unknown>> {
-  private readonly formatDate: (date: number) => string;
-
-  constructor({ formatDate }: ConsoleLoggerOptions) {
-    this.formatDate = formatDate;
-  }
+  constructor(private options: ConsoleLoggerOptions) {}
 
   log(date: number, log: Log<unknown>): void {
-    console.log(`[${this.formatDate(date)}]`, log.message);
+    if (this.options.formatDate === undefined && !this.options.showType) {
+      return console.log(log.message);
+    }
+
+    let prefix = '';
+    if (this.options.formatDate) prefix += `[${this.options.formatDate(date)}]`;
+    if (this.options.showType) prefix += `[${log.type}]`;
+    console.log(prefix, log.message);
   }
 }

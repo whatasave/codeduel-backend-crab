@@ -14,6 +14,8 @@ export const LoggerConfig = Type.Object({
 export type ConsoleLoggerConfig = Static<typeof ConsoleLoggerConfig>;
 export const ConsoleLoggerConfig = Type.Object({
   locale: Type.Optional(Type.String()),
+  showDate: Type.Boolean({ default: true }),
+  showType: Type.Boolean({ default: true }),
 });
 
 export class LoggerFactory {
@@ -44,11 +46,12 @@ export class LoggerFactory {
 
   createConsoleLogger(options: ConsoleLoggerConfig): ConsoleLogger {
     return new ConsoleLogger({
-      formatDate: this.parseFormatDate(options.locale),
+      formatDate: options.showDate ? this.dateFormatterFromLocale(options.locale) : undefined,
+      showType: options.showType,
     });
   }
 
-  private parseFormatDate(locale?: string): (date: number) => string {
+  private dateFormatterFromLocale(locale?: string): (date: number) => string {
     return (date) => new Date(date).toLocaleString(locale);
   }
 }

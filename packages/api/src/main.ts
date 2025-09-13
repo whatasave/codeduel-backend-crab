@@ -6,6 +6,8 @@ import { Router, type RouterGroup } from '@glass-cannon/router';
 import { cors } from '@glass-cannon/cors';
 import { typebox } from '@glass-cannon/typebox';
 import { BunServer, json, text } from '@glass-cannon/server-bun';
+import { LoggerService } from './log/service';
+import { LoggerFactory } from './log/loggerFactory';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
@@ -13,6 +15,7 @@ if (!config) {
   process.exit(1);
 }
 
+const logger = new LoggerService({ loggers: new LoggerFactory().createComposite(config.logger) });
 const database = createDatabase(config.database);
 const router = new Router();
 
@@ -39,7 +42,7 @@ const typeboxRoot = typebox(root, {
     config.descriptiveErrors ? json({ status: 400, body: { errors } }) : { status: 400 },
 });
 
-const controller = new RootController(database, config);
+const controller = new RootController(database, logger, config);
 controller.setup(typeboxRoot.group({ prefix: '/v1' }));
 
 const openapi = typeboxRoot.openapi();
@@ -64,4 +67,4 @@ typeboxRoot.route({
 
 const server = new BunServer(router.handle);
 const running = await server.listen({ host: config.host, port: config.port });
-console.log(`Server is running on ${running.url}`);
+void logger.log('listening', `Server is running on ${running.url}`);

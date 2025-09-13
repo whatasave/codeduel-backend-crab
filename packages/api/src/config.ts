@@ -2,6 +2,7 @@ import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
 import { Config as AuthConfig } from './route/auth/config';
+import { LoggerConfig } from './log/loggerFactory';
 
 export const CorsOptions = Type.Object({
   allowedOrigins: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
@@ -20,6 +21,7 @@ export const Config = Type.Object({
   cors: Type.Optional(CorsOptions),
   database: DatabaseConfig,
   auth: AuthConfig,
+  logger: Type.Array(LoggerConfig),
 });
 
 export function loadConfig(): Config {
@@ -38,9 +40,9 @@ export function loadConfig(): Config {
         env.CORS_ALLOWED_METHODS == '*'
           ? undefined
           : env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
-      allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean),
-      allowCredentials: env.CORS_ALLOW_CREDENTIALS,
-      exposeHeaders: env.CORS_EXPOSE_HEADERS?.split(',').filter(Boolean),
+      allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean) ?? [],
+      allowCredentials: env.CORS_ALLOW_CREDENTIALS ?? false,
+      exposeHeaders: env.CORS_EXPOSE_HEADERS?.split(',').filter(Boolean) ?? [],
       maxAge: env.CORS_MAX_AGE === '' ? undefined : env.CORS_MAX_AGE,
     },
     database: {
@@ -113,7 +115,13 @@ export function loadConfig(): Config {
         },
       },
     },
+    logger:
+      env.LOGGER === undefined || env.LOGGER === ''
+        ? [{ type: 'console' }]
+        : (JSON.parse(env.LOGGER) as unknown),
   };
+
+  if (!Array.isArray(config.logger)) config.logger = [config.logger];
 
   try {
     return Value.Parse(Config, config);

@@ -1,17 +1,17 @@
 import type { Middleware } from '@glass-cannon/router/middleware';
 import { text } from '@glass-cannon/server-bun';
 
-export const defaultErrorHandler: Middleware = (next) => {
+export const defaultErrorHandler: Middleware = async (next) => {
   try {
-    return next({});
+    return await next({});
   } catch {
     return text({ status: 500, body: 'Internal Server Error' });
   }
 };
 
-export const descriptiveErrorHandler: Middleware = (next) => {
+export const descriptiveErrorHandler: Middleware = async (next, c) => {
   try {
-    return next({});
+    return await next({});
   } catch (error) {
     if (error instanceof Error) {
       return text({ status: 500, body: error.stack ?? error.toString() });

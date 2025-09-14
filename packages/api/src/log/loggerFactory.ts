@@ -1,23 +1,9 @@
-import { Type, type Static } from '@sinclair/typebox';
 import { ConsoleLogger } from './console';
 import { LoggerFilter, type Logger } from './logger';
 import type { Log } from './service';
 import { AssertError, Value } from '@sinclair/typebox/value';
-
-export type LoggerConfig = Static<typeof LoggerConfig>;
-export const LoggerConfig = Type.Object({
-  type: Type.Union([Type.Literal('console')]),
-  options: Type.Record(Type.String(), Type.Any(), { default: {} }),
-  enabled: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
-  disabled: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
-});
-
-export type ConsoleLoggerConfig = Static<typeof ConsoleLoggerConfig>;
-export const ConsoleLoggerConfig = Type.Object({
-  locale: Type.Optional(Type.String()),
-  showDate: Type.Boolean({ default: true }),
-  showType: Type.Boolean({ default: true }),
-});
+import type { LoggerConfig } from './config';
+import { ConsoleLoggerConfig } from './config';
 
 export class LoggerFactory {
   create({ type, options, enabled, disabled }: LoggerConfig): Logger<Log<unknown>> {

@@ -7,7 +7,7 @@ import { cors } from '@glass-cannon/cors';
 import { typebox } from '@glass-cannon/typebox';
 import { BunServer, json, text } from '@glass-cannon/server-bun';
 import { LoggerService } from './log/service';
-import { LoggerFactory } from './log/loggerFactory';
+import { pipe } from '@glass-cannon/router/middleware';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
@@ -15,7 +15,7 @@ if (!config) {
   process.exit(1);
 }
 
-const logger = new LoggerService({ loggers: new LoggerFactory().createComposite(config.logger) });
+const logger = new LoggerService(config.logger);
 const database = createDatabase(config.database);
 const router = new Router();
 
@@ -34,7 +34,7 @@ if (config.cors) {
 }
 
 const errorHandler = config.descriptiveErrors ? descriptiveErrorHandler : defaultErrorHandler;
-root = root.group({ middleware: errorHandler });
+root = root.group({ middleware: pipe(errorHandler, logger.middleware) });
 
 const typeboxRoot = typebox(root, {
   openapi: {},

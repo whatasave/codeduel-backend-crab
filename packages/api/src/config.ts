@@ -2,7 +2,7 @@ import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
 import { Config as AuthConfig } from './route/auth/config';
-import { LoggerConfig } from './log/loggerFactory';
+import { Config as LoggerConfig } from './log/config';
 
 export const CorsOptions = Type.Object({
   allowedOrigins: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
@@ -21,7 +21,7 @@ export const Config = Type.Object({
   cors: Type.Optional(CorsOptions),
   database: DatabaseConfig,
   auth: AuthConfig,
-  logger: Type.Array(LoggerConfig),
+  logger: LoggerConfig,
 });
 
 export function loadConfig(): Config {
@@ -115,13 +115,19 @@ export function loadConfig(): Config {
         },
       },
     },
-    logger:
-      env.LOGGER === undefined || env.LOGGER === ''
-        ? [{ type: 'console' }]
-        : (JSON.parse(env.LOGGER) as unknown),
+    logger: {
+      loggers:
+        env.LOGGER === undefined || env.LOGGER === ''
+          ? [{ type: 'console' }]
+          : (JSON.parse(env.LOGGER) as unknown),
+      sanitizer:
+        env.LOGGER_REQUEST_SANITIZER === undefined || env.LOGGER_SANITIZER === ''
+          ? {}
+          : (JSON.parse(env.LOGGER_REQUEST_SANITIZER) as unknown),
+    },
   };
 
-  if (!Array.isArray(config.logger)) config.logger = [config.logger];
+  if (!Array.isArray(config.logger.loggers)) config.logger.loggers = [config.logger.loggers];
 
   try {
     return Value.Parse(Config, config);

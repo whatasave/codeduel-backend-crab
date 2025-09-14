@@ -1,8 +1,10 @@
-import { CompositeLogger, type Logger } from './logger';
-
-export interface LoggerServiceOptions {
-  loggers: Logger<Log<unknown>>[];
-}
+import type { RouteContext } from '@glass-cannon/router';
+import { CompositeLogger } from './logger';
+import { readJson, readText, type Response } from '@glass-cannon/server-bun';
+import type { Middleware } from '@glass-cannon/router/middleware';
+import type { Config, RequestSanitizerOptions } from './config';
+import { LoggerFactory } from './loggerFactory';
+import type { ReadableStream } from 'node:stream/web';
 
 export interface Log<T> {
   type: string;
@@ -11,12 +13,101 @@ export interface Log<T> {
 
 export class LoggerService {
   private readonly logger: CompositeLogger<Log<unknown>>;
+  private readonly sanitizer: RequestSanitizerOptions;
 
-  constructor({ loggers }: LoggerServiceOptions) {
-    this.logger = new CompositeLogger<Log<unknown>>(loggers);
+  constructor({ loggers, sanitizer }: Config) {
+    const factory = new LoggerFactory();
+    this.logger = new CompositeLogger<Log<unknown>>(factory.createComposite(loggers));
+    this.sanitizer = sanitizer;
   }
 
-  log(type: string, message: unknown): Promise<void> {
-    return this.logger.log(Date.now(), { type, message });
+  middleware: Middleware = async (next, context) => {
+    const start = Date.now();
+    const response = await next(context);
+    void this.logRequest(context, response, Date.now() - start);
+    return response;
+  };
+
+  async log(type: string, message: unknown): Promise<void> {
+    return await this.logger.log(Date.now(), { type, message });
+  }
+
+  async logRequest(
+    request: RouteContext,
+    response: Response,
+    executionTime: number
+  ): Promise<void> {
+    let type = `request.${request.route.path}`;
+    if (request.route.method) type += `.${request.route.method.toLowerCase()}`;
+    return await this.logger.log(Date.now(), {
+      type,
+      message: JSON.stringify({
+        request: this.sanitizeRequest(request),
+        response: await this.sanitizeResponse(response, request),
+        executionTime,
+      }),
+    });
+  }
+
+  private sanitizeRequest(request: RouteContext): Record<string, unknown> {
+    const headers = this.sanitizeHeaders(request.headers);
+
+    const body =
+      'body' in request && this.sanitizer.secretRequests.includes(request.route.path)
+        ? request.body
+        : undefined;
+
+    const url = new URL(request.url);
+    if (this.sanitizer.secretRequests.includes(request.route.path)) {
+      url.search = '';
+    }
+
+    return {
+      route: {
+        method: request.route.method,
+        path: request.route.path,
+      },
+      url: url.toJSON(),
+      method: request.method,
+      headers,
+      body,
+    };
+  }
+
+  private async sanitizeResponse(
+    response: Response,
+    request: RouteContext
+  ): Promise<Record<string, unknown>> {
+    const headers = this.sanitizeHeaders(response.headers);
+
+    let body = undefined;
+    if (response.body && !this.sanitizer.secretResponses.includes(request.route.path)) {
+      const { readable, writable } = new TransformStream<Uint8Array>();
+      void response.body(writable).then(() => writable.close());
+      switch (response.headers?.get('content-type')) {
+        case 'application/json':
+          body = await readJson(readable as unknown as ReadableStream<Uint8Array>);
+          break;
+        case 'text/plain':
+        case 'text/html':
+          body = await readText(readable as unknown as ReadableStream<Uint8Array>);
+          break;
+      }
+    }
+
+    return {
+      status: response.status,
+      headers,
+      body,
+    };
+  }
+
+  private sanitizeHeaders(headers: Headers | undefined): Record<string, unknown> {
+    const sanitized = { ...headers?.toJSON() };
+    for (const header of this.sanitizer.secretHeaders) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete sanitized[header];
+    }
+    return sanitized;
   }
 }

@@ -17,7 +17,7 @@ export const ConsoleLoggerConfig = Type.Object({
 
 export type RequestSanitizerOptions = Static<typeof RequestSanitizerOptions>;
 export const RequestSanitizerOptions = Type.Object({
-  secretHeaders: Type.Array(Type.String(), { default: [] }),
+  allowedHeaders: Type.Array(Type.String(), { default: [] }),
   secretRequests: Type.Array(Type.String(), { default: [] }),
   secretResponses: Type.Array(Type.String(), { default: [] }),
 });

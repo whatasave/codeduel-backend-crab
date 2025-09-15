@@ -148,12 +148,16 @@ export class LoggerService {
   }
 
   private sanitizeHeaders(headers: Headers | undefined): Record<string, unknown> {
-    const sanitized = { ...headers?.toJSON() };
-    for (const header of this.sanitizer.secretHeaders) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete sanitized[header];
+    if (!headers) return {};
+
+    const result: Record<string, unknown> = {};
+    for (const allowedHeader of this.sanitizer.allowedHeaders) {
+      const value = headers.get(allowedHeader);
+      if (value !== null) {
+        result[allowedHeader] = value;
+      }
     }
-    return sanitized;
+    return result;
   }
 }
 

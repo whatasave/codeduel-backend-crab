@@ -17,6 +17,15 @@ export class ConsoleLogger implements Logger<Log<unknown>> {
     let prefix = '';
     if (this.options.formatDate) prefix += `[${this.options.formatDate(date)}]`;
     if (this.options.showType) prefix += `[${log.type}]`;
+
+    if (log.type.startsWith('error')) {
+      return console.error(prefix, log.message);
+    }
+
+    if (log.type.startsWith('warn')) {
+      return console.warn(prefix, log.message);
+    }
+
     console.log(prefix, log.message);
   }
 }

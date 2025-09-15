@@ -15,7 +15,7 @@ if (!config) {
   process.exit(1);
 }
 
-const logger = new LoggerService(config.logger);
+const logger = LoggerService.init(config.logger);
 const database = createDatabase(config.database);
 const router = new Router();
 
@@ -67,4 +67,5 @@ typeboxRoot.route({
 
 const server = new BunServer(router.handle);
 const running = await server.listen({ host: config.host, port: config.port });
+
 void logger.log('listening', `Server is running on ${running.url}`);

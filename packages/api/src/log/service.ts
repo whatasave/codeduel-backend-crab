@@ -15,7 +15,21 @@ export class LoggerService {
   private readonly logger: CompositeLogger<Log<unknown>>;
   private readonly sanitizer: RequestSanitizerOptions;
 
-  constructor({ loggers, sanitizer }: Config) {
+  static init(config: Config): LoggerService {
+    const logger = new LoggerService(config);
+
+    process.on('unhandledRejection', (error) => {
+      logger.error(error, 'Unhandled Promise Rejection').catch((logError: unknown) => {
+        const stack = errorToString(error);
+        const logStack = errorToString(logError);
+        console.error(`Unable to log error:\n${logStack}\nOriginal error:\n${stack}`);
+      });
+    });
+
+    return logger;
+  }
+
+  private constructor({ loggers, sanitizer }: Config) {
     const factory = new LoggerFactory();
     this.logger = new CompositeLogger<Log<unknown>>(factory.createComposite(loggers));
     this.sanitizer = sanitizer;
@@ -23,27 +37,58 @@ export class LoggerService {
 
   middleware: Middleware = async (next, context) => {
     const start = Date.now();
-    const response = await next(context);
-    void this.logRequest(context, response, Date.now() - start);
-    return response;
+    try {
+      const response = await next(context);
+      void this.logRequest(context, response, undefined, Date.now() - start);
+      return response;
+    } catch (error) {
+      void this.logRequest(context, undefined, error, Date.now() - start);
+
+      const jsonRequest = JSON.stringify(this.sanitizeRequest(context));
+      void this.error(error, jsonRequest, `request.${context.route.path}`).catch(
+        (logError: unknown) => {
+          const stack = errorToString(error);
+          const logStack = errorToString(logError);
+          console.error(`Unable to log error:\n${logStack}\nOriginal error:\n${stack}`);
+        }
+      );
+
+      throw error;
+    }
   };
 
   async log(type: string, message: unknown): Promise<void> {
     return await this.logger.log(Date.now(), { type, message });
   }
 
+  async error(error: unknown, message?: string, type?: string): Promise<void> {
+    const stack = (error as Error).stack ?? String(error);
+
+    return await this.logger.log(Date.now(), {
+      type: type ? `error.${type}` : 'error',
+      message: message ? `${message}\n${stack}` : stack,
+    });
+  }
+
+  async warn(message: string): Promise<void> {
+    return await this.logger.log(Date.now(), { type: 'warn', message });
+  }
+
   async logRequest(
     request: RouteContext,
-    response: Response,
+    response: Response | undefined,
+    error: unknown,
     executionTime: number
   ): Promise<void> {
     let type = `request.${request.route.path}`;
     if (request.route.method) type += `.${request.route.method.toLowerCase()}`;
+
     return await this.logger.log(Date.now(), {
       type,
       message: JSON.stringify({
         request: this.sanitizeRequest(request),
-        response: await this.sanitizeResponse(response, request),
+        response: response ? await this.sanitizeResponse(response, request) : undefined,
+        error: error ? errorToString(error) : undefined,
         executionTime,
       }),
     });
@@ -110,4 +155,9 @@ export class LoggerService {
     }
     return sanitized;
   }
+}
+
+function errorToString(error: unknown): string {
+  if (error instanceof Error) return error.stack ?? error.toString();
+  return JSON.stringify(error, Object.getOwnPropertyNames(error));
 }

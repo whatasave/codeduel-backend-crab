@@ -1,14 +1,33 @@
 import { ConsoleLogger } from './console';
-import { LoggerFilter, type Logger } from './logger';
-import type { Log } from './service';
+import { CompositeLogger, LoggerFilter, type Logger } from './logger';
+import type { Log, Request } from './service';
 import { AssertError, Value } from '@sinclair/typebox/value';
 import type { LoggerConfig } from './config';
 import { ConsoleLoggerConfig } from './config';
 
 export class LoggerFactory {
-  create({ type, options, enabled, disabled }: LoggerConfig): Logger<Log<unknown>> {
+  private readonly STRING_LOGGERS: string[] = ['console'];
+  private readonly REQUEST_LOGGERS: string[] = [];
+
+  createCompositeString(loggers: LoggerConfig[]): Logger<Log<string>> {
+    return new CompositeLogger(
+      loggers
+        .filter((config) => this.STRING_LOGGERS.includes(config.type))
+        .map((config) => this.create(config))
+    );
+  }
+
+  createCompositeRequest(loggers: LoggerConfig[]): Logger<Log<Request>> {
+    return new CompositeLogger(
+      loggers
+        .filter((config) => this.REQUEST_LOGGERS.includes(config.type))
+        .map((config) => this.create(config))
+    );
+  }
+
+  create<T>({ type, options, enabled, disabled }: LoggerConfig): Logger<Log<T>> {
     try {
-      const factories: Record<string, () => Logger<Log<unknown>>> = {
+      const factories: Record<string, () => Logger<Log<never>>> = {
         console: () => this.createConsoleLogger(Value.Parse(ConsoleLoggerConfig, options)),
       };
 
@@ -28,11 +47,7 @@ export class LoggerFactory {
     }
   }
 
-  createComposite(loggers: LoggerConfig[]): Logger<Log<unknown>>[] {
-    return loggers.map((config) => this.create(config));
-  }
-
-  createFilterEnabled(logger: Logger<Log<unknown>>, enabled: string[]): Logger<Log<unknown>> {
+  createFilterEnabled<T>(logger: Logger<Log<T>>, enabled: string[]): Logger<Log<T>> {
     const enabledRegex = enabled.map(
       (e) => new RegExp(`^(${escapeRegExp(e)}|${escapeRegExp(e)}\\..*)$`)
     );
@@ -40,7 +55,7 @@ export class LoggerFactory {
     return new LoggerFilter(logger, (log) => enabledRegex.some((regex) => regex.test(log.type)));
   }
 
-  createFilterDisabled(logger: Logger<Log<unknown>>, disabled: string[]): Logger<Log<unknown>> {
+  createFilterDisabled<T>(logger: Logger<Log<T>>, disabled: string[]): Logger<Log<T>> {
     const disabledRegex = disabled.map(
       (e) => new RegExp(`^(${escapeRegExp(e)}|${escapeRegExp(e)}\\..*)$`)
     );

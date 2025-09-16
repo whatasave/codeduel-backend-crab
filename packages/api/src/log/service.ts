@@ -1,6 +1,6 @@
 import type { RouteContext } from '@glass-cannon/router';
-import { CompositeLogger } from './logger';
-import { readJson, readText, type Response } from '@glass-cannon/server-bun';
+import { type Logger } from './logger';
+import { readJson, readText, type Response, type ResponseBody } from '@glass-cannon/server-bun';
 import type { Middleware } from '@glass-cannon/router/middleware';
 import type { Config, RequestSanitizerOptions } from './config';
 import { LoggerFactory } from './loggerFactory';
@@ -10,21 +10,44 @@ export interface Log<T> {
   date: number;
   type: string;
   message: T;
+  error?: unknown;
+}
+
+export interface Request {
+  request: {
+    route: {
+      method?: string;
+      path: string;
+    };
+    url: string;
+    method: string;
+    headers: Record<string, string>;
+    body?: unknown;
+  };
+  response?: {
+    status: number;
+    headers: Record<string, string>;
+    body?: unknown;
+  };
 }
 
 export class LoggerService {
-  private readonly logger: CompositeLogger<Log<unknown>>;
+  private readonly logger: Logger<Log<string>>;
+  private readonly requestLogger: Logger<Log<Request>>;
   private readonly sanitizer: RequestSanitizerOptions;
+
+  private static loggerExceptionHandler = (reason: unknown): void => {
+    console.error('Failed to log message:');
+    console.error(reason);
+  };
 
   static init(config: Config): LoggerService {
     const logger = new LoggerService(config);
 
     process.on('unhandledRejection', (error) => {
-      logger.error(error, 'Unhandled Promise Rejection').catch((logError: unknown) => {
-        const stack = errorToString(error);
-        const logStack = errorToString(logError);
-        console.error(`Unable to log error:\n${logStack}\nOriginal error:\n${stack}`);
-      });
+      logger
+        .error('Unhandled promise rejection', error)
+        .catch(LoggerService.loggerExceptionHandler);
     });
 
     return logger;
@@ -32,7 +55,8 @@ export class LoggerService {
 
   private constructor({ loggers, sanitizer }: Config) {
     const factory = new LoggerFactory();
-    this.logger = new CompositeLogger<Log<unknown>>(factory.createComposite(loggers));
+    this.logger = factory.createCompositeString(loggers);
+    this.requestLogger = factory.createCompositeRequest(loggers);
     this.sanitizer = sanitizer;
   }
 
@@ -48,22 +72,20 @@ export class LoggerService {
     }
   };
 
-  async log(type: string, message: unknown): Promise<void> {
-    return await this.logger.log({ date: Date.now(), type, message });
+  async log(type: string, message: string, error?: unknown): Promise<void> {
+    return await this.logger
+      .log({ date: Date.now(), type, message, error })
+      .catch(LoggerService.loggerExceptionHandler);
   }
 
-  async error(error: unknown, message?: string, type?: string): Promise<void> {
-    const stack = errorToString(error);
-
-    return await this.logger.log({
-      date: Date.now(),
-      type: type ? `error.${type}` : 'error',
-      message: message ? `${message}\n${stack}` : stack,
-    });
+  async error(message: string, error?: unknown, type?: string): Promise<void> {
+    type = type !== undefined ? `error.${type}` : 'error';
+    return await this.log(type, message, error);
   }
 
-  async warn(message: string): Promise<void> {
-    return await this.logger.log({ date: Date.now(), type: 'warn', message });
+  async warn(message: string, error?: unknown, type?: string): Promise<void> {
+    type = type !== undefined ? `warn.${type}` : 'warn';
+    return await this.log(type, message, error);
   }
 
   async logRequest(
@@ -74,21 +96,26 @@ export class LoggerService {
   ): Promise<void> {
     let type = `request.${request.route.path}`;
     if (request.route.method) type += `.${request.route.method.toLowerCase()}`;
-    if (error) type = `error.${type}`;
 
-    return await this.logger.log({
-      date: Date.now(),
-      type,
-      message: JSON.stringify({
-        request: this.sanitizeRequest(request),
-        response: response ? await this.sanitizeResponse(response, request) : undefined,
-        error: error ? errorToString(error) : undefined,
-        executionTime,
-      }),
-    });
+    const message = {
+      request: this.sanitizeRequest(request),
+      response: response ? await this.sanitizeResponse(response, request) : undefined,
+      executionTime,
+    };
+
+    const date = Date.now();
+
+    await Promise.allSettled([
+      this.logger
+        .log({ date, type, message: JSON.stringify(message), error })
+        .catch(LoggerService.loggerExceptionHandler),
+      this.requestLogger
+        .log({ date, type, message, error })
+        .catch(LoggerService.loggerExceptionHandler),
+    ]);
   }
 
-  private sanitizeRequest(request: RouteContext): Record<string, unknown> {
+  private sanitizeRequest(request: RouteContext): Request['request'] {
     const headers = this.sanitizeHeaders(request.headers);
 
     const body =
@@ -116,20 +143,18 @@ export class LoggerService {
   private async sanitizeResponse(
     response: Response,
     request: RouteContext
-  ): Promise<Record<string, unknown>> {
+  ): Promise<Request['response']> {
     const headers = this.sanitizeHeaders(response.headers);
 
     let body = undefined;
     if (response.body && !this.sanitizer.secretResponses.includes(request.route.path)) {
-      const { readable, writable } = new TransformStream<Uint8Array>();
-      void response.body(writable).then(() => writable.close());
       switch (response.headers?.get('content-type')) {
         case 'application/json':
-          body = await readJson(readable as unknown as ReadableStream<Uint8Array>);
+          body = await readJson(readableFromResponseBody(response.body));
           break;
         case 'text/plain':
         case 'text/html':
-          body = await readText(readable as unknown as ReadableStream<Uint8Array>);
+          body = await readText(readableFromResponseBody(response.body));
           break;
       }
     }
@@ -141,10 +166,10 @@ export class LoggerService {
     };
   }
 
-  private sanitizeHeaders(headers: Headers | undefined): Record<string, unknown> {
+  private sanitizeHeaders(headers: Headers | undefined): Record<string, string> {
     if (!headers) return {};
 
-    const result: Record<string, unknown> = {};
+    const result: Record<string, string> = {};
     for (const allowedHeader of this.sanitizer.allowedHeaders) {
       const value = headers.get(allowedHeader);
       if (value !== null) {
@@ -155,7 +180,8 @@ export class LoggerService {
   }
 }
 
-function errorToString(error: unknown): string {
-  if (error instanceof Error) return error.stack ?? error.toString();
-  return JSON.stringify(error, Object.getOwnPropertyNames(error));
+function readableFromResponseBody(body: ResponseBody): ReadableStream<Uint8Array> {
+  const { readable, writable } = new TransformStream<Uint8Array>();
+  void body(writable).then(() => writable.close());
+  return readable as unknown as ReadableStream<Uint8Array>;
 }

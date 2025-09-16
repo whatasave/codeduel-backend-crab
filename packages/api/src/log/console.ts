@@ -9,13 +9,13 @@ export interface ConsoleLoggerOptions {
 export class ConsoleLogger implements Logger<Log<unknown>> {
   constructor(private options: ConsoleLoggerOptions) {}
 
-  log(date: number, log: Log<unknown>): void {
+  log(log: Log<unknown>): void {
     if (this.options.formatDate === undefined && !this.options.showType) {
       return console.log(log.message);
     }
 
     let prefix = '';
-    if (this.options.formatDate) prefix += `[${this.options.formatDate(date)}]`;
+    if (this.options.formatDate) prefix += `[${this.options.formatDate(log.date)}]`;
     if (this.options.showType) prefix += `[${log.type}]`;
 
     if (log.type.startsWith('error')) {

@@ -7,6 +7,7 @@ import { LoggerFactory } from './loggerFactory';
 import type { ReadableStream } from 'node:stream/web';
 
 export interface Log<T> {
+  date: number;
   type: string;
   message: T;
 }
@@ -58,20 +59,21 @@ export class LoggerService {
   };
 
   async log(type: string, message: unknown): Promise<void> {
-    return await this.logger.log(Date.now(), { type, message });
+    return await this.logger.log({ date: Date.now(), type, message });
   }
 
   async error(error: unknown, message?: string, type?: string): Promise<void> {
-    const stack = (error as Error).stack ?? String(error);
+    const stack = errorToString(error);
 
-    return await this.logger.log(Date.now(), {
+    return await this.logger.log({
+      date: Date.now(),
       type: type ? `error.${type}` : 'error',
       message: message ? `${message}\n${stack}` : stack,
     });
   }
 
   async warn(message: string): Promise<void> {
-    return await this.logger.log(Date.now(), { type: 'warn', message });
+    return await this.logger.log({ date: Date.now(), type: 'warn', message });
   }
 
   async logRequest(
@@ -83,7 +85,8 @@ export class LoggerService {
     let type = `request.${request.route.path}`;
     if (request.route.method) type += `.${request.route.method.toLowerCase()}`;
 
-    return await this.logger.log(Date.now(), {
+    return await this.logger.log({
+      date: Date.now(),
       type,
       message: JSON.stringify({
         request: this.sanitizeRequest(request),

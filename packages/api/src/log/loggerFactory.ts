@@ -37,7 +37,7 @@ export class LoggerFactory {
       (e) => new RegExp(`^(${escapeRegExp(e)}|${escapeRegExp(e)}\\..*)$`)
     );
 
-    return new LoggerFilter(logger, (_, log) => enabledRegex.some((regex) => regex.test(log.type)));
+    return new LoggerFilter(logger, (log) => enabledRegex.some((regex) => regex.test(log.type)));
   }
 
   createFilterDisabled(logger: Logger<Log<unknown>>, disabled: string[]): Logger<Log<unknown>> {
@@ -45,9 +45,7 @@ export class LoggerFactory {
       (e) => new RegExp(`^(${escapeRegExp(e)}|${escapeRegExp(e)}\\..*)$`)
     );
 
-    return new LoggerFilter(logger, (_, log) =>
-      disabledRegex.every((regex) => !regex.test(log.type))
-    );
+    return new LoggerFilter(logger, (log) => disabledRegex.every((regex) => !regex.test(log.type)));
   }
 
   createConsoleLogger(options: ConsoleLoggerConfig): ConsoleLogger {

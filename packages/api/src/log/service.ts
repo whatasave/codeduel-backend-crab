@@ -44,16 +44,6 @@ export class LoggerService {
       return response;
     } catch (error) {
       void this.logRequest(context, undefined, error, Date.now() - start);
-
-      const jsonRequest = JSON.stringify(this.sanitizeRequest(context));
-      void this.error(error, jsonRequest, `request.${context.route.path}`).catch(
-        (logError: unknown) => {
-          const stack = errorToString(error);
-          const logStack = errorToString(logError);
-          console.error(`Unable to log error:\n${logStack}\nOriginal error:\n${stack}`);
-        }
-      );
-
       throw error;
     }
   };
@@ -84,6 +74,7 @@ export class LoggerService {
   ): Promise<void> {
     let type = `request.${request.route.path}`;
     if (request.route.method) type += `.${request.route.method.toLowerCase()}`;
+    if (error) type = `error.${type}`;
 
     return await this.logger.log({
       date: Date.now(),

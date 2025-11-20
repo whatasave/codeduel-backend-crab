@@ -2,7 +2,7 @@ import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
 import { createDatabase } from '@codeduel-backend-crab/database';
 import { defaultErrorHandler, descriptiveErrorHandler } from './errors';
-import { Router } from '@glass-cannon/router';
+import { Router, type RouterGroup } from '@glass-cannon/router';
 import { cors } from '@glass-cannon/cors';
 import { typebox } from '@glass-cannon/typebox';
 import { BunServer, json, text } from '@glass-cannon/server-bun';
@@ -16,9 +16,7 @@ if (!config) {
 const database = createDatabase(config.database);
 const router = new Router();
 
-const errorHandler = config.descriptiveErrors ? descriptiveErrorHandler : defaultErrorHandler;
-
-let root = router.group({ middleware: errorHandler });
+let root: RouterGroup = router;
 
 if (config.cors) {
   const options = config.cors;
@@ -31,6 +29,9 @@ if (config.cors) {
     maxAge: options.maxAge,
   });
 }
+
+const errorHandler = config.descriptiveErrors ? descriptiveErrorHandler : defaultErrorHandler;
+root = root.group({ middleware: errorHandler });
 
 const typeboxRoot = typebox(root, {
   openapi: {},

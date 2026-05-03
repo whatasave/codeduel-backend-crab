@@ -19,7 +19,7 @@ import type { TypeBoxGroup } from '@glass-cannon/typebox';
 import { AuthMiddleware } from './auth/middleware';
 import { PermissionRepository } from './permission/repository';
 import { PermissionService } from './permission/service';
-import type { LoggerService } from '../log/service';
+import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class RootController {
   private readonly userRepository: UserRepository;
@@ -28,7 +28,6 @@ export class RootController {
   private readonly gameRepository: GameRepository;
   private readonly permissionRepository: PermissionRepository;
 
-  private readonly loggerService: LoggerService;
   private readonly healthService: HealthService;
   private readonly userService: UserService;
   private readonly challengeService: ChallengeService;
@@ -44,9 +43,7 @@ export class RootController {
   private readonly gameController: GameController;
   private readonly authMiddleware: AuthMiddleware;
 
-  constructor(database: Database, logger: LoggerService, config: Config) {
-    this.loggerService = logger;
-
+  constructor(database: Database, logger: Logger, config: Config) {
     this.userRepository = new UserRepository(database);
     this.challengeRepository = new ChallengeRepository(database);
     this.authRepository = new AuthRepository(database);

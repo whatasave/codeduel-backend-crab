@@ -1,13 +1,14 @@
 import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
-import { createDatabase } from '@codeduel-backend-crab/database';
-import { defaultErrorHandler, descriptiveErrorHandler } from './middleware/errors';
+import { createDatabase, pingDatabase } from '@codeduel-backend-crab/database';
+import { defaultErrorHandler, descriptiveErrorHandler } from './errors';
 import { Router, type RouterGroup } from '@glass-cannon/router';
 import { cors } from '@glass-cannon/cors';
 import { typebox } from '@glass-cannon/typebox';
 import { BunServer, json, text } from '@glass-cannon/server-bun';
-import { LoggerService } from './log/service';
 import { pipe } from '@glass-cannon/router/middleware';
+import { Logger } from '@codeduel-backend-crab/logger';
+import { logRequests } from './logger';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
@@ -15,8 +16,15 @@ if (!config) {
   process.exit(1);
 }
 
-const logger = LoggerService.init(config.logger);
+const logger = new Logger(config.logger);
 const database = createDatabase(config.database);
+
+void pingDatabase(database).then((success) => {
+  if (!success) {
+    logger.warn('database', 'cannot connect to the database');
+  }
+});
+
 const router = new Router();
 
 let root: RouterGroup = router;
@@ -34,7 +42,7 @@ if (config.cors) {
 }
 
 const errorHandler = config.descriptiveErrors ? descriptiveErrorHandler : defaultErrorHandler;
-root = root.group({ middleware: pipe(errorHandler, logger.middleware) });
+root = root.group({ middleware: pipe(errorHandler(logger), logRequests(logger)) });
 
 const typeboxRoot = typebox(root, {
   openapi: {},
@@ -68,4 +76,4 @@ typeboxRoot.route({
 const server = new BunServer(router.handle);
 const running = await server.listen({ host: config.host, port: config.port });
 
-void logger.log('listening', `Server is running on ${running.url}`);
+logger.info('listening', `Server is running on ${running.url}`, { url: running.url });

@@ -2,7 +2,7 @@ import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
 import { Config as AuthConfig } from './route/auth/config';
-import { Config as LoggerConfig } from './log/config';
+import { Config as LoggerConfig } from '@codeduel-backend-crab/logger';
 
 export const CorsOptions = Type.Object({
   allowedOrigins: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
@@ -116,18 +116,10 @@ export function loadConfig(): Config {
       },
     },
     logger: {
-      loggers:
-        env.LOGGER === undefined || env.LOGGER === ''
-          ? [{ type: 'console' }]
-          : (JSON.parse(env.LOGGER) as unknown),
-      sanitizer:
-        env.LOGGER_REQUEST_SANITIZER === undefined || env.LOGGER_SANITIZER === ''
-          ? {}
-          : (JSON.parse(env.LOGGER_REQUEST_SANITIZER) as unknown),
+      level: env.LOGGER_LEVEL ?? 'info',
+      serviceName: env.SERVICE_NAME ?? 'backend',
     },
   };
-
-  if (!Array.isArray(config.logger.loggers)) config.logger.loggers = [config.logger.loggers];
 
   try {
     return Value.Parse(Config, config);

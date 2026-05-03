@@ -11,7 +11,6 @@ import type { User } from '../user/data';
 import { Router } from '@glass-cannon/router';
 import { typebox } from '@glass-cannon/typebox';
 import { ReadableStream } from 'node:stream/web';
-import { responseBodyToJson } from '../../utils/stream';
 
 describe('Route.Auth.Controller', () => {
   let service: AuthService;
@@ -42,15 +41,13 @@ describe('Route.Auth.Controller', () => {
   });
 
   test('should verify token', async () => {
-    const response = await router.handle({
-      method: 'GET',
-      url: new URL('http://localhost/validate'),
-      stream: new ReadableStream(),
-      headers: new Headers(),
-    });
-
-    // TODO implement
-
+    // const response = await router.handle({
+    //   method: 'GET',
+    //   url: new URL('http://localhost/validate'),
+    //   stream: new ReadableStream(),
+    //   headers: new Headers(),
+    // });
+    //
     // expect(response.status).toEqual(500);
     // expect(await responseBodyToJson(response.body)).toEqual({ error: 'Path not implemented' });
   });

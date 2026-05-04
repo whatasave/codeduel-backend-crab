@@ -28,7 +28,7 @@ export default tseslint.config({
         allowNumber: true,
         allowBoolean: true,
         allowNever: true,
-        allow: [{ name: ['Error', 'URL', 'URLSearchParams'], from: 'lib' }],
+        allow: ['Error', 'URL', 'URLSearchParams'],
       },
     ],
     '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],

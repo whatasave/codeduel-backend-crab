@@ -44,7 +44,7 @@ export class GitlabService {
         redirect_uri: this.config.callbackUri,
       }),
     });
-    return (await response.json()) as unknown as GitlabAccessToken;
+    return (await response.json()) as GitlabAccessToken;
   }
 
   async userData(accessToken: string): Promise<GitlabUserData> {
@@ -57,7 +57,7 @@ export class GitlabService {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    return (await response.json()) as unknown as GitlabUserData;
+    return (await response.json()) as GitlabUserData;
   }
 
   authorizationUrl(state: string): string {

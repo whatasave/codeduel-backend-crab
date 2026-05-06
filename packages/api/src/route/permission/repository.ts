@@ -175,7 +175,7 @@ export class PermissionRepository {
   static selectToPermission(permission: Select<'permission'>): Permission {
     return {
       id: permission.id,
-      resource: permission.resource ?? undefined,
+      resource: permission.resource,
       name: permission.name,
       createdAt: permission.created_at,
       updatedAt: permission.updated_at,

@@ -23,7 +23,7 @@ export class AuthMiddleware {
   }
 
   requirePermission(
-    ...requiredPermissions: { resource?: string; name: string }[]
+    ...requiredPermissions: { resource: string; name: string }[]
   ): Middleware<{ user: SessionUser; permissions: Permissions }> {
     return async (next, context) => {
       const user =

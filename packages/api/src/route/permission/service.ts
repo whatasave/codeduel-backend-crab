@@ -12,7 +12,7 @@ export class PermissionService {
     return await this.repository.byIds(ids);
   }
 
-  async createPermission(name: string, resource?: string): Promise<Permission> {
+  async createPermission(name: string, resource: string): Promise<Permission> {
     return await this.repository.createPermission(name, resource);
   }
 

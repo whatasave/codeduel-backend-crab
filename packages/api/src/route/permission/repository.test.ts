@@ -24,6 +24,7 @@ describe('Route.Permission.Repository', () => {
           },
           {
             name: 'login',
+            resource: 'auth',
           },
           {
             name: 'view',
@@ -35,7 +36,7 @@ describe('Route.Permission.Repository', () => {
         .then((rows) =>
           rows.map((row) => ({
             id: row.id,
-            resource: row.resource ?? undefined,
+            resource: row.resource,
             name: row.name,
             createdAt: row.created_at,
             updatedAt: row.updated_at,

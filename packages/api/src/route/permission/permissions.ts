@@ -16,21 +16,21 @@ export class Permissions implements Iterable<Permission> {
     }
   }
 
-  has(name: string, resource?: string): boolean {
+  has(name: string, resource: string): boolean {
     const key = this.getPermissionKey(name, resource);
     return this.permissionMap.has(key);
   }
 
-  hasAny(permissionChecks: { name: string; resource?: string }[]): boolean {
+  hasAny(permissionChecks: { name: string; resource: string }[]): boolean {
     return permissionChecks.some((check) => this.has(check.name, check.resource));
   }
 
-  hasAll(permissionChecks: { name: string; resource?: string }[]): boolean {
+  hasAll(permissionChecks: { name: string; resource: string }[]): boolean {
     return permissionChecks.every((check) => this.has(check.name, check.resource));
   }
 
-  getForResource(resource?: string): Permission[] {
-    return this.resourceMap.get(resource ?? '') ?? [];
+  getForResource(resource: string): Permission[] {
+    return this.resourceMap.get(resource) ?? [];
   }
 
   getResources(): string[] {
@@ -41,8 +41,8 @@ export class Permissions implements Iterable<Permission> {
     return [...this.permissions];
   }
 
-  private getPermissionKey(name: string, resource?: string): string {
-    return resource ? `${resource}:${name}` : name;
+  private getPermissionKey(name: string, resource: string): string {
+    return `${resource}:${name}`;
   }
 
   [Symbol.iterator](): Iterator<Permission> {

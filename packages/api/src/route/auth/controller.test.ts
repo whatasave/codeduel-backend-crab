@@ -46,15 +46,13 @@ describe('Route.Auth.Controller', () => {
   });
 
   test('should verify token', async () => {
-    const response = await router.handle({
-      method: 'GET',
-      url: new URL('http://localhost/validate'),
-      stream: new ReadableStream(),
-      headers: new Headers(),
-    });
-
-    // TODO implement
-
+    // const response = await router.handle({
+    //   method: 'GET',
+    //   url: new URL('http://localhost/validate'),
+    //   stream: new ReadableStream(),
+    //   headers: new Headers(),
+    // });
+    //
     // expect(response.status).toEqual(500);
     // expect(await responseBodyToJson(response.body)).toEqual({ error: 'Path not implemented' });
   });

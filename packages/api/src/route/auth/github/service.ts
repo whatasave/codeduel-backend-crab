@@ -43,7 +43,7 @@ export class GithubService {
         state,
       }),
     });
-    return (await response.json()) as unknown as GithubAccessToken;
+    return (await response.json()) as GithubAccessToken;
   }
 
   async userData(accessToken: string): Promise<GithubUserData> {
@@ -55,7 +55,7 @@ export class GithubService {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    return (await response.json()) as unknown as GithubUserData;
+    return (await response.json()) as GithubUserData;
   }
 
   authorizationUrl(state: string): string {

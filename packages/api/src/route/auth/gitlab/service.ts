@@ -1,4 +1,4 @@
-import type { Auth, CreateAuthSession } from '../data';
+import type { CreateAuthSession, CreateContext } from '../data';
 import type { AuthService } from '../service';
 import type { GitlabAccessToken, GitlabUserData } from './data';
 import type { User } from '../../user/data';
@@ -17,7 +17,7 @@ export class GitlabService {
     return this.config.stateCookie;
   }
 
-  async create(gitlabUser: GitlabUserData): Promise<[Auth, User]> {
+  async create(gitlabUser: GitlabUserData): Promise<CreateContext> {
     return await this.authService.createForce(
       { name: GitlabService.PROVIDER, userId: gitlabUser.id },
       {

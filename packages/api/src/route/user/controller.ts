@@ -1,11 +1,15 @@
 import { Type } from '@sinclair/typebox';
 import type { UserService } from './service';
 import { User } from './data';
+import type { AuthMiddleware } from '../auth/middleware';
 import type { TypeBoxGroup } from '@glass-cannon/typebox';
 import { route } from '../../utils/route';
 
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly authMiddleware: AuthMiddleware
+  ) {}
 
   setup(group: TypeBoxGroup): void {
     this.byId(group);
@@ -52,14 +56,15 @@ export class UserController {
     },
   });
 
-  profile = route({
+  profile = route(() => ({
     method: 'GET',
     path: '/profile',
+    middleware: this.authMiddleware.requireAuth(),
     schema: {
       response: {},
     },
     handler: async () => {
       throw new Error('not implemented');
     },
-  });
+  }));
 }

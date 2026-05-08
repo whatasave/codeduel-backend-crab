@@ -1,10 +1,10 @@
 import { randomUUIDv7 } from 'bun';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
+import type { CreateContext, SessionUser } from './data';
 import {
   type AuthSession,
   type CreateAuthSession,
   stateValidator,
-  type Auth,
   type JwtAccessToken,
   type JwtRefreshToken,
   type Provider,
@@ -14,10 +14,12 @@ import type { AuthRepository } from './repository';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import type { Config } from './config';
 import type { CookieOptions } from '../../utils/cookie';
+import type { PermissionService } from '../permission/service';
 
 export class AuthService {
   constructor(
     private readonly repository: AuthRepository,
+    private readonly permissionsService: PermissionService,
     private readonly config: Config
   ) {}
 
@@ -29,23 +31,27 @@ export class AuthService {
     return this.config.refreshToken.cookie;
   }
 
-  async createIfNotExists(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
-    return await this.repository.createIfNotExists(provider, user);
+  async createIfNotExists(provider: Provider, user: CreateUser): Promise<CreateContext> {
+    return await this.repository.createIfNotExists(provider, user, this.config.userDefaultRole);
   }
 
-  async createForce(provider: Provider, user: CreateUser): Promise<[Auth, User]> {
+  async createForce(provider: Provider, user: CreateUser): Promise<CreateContext> {
     try {
       return await this.createIfNotExists(provider, user);
     } catch (error) {
       if (!(error instanceof UserNameAlreadyExistsError)) throw error;
-      return await this.repository.create(provider, {
-        ...user,
-        username: `${user.username}-${randomUUIDv7()}`,
-      });
+      return await this.repository.create(
+        provider,
+        {
+          ...user,
+          username: `${user.username}-${randomUUIDv7()}`,
+        },
+        this.config.userDefaultRole
+      );
     }
   }
 
-  accessToken(user: User, now: number = Date.now()): Promise<string> {
+  accessToken(user: User, permissions: number[], now: number = Date.now()): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
         {
@@ -55,6 +61,7 @@ export class AuthService {
           sub: user.id,
 
           username: user.username,
+          permissions,
         } as JwtAccessToken,
         this.config.accessToken.secret,
         { algorithm: 'HS256' },
@@ -121,6 +128,7 @@ export class AuthService {
             exp: payload.exp,
             sub: payload.sub,
             username: payload.username,
+            permissions: payload.permissions as number[],
           });
         }
       );
@@ -157,6 +165,16 @@ export class AuthService {
         }
       );
     });
+  }
+
+  async verifySession(token: string): Promise<SessionUser> {
+    const payload = await this.verifyAccessToken(token);
+    const permissions = await this.permissionsService.byIds(payload.permissions);
+    return {
+      id: payload.sub,
+      username: payload.username,
+      permissions,
+    };
   }
 
   encodeState(state: State): string {

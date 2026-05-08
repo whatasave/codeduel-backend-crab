@@ -7,9 +7,16 @@ import { Router } from '@glass-cannon/router';
 import { typebox } from '@glass-cannon/typebox';
 import { ReadableStream } from 'node:stream/web';
 import { responseBodyToJson } from '../../utils/stream';
+import { AuthMiddleware } from '../auth/middleware';
+import { AuthService } from '../auth/service';
+import type { AuthRepository } from '../auth/repository';
+import type { PermissionRepository } from '../permission/repository';
+import { PermissionService } from '../permission/service';
+import type { Config as AuthConfig } from '../auth/config';
 
 describe('Route.User.Controller', () => {
   let service: UserService;
+  let authService: AuthService;
   let controller: UserController;
   let router: Router;
   const mockUser: User = {
@@ -39,10 +46,23 @@ describe('Route.User.Controller', () => {
     { id: 4, username: 'dora', createdAt: new Date().toString(), updatedAt: new Date().toString() },
   ];
 
+  const authConfig = {
+    accessToken: {
+      cookie: { name: 'access-token' },
+    },
+    refreshToken: {
+      cookie: { name: 'refresh-token' },
+    },
+  } as AuthConfig;
+
   beforeAll(() => {
     const repository = {} as UserRepository;
+    const authRepository = {} as AuthRepository;
+    const permissionRepository = {} as PermissionRepository;
+    const permissionService = new PermissionService(permissionRepository);
+    authService = new AuthService(authRepository, permissionService, authConfig);
     service = new UserService(repository);
-    controller = new UserController(service);
+    controller = new UserController(service, new AuthMiddleware(authService));
     router = new Router();
     controller.setup(typebox(router));
   });
@@ -106,6 +126,11 @@ describe('Route.User.Controller', () => {
 
   test('should return a user profile', async () => {
     const byIdSpy = spyOn(service, 'byId').mockResolvedValue(mockUser);
+    const spyVerifySession = spyOn(authService, 'verifySession').mockResolvedValue({
+      id: mockUser.id,
+      username: mockUser.username,
+      permissions: [],
+    });
 
     const response = await router.handle({
       method: 'GET',
@@ -116,6 +141,9 @@ describe('Route.User.Controller', () => {
 
     expect(byIdSpy).toHaveBeenCalledWith(mockUser.id);
     expect(byIdSpy).toHaveBeenCalledTimes(1);
+
+    expect(spyVerifySession).toHaveBeenCalledWith('token_value');
+    expect(spyVerifySession).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);
     expect(await responseBodyToJson(response.body)).toEqual(mockUser);

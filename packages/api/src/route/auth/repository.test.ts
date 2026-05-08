@@ -67,6 +67,8 @@ describe('Route.Auth.Repository', () => {
         )
         .returningAll()
         .executeTakeFirstOrThrow();
+
+      await trx.insertInto('role').values({ name: 'user' }).executeTakeFirstOrThrow();
     });
   });
 
@@ -84,7 +86,7 @@ describe('Route.Auth.Repository', () => {
         biography: '',
       };
       const newProvider: Provider = { name: 'px', userId: 333 };
-      const [auth, user] = await repository.create(newProvider, newUser);
+      const { auth, user } = await repository.create(newProvider, newUser, 'user');
 
       expect(auth).toMatchObject({
         userId: expect.any(Number) as number,
@@ -113,7 +115,7 @@ describe('Route.Auth.Repository', () => {
       if (!exUser || !exAuth) throw new Error('Mock data is not set up correctly');
       const exProvider: Provider = { name: exAuth.provider, userId: exAuth.providerId };
 
-      const [auth, user] = await repository.createIfNotExists(exProvider, exUser);
+      const { auth, user } = await repository.createIfNotExists(exProvider, exUser, 'user');
 
       expect(auth).toMatchObject({
         userId: exUser.id,

@@ -9,19 +9,22 @@
     "@types/pg": "^8.11.11",
     "kanel": "^3.14.1",
     "kanel-kysely": "^0.7.1",
-    "kysely-ctl": "^0.12.1"
+    "kysely-ctl": "^0.15.1"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "scripts": {
-    "generate": "kanel --output ./src/types",
-    "reset": "kysely migrate:rollback --all && kysely migrate:latest && bun generate",
-    "seed:mock_challenges": "kysely seed:run --specific mock_challenges"
+    "generate": "bun --env-file ../../.env kanel --output ./src/types",
+    "rollback": "bun --env-file ../../.env kysely migrate:rollback --all",
+    "migrate": "bun --env-file ../../.env kysely migrate:latest",
+    "reset": "bun rollback && bun migrate && bun generate",
+    "seed:mock_challenges": "bun --env-file ../../.env kysely seed:run --specific mock_challenges",
+    "seed:roles": "bun --env-file ../../.env kysely seed:run --specific roles"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.29",
-    "kysely": "^0.28.1",
+    "kysely": "^0.28.4",
     "pg": "^8.13.3"
   }
 }

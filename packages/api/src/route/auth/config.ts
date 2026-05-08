@@ -19,6 +19,7 @@ export const Config = Type.Object({
     expiresIn: Type.Number(),
     cookie: CookieOptions,
   }),
+  userDefaultRole: Type.String(),
 
   github: GithubConfig,
   gitlab: GitlabConfig,

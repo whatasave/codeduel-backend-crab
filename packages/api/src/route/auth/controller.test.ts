@@ -11,10 +11,13 @@ import type { User } from '../user/data';
 import { Router } from '@glass-cannon/router';
 import { typebox } from '@glass-cannon/typebox';
 import { ReadableStream } from 'node:stream/web';
+import { PermissionService } from '../permission/service';
+import type { PermissionRepository } from '../permission/repository';
 
 describe('Route.Auth.Controller', () => {
   let service: AuthService;
   let userService: UserService;
+  let permissionService: PermissionService;
   let controller: AuthController;
   let router: Router;
   const config = {
@@ -29,9 +32,11 @@ describe('Route.Auth.Controller', () => {
   beforeAll(() => {
     const repository = {} as AuthRepository;
     const userRepository = {} as UserRepository;
-    service = new AuthService(repository, config);
+    const permissionRepository = {} as PermissionRepository;
     userService = new UserService(userRepository);
-    controller = new AuthController(service, userService, config);
+    permissionService = new PermissionService(permissionRepository);
+    service = new AuthService(repository, permissionService, config);
+    controller = new AuthController(service, userService, permissionService, config);
     router = new Router();
     controller.setup(typebox(router));
   });
@@ -88,6 +93,7 @@ describe('Route.Auth.Controller', () => {
     let spyAccessToken: ReturnType<typeof spyOn>;
     let spyRefreshToken: ReturnType<typeof spyOn>;
     let spyUpdateSession: ReturnType<typeof spyOn>;
+    let spyByUserId: ReturnType<typeof spyOn>;
 
     beforeEach(() => {
       spyVerifyRefreshToken = spyOn(service, 'verifyRefreshToken').mockResolvedValue(
@@ -98,6 +104,7 @@ describe('Route.Auth.Controller', () => {
       spyAccessToken = spyOn(service, 'accessToken').mockResolvedValue(mockAccessToken);
       spyRefreshToken = spyOn(service, 'refreshToken').mockResolvedValue(mockRefreshToken);
       spyUpdateSession = spyOn(service, 'updateSession').mockResolvedValue();
+      spyByUserId = spyOn(permissionService, 'byUserId').mockResolvedValue([]);
     });
 
     test('should refresh access and refresh token', async () => {
@@ -117,7 +124,7 @@ describe('Route.Auth.Controller', () => {
       expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub);
       expect(spyUserById).toHaveBeenCalledTimes(1);
 
-      expect(spyAccessToken).toHaveBeenCalledWith(mockUser);
+      expect(spyAccessToken).toHaveBeenCalledWith(mockUser, []);
       expect(spyAccessToken).toHaveBeenCalledTimes(1);
 
       expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));
@@ -125,6 +132,9 @@ describe('Route.Auth.Controller', () => {
 
       expect(spyUpdateSession).toHaveBeenCalledWith(mockAuthSession.id, expect.any(String));
       expect(spyUpdateSession).toHaveBeenCalledTimes(1);
+
+      expect(spyByUserId).toHaveBeenCalledWith(mockUser.id);
+      expect(spyByUserId).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(204);
       if (!response.headers) throw new Error('Response headers are undefined');

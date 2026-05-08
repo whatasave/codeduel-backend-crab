@@ -14,7 +14,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('input', 'text', (col) => col.notNull())
     .addColumn('output', 'text', (col) => col.notNull())
     .addColumn('hidden', 'boolean', (col) => col.notNull())
-    .addUniqueConstraint('uq_test_case_challenge_id_input', ['challenge_id', 'input'])
+    .addUniqueConstraint(`uq_${TEST_CASE_TABLE_NAME}_challenge_id_input`, ['challenge_id', 'input'])
     .execute();
 }
 

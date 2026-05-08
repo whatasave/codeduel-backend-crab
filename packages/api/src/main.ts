@@ -2,7 +2,7 @@ import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
 import { createDatabase } from '@codeduel-backend-crab/database';
 import { defaultErrorHandler, descriptiveErrorHandler } from './middleware/errors';
-import { Router } from '@glass-cannon/router';
+import { Router, type RouterGroup } from '@glass-cannon/router';
 import { cors } from '@glass-cannon/cors';
 import { typebox } from '@glass-cannon/typebox';
 import { BunServer, json, text } from '@glass-cannon/server-bun';

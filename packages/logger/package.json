@@ -4,6 +4,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
   "dependencies": {
     "@sinclair/typebox": "^0.34.29",
     "pino": "^10.3.1"

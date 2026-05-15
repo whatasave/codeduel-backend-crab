@@ -1,14 +1,15 @@
 import { RootController } from './route/controller';
 import { safeLoadConfig } from './config';
 import { createDatabase, pingDatabase } from '@codeduel-backend-crab/database';
-import { defaultErrorHandler, descriptiveErrorHandler } from './errors';
+import { defaultErrorHandler, descriptiveErrorHandler } from './middleware/errors';
 import { Router, type RouterGroup } from '@glass-cannon/router';
 import { cors } from '@glass-cannon/cors';
 import { typebox } from '@glass-cannon/typebox';
 import { BunServer, json, text } from '@glass-cannon/server-bun';
 import { pipe } from '@glass-cannon/router/middleware';
 import { Logger } from '@codeduel-backend-crab/logger';
-import { logRequests } from './logger';
+import { logRequests } from './middleware/logger';
+import { traceRequests } from './middleware/trace';
 
 const { config, error } = safeLoadConfig();
 if (!config) {
@@ -42,9 +43,11 @@ if (config.cors) {
 }
 
 const errorHandler = config.descriptiveErrors ? descriptiveErrorHandler : defaultErrorHandler;
-root = root.group({ middleware: pipe(errorHandler(logger), logRequests(logger)) });
+const rootWithMiddlewares = root.group({
+  middleware: pipe(traceRequests(logger), logRequests(logger), errorHandler(logger)),
+});
 
-const typeboxRoot = typebox(root, {
+const typeboxRoot = typebox(rootWithMiddlewares, {
   openapi: {},
   onInvalidRequest: ({ errors }) =>
     config.descriptiveErrors ? json({ status: 400, body: { errors } }) : { status: 400 },

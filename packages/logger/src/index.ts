@@ -1,8 +1,5 @@
-import type { Middleware } from '@glass-cannon/router/middleware';
 import pino from 'pino';
-import type { Config } from './config';
-import { readJson, readText, type ResponseBody } from '@glass-cannon/server-bun';
-import { TransformStream, type ReadableStream } from 'stream/web';
+import type { Config, LogLevel } from './config';
 
 interface Log {
   type: string;
@@ -24,6 +21,10 @@ export class Logger {
       },
       timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
     });
+  }
+
+  isLevelEnabled(level: LogLevel): boolean {
+    return this.pino.isLevelEnabled(level);
   }
 
   createLog(type: string, message: string, context?: unknown): Log {

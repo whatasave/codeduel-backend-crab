@@ -11,18 +11,21 @@ describe('Route.Permission.Service', () => {
   const mockPermissions: Permission[] = [
     {
       id: 1,
+      resource: 'all',
       name: 'read',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
     {
       id: 2,
+      resource: 'all',
       name: 'write',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
     {
       id: 3,
+      resource: 'all',
       name: 'admin',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

@@ -19,6 +19,7 @@ import type { TypeBoxGroup } from '@glass-cannon/typebox';
 import { AuthMiddleware } from './auth/middleware';
 import { PermissionRepository } from './permission/repository';
 import { PermissionService } from './permission/service';
+import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class RootController {
   private readonly userRepository: UserRepository;
@@ -42,7 +43,7 @@ export class RootController {
   private readonly gameController: GameController;
   private readonly authMiddleware: AuthMiddleware;
 
-  constructor(database: Database, config: Config) {
+  constructor(database: Database, logger: Logger, config: Config) {
     this.userRepository = new UserRepository(database);
     this.challengeRepository = new ChallengeRepository(database);
     this.authRepository = new AuthRepository(database);

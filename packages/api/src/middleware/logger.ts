@@ -12,7 +12,7 @@ export function logRequests(logger: Logger): Middleware {
     const duration = performance.now() - startTime;
     const { status } = response;
 
-    logger.info('request', 'Request completed', {
+    logger.info('request.completed', 'Request completed', {
       method,
       route: route.path,
       status,

@@ -6,11 +6,13 @@ import { randomUUIDv7 } from 'bun';
 import { getIp } from '../../../utils/ip';
 import type { TypeBoxGroup } from '@glass-cannon/typebox';
 import { route } from '../../../utils/route';
+import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class GithubController {
   constructor(
     private readonly service: GithubService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly logger: Logger
   ) {}
 
   setup(group: TypeBoxGroup): void {
@@ -27,8 +29,10 @@ export class GithubController {
         307: Type.String(),
       },
     },
-    handler: async ({ query, headers }) => {
+    handler: async ({ query, headers, context }) => {
+      const { trace } = context;
       const { redirect } = query;
+      this.logger.debug('login.start', 'starting github login', { redirect, trace });
 
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
@@ -64,27 +68,41 @@ export class GithubController {
         400: Type.String(),
       },
     },
-    handler: async ({ query, headers }) => {
+    handler: async ({ query, headers, context }) => {
+      const { trace } = context;
       const { code, state } = query;
 
       const cookies = parseCookies(headers.get('cookie'));
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
-      if (state !== cookieState) return { status: 400, body: 'Invalid or missing state' };
+      if (state !== cookieState) {
+        this.logger.warn('callback.stateMismatch', 'state mismatch or missing', {
+          state,
+          cookieState,
+          trace,
+        });
+        return { status: 400, body: 'Invalid or missing state' };
+      }
       const { redirect, ip, userAgent } = this.authService.decodeState(state);
 
-      const token = await this.service.exchangeCodeForToken(code, state);
-      const githubUser = await this.service.userData(token.access_token);
-      const { user, permissions } = await this.service.create(githubUser);
+      const token = await this.service.exchangeCodeForToken(code, state, trace);
+      const githubUser = await this.service.userData(token.access_token, trace);
+      const { user, permissions } = await this.service.create(githubUser, trace);
 
       const accessToken = await this.authService.accessToken(
         user,
-        permissions.map((p) => p.id)
+        permissions.map((p) => p.id),
+        trace
       );
       const jti = randomUUIDv7();
-      const refreshToken = await this.authService.refreshToken(user, jti);
+      const refreshToken = await this.authService.refreshToken(user, jti, trace);
 
-      await this.service.createSession(user.id, jti, ip, userAgent);
+      await this.service.createSession(user.id, jti, ip, userAgent, trace);
+
+      this.logger.info('callback.success', 'successfully logged in via github', {
+        userId: user.id,
+        trace,
+      });
 
       const accessCookie = createCookie({
         ...this.authService.accessTokenCookieOptions,

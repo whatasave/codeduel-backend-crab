@@ -4,31 +4,36 @@ import type { GitlabAccessToken, GitlabUserData } from './data';
 import type { User } from '../../user/data';
 import type { CookieOptions } from '../../../utils/cookie';
 import type { Config } from './config';
+import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class GitlabService {
   private static readonly PROVIDER: string = 'gitlab';
 
   constructor(
     private readonly authService: AuthService,
-    private readonly config: Config
+    private readonly config: Config,
+    private readonly logger: Logger
   ) {}
 
   get stateCookieOptions(): CookieOptions {
     return this.config.stateCookie;
   }
 
-  async create(gitlabUser: GitlabUserData): Promise<CreateContext> {
+  async create(gitlabUser: GitlabUserData, trace?: string): Promise<CreateContext> {
+    this.logger.debug('create.start', 'creating gitlab user', { gitlabId: gitlabUser.id, trace });
     return await this.authService.createForce(
       { name: GitlabService.PROVIDER, userId: gitlabUser.id },
       {
         username: gitlabUser.username,
         name: gitlabUser.name ?? gitlabUser.username,
         avatar: gitlabUser.avatar_url,
-      }
+      },
+      trace
     );
   }
 
-  async exchangeCodeForToken(code: string): Promise<GitlabAccessToken> {
+  async exchangeCodeForToken(code: string, trace?: string): Promise<GitlabAccessToken> {
+    this.logger.debug('exchangeCodeForToken.start', 'exchanging code for token', { trace });
     const response = await fetch('https://gitlab.com/oauth/token', {
       method: 'POST',
       headers: {
@@ -47,7 +52,8 @@ export class GitlabService {
     return (await response.json()) as GitlabAccessToken;
   }
 
-  async userData(accessToken: string): Promise<GitlabUserData> {
+  async userData(accessToken: string, trace?: string): Promise<GitlabUserData> {
+    this.logger.debug('userData.start', 'fetching user data from gitlab', { trace });
     // or https://gitlab.com/oauth/userinfo
     const response = await fetch('https://gitlab.com/api/v4/user', {
       method: 'GET',
@@ -78,7 +84,8 @@ export class GitlabService {
     userId: User['id'],
     tokenId: CreateAuthSession['tokenId'],
     ip: CreateAuthSession['ip'],
-    userAgent: CreateAuthSession['userAgent']
+    userAgent: CreateAuthSession['userAgent'],
+    trace?: string
   ): Promise<void> {
     const sessions: CreateAuthSession = {
       userId,
@@ -88,6 +95,6 @@ export class GitlabService {
       provider: GitlabService.PROVIDER,
     };
 
-    await this.authService.createSession(sessions);
+    await this.authService.createSession(sessions, trace);
   }
 }

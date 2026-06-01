@@ -44,9 +44,11 @@ export class RootController {
   private readonly authMiddleware: AuthMiddleware;
 
   constructor(database: Database, logger: Logger, config: Config) {
+    const authLogger = logger.group({ type: 'auth' });
+
     this.userRepository = new UserRepository(database);
     this.challengeRepository = new ChallengeRepository(database);
-    this.authRepository = new AuthRepository(database);
+    this.authRepository = new AuthRepository(database, authLogger.group({ type: 'repository' }));
     this.gameRepository = new GameRepository(database);
     this.permissionRepository = new PermissionRepository(database);
 
@@ -54,7 +56,12 @@ export class RootController {
     this.userService = new UserService(this.userRepository);
     this.challengeService = new ChallengeService(this.challengeRepository);
     this.permissionService = new PermissionService(this.permissionRepository);
-    this.authService = new AuthService(this.authRepository, this.permissionService, config.auth);
+    this.authService = new AuthService(
+      this.authRepository,
+      this.permissionService,
+      config.auth,
+      authLogger.group({ type: 'service' })
+    );
     this.gameService = new GameService(this.gameRepository);
 
     this.authMiddleware = new AuthMiddleware(this.authService);
@@ -66,12 +73,13 @@ export class RootController {
       this.authService,
       this.userService,
       this.permissionService,
-      config.auth
+      config.auth,
+      authLogger
     );
     this.gameController = new GameController(this.gameService);
   }
 
-  setup(group: TypeBoxGroup): void {
+  setup(group: TypeBoxGroup<{ trace: string }>): void {
     this.scalarController.setup(group.group({ prefix: '/scalar' }));
     this.healthController.setup(group.group({ prefix: '/health' }));
     this.userController.setup(group.group({ prefix: '/user' }));

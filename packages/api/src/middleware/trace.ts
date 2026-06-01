@@ -4,19 +4,19 @@ import type { Logger } from '@codeduel-backend-crab/logger';
 
 export function traceRequests(logger: Logger): Middleware<{ trace: string }> {
   return async (next, { headers }) => {
-    const traceparentheader = headers.get('traceparent');
-    let traceparent: TraceContext | undefined;
+    const traceParentHeader = headers.get('traceparent');
+    let traceParent: TraceContext | undefined;
     try {
-      traceparent = traceparentheader ? parseTrace(traceparentheader) : undefined;
+      traceParent = traceParentHeader ? parseTrace(traceParentHeader) : undefined;
     } catch (error) {
-      logger.warn('trace.parse', `failed to parse traceparent header '${traceparentheader}'`, {
+      logger.warn('trace.parse', `failed to parse traceparent header '${traceParentHeader}'`, {
         error: logger.errorData(error),
       });
     }
     const trace = createTrace({
-      version: traceparent?.version,
-      traceId: traceparent?.traceId,
-      flags: traceparent?.flags,
+      version: traceParent?.version,
+      traceId: traceParent?.traceId,
+      flags: traceParent?.flags,
     });
     const response = await next({ trace });
     response.headers ??= new Headers();

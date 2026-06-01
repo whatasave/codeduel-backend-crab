@@ -22,7 +22,7 @@ const database = createDatabase(config.database);
 
 void pingDatabase(database).then((success) => {
   if (!success) {
-    logger.warn('database', 'cannot connect to the database');
+    logger.warn('database.pingFailed', 'cannot connect to the database');
   }
 });
 

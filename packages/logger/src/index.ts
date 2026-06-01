@@ -1,7 +1,7 @@
 import pino from 'pino';
 import type { Config, LogLevel } from './config';
 
-interface Log {
+export interface Log {
   type: string;
   message: string;
   context?: Record<string, unknown>;

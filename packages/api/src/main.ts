@@ -17,7 +17,7 @@ if (!config) {
   process.exit(1);
 }
 
-const logger = new Logger(config.logger);
+const logger = Logger.create(config.logger);
 const database = createDatabase(config.database);
 
 void pingDatabase(database).then((success) => {

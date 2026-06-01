@@ -2,6 +2,8 @@ import type { CreateUser, User } from './data';
 import type { UserRepository } from './repository';
 
 export class UserService {
+  logger = console;
+
   constructor(private readonly userRepository: UserRepository) {}
 
   /**

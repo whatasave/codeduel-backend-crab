@@ -4,35 +4,53 @@ import type { Config, LogLevel } from './config';
 interface Log {
   type: string;
   message: string;
-  context?: unknown;
+  context?: Record<string, unknown>;
 }
 
-export class Logger {
-  private readonly pino: pino.Logger;
+interface LogRecord {
+  type: string;
+  message: string;
+  context?: Record<string, unknown>;
+}
 
-  constructor({ level, serviceName }: Config) {
-    this.pino = pino({
-      base: {
-        service: serviceName,
-      },
+type GroupOptions = Partial<Omit<Log, 'message'>>;
+
+export class Logger {
+  static create({ level, serviceName }: Config): Logger {
+    const pinoLogger = pino({
+      base: { service: serviceName },
       level,
       formatters: {
         level: (label) => ({ level: label }),
       },
       timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
     });
+
+    return new Logger(pinoLogger, {});
   }
+
+  private constructor(
+    private readonly pino: pino.Logger,
+    private readonly groupOptions: GroupOptions
+  ) {}
 
   isLevelEnabled(level: LogLevel): boolean {
     return this.pino.isLevelEnabled(level);
   }
 
-  createLog(type: string, message: string, context?: unknown): Log {
+  createLog(type: Log['type'], message: Log['message'], context: Log['context']): LogRecord {
     return {
-      type,
+      type: this.groupOptions.type ? `${this.groupOptions.type}.${type}` : type,
       message,
-      context,
+      context: { ...this.groupOptions.context, ...context },
     };
+  }
+
+  group({ type, context }: GroupOptions): Logger {
+    return new Logger(this.pino, {
+      type: this.groupOptions.type ? `${this.groupOptions.type}.${type}` : type,
+      context: { ...context, ...this.groupOptions.context },
+    });
   }
 
   errorData(error: unknown): unknown {
@@ -42,23 +60,23 @@ export class Logger {
     return { message: String(error) };
   }
 
-  debug(type: string, message: string, context?: unknown): void {
+  debug(type: Log['type'], message: Log['message'], context?: Log['context']): void {
     this.pino.debug(this.createLog(type, message, context));
   }
 
-  info(type: string, message: string, context?: unknown): void {
+  info(type: Log['type'], message: Log['message'], context?: Log['context']): void {
     this.pino.info(this.createLog(type, message, context));
   }
 
-  warn(type: string, message: string, context?: unknown): void {
+  warn(type: Log['type'], message: Log['message'], context?: Log['context']): void {
     this.pino.warn(this.createLog(type, message, context));
   }
 
-  error(type: string, message: string, context?: unknown): void {
+  error(type: Log['type'], message: Log['message'], context?: Log['context']): void {
     this.pino.error(this.createLog(type, message, context));
   }
 
-  fatal(type: string, message: string, context?: unknown): void {
+  fatal(type: Log['type'], message: Log['message'], context?: Log['context']): void {
     this.pino.fatal(this.createLog(type, message, context));
   }
 }

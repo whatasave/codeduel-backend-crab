@@ -13,6 +13,7 @@ import { typebox } from '@glass-cannon/typebox';
 import { ReadableStream } from 'node:stream/web';
 import { PermissionService } from '../permission/service';
 import type { PermissionRepository } from '../permission/repository';
+import { Logger } from '@codeduel-backend-crab/logger';
 
 describe('Route.Auth.Controller', () => {
   let service: AuthService;
@@ -33,10 +34,11 @@ describe('Route.Auth.Controller', () => {
     const repository = {} as AuthRepository;
     const userRepository = {} as UserRepository;
     const permissionRepository = {} as PermissionRepository;
+    const logger = Logger.create({ level: 'silent', serviceName: 'test' });
     userService = new UserService(userRepository);
     permissionService = new PermissionService(permissionRepository);
     service = new AuthService(repository, permissionService, config);
-    controller = new AuthController(service, userService, permissionService, config);
+    controller = new AuthController(service, userService, permissionService, config, logger);
     router = new Router();
     controller.setup(typebox(router));
   });

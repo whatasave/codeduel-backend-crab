@@ -31,12 +31,12 @@ export class AuthController {
     const gitlabLogger = logger.group({ type: 'gitlab' });
 
     this.githubController = new GithubController(
-      new GithubService(this.service, config.github, githubLogger.group({ type: 'service' })),
+      new GithubService(this.service, config.github),
       this.service,
       githubLogger.group({ type: 'controller' })
     );
     this.gitlabController = new GitlabController(
-      new GitlabService(this.service, config.gitlab, gitlabLogger.group({ type: 'service' })),
+      new GitlabService(this.service, config.gitlab),
       this.service,
       gitlabLogger.group({ type: 'controller' })
     );

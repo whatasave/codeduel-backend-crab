@@ -11,16 +11,15 @@ export class GithubService {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly config: Config,
-    private readonly logger: Logger
+    private readonly config: Config
   ) {}
 
   get stateCookieOptions(): CookieOptions {
     return this.config.stateCookie;
   }
 
-  async create(githubUser: GithubUserData, trace?: string): Promise<CreateContext> {
-    this.logger.debug('create.start', 'creating github user', { githubId: githubUser.id, trace });
+  async create(githubUser: GithubUserData, logger?: Logger): Promise<CreateContext> {
+    logger?.debug('create.start', 'creating github user', { githubId: githubUser.id });
     return await this.authService.createForce(
       { name: GithubService.PROVIDER, userId: githubUser.id },
       {
@@ -28,16 +27,16 @@ export class GithubService {
         name: githubUser.name ?? githubUser.login,
         avatar: githubUser.avatar_url,
       },
-      trace
+      logger
     );
   }
 
   async exchangeCodeForToken(
     code: string,
     state: string,
-    trace?: string
+    logger?: Logger
   ): Promise<GithubAccessToken> {
-    this.logger.debug('exchangeCodeForToken.start', 'exchanging code for token', { trace });
+    logger?.debug('exchangeCodeForToken.start', 'exchanging code for token');
     const response = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -55,8 +54,8 @@ export class GithubService {
     return (await response.json()) as GithubAccessToken;
   }
 
-  async userData(accessToken: string, trace?: string): Promise<GithubUserData> {
-    this.logger.debug('userData.start', 'fetching user data from github', { trace });
+  async userData(accessToken: string, logger?: Logger): Promise<GithubUserData> {
+    logger?.debug('userData.start', 'fetching user data from github');
     const response = await fetch('https://api.github.com/user', {
       method: 'GET',
       headers: {
@@ -87,7 +86,7 @@ export class GithubService {
     tokenId: CreateAuthSession['tokenId'],
     ip: CreateAuthSession['ip'],
     userAgent: CreateAuthSession['userAgent'],
-    trace?: string
+    logger?: Logger
   ): Promise<void> {
     const sessions: CreateAuthSession = {
       userId,
@@ -97,6 +96,6 @@ export class GithubService {
       provider: GithubService.PROVIDER,
     };
 
-    await this.authService.createSession(sessions, trace);
+    await this.authService.createSession(sessions, logger);
   }
 }

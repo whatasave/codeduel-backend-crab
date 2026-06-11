@@ -48,7 +48,7 @@ export class RootController {
 
     this.userRepository = new UserRepository(database);
     this.challengeRepository = new ChallengeRepository(database);
-    this.authRepository = new AuthRepository(database, authLogger.group({ type: 'repository' }));
+    this.authRepository = new AuthRepository(database);
     this.gameRepository = new GameRepository(database);
     this.permissionRepository = new PermissionRepository(database);
 
@@ -56,12 +56,7 @@ export class RootController {
     this.userService = new UserService(this.userRepository);
     this.challengeService = new ChallengeService(this.challengeRepository);
     this.permissionService = new PermissionService(this.permissionRepository);
-    this.authService = new AuthService(
-      this.authRepository,
-      this.permissionService,
-      config.auth,
-      authLogger.group({ type: 'service' })
-    );
+    this.authService = new AuthService(this.authRepository, this.permissionService, config.auth);
     this.gameService = new GameService(this.gameRepository);
 
     this.authMiddleware = new AuthMiddleware(this.authService);

@@ -11,29 +11,27 @@ export class GitlabService {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly config: Config,
-    private readonly logger: Logger
+    private readonly config: Config
   ) {}
 
   get stateCookieOptions(): CookieOptions {
     return this.config.stateCookie;
   }
 
-  async create(gitlabUser: GitlabUserData, trace?: string): Promise<CreateContext> {
-    this.logger.debug('create.start', 'creating gitlab user', { gitlabId: gitlabUser.id, trace });
+  async create(gitlabUser: GitlabUserData, logger?: Logger): Promise<CreateContext> {
+    logger?.debug('create.start', 'creating gitlab user', { gitlabId: gitlabUser.id });
     return await this.authService.createForce(
       { name: GitlabService.PROVIDER, userId: gitlabUser.id },
       {
         username: gitlabUser.username,
         name: gitlabUser.name ?? gitlabUser.username,
         avatar: gitlabUser.avatar_url,
-      },
-      trace
+      }
     );
   }
 
-  async exchangeCodeForToken(code: string, trace?: string): Promise<GitlabAccessToken> {
-    this.logger.debug('exchangeCodeForToken.start', 'exchanging code for token', { trace });
+  async exchangeCodeForToken(code: string, logger?: Logger): Promise<GitlabAccessToken> {
+    logger?.debug('exchangeCodeForToken.start', 'exchanging code for token');
     const response = await fetch('https://gitlab.com/oauth/token', {
       method: 'POST',
       headers: {
@@ -52,8 +50,8 @@ export class GitlabService {
     return (await response.json()) as GitlabAccessToken;
   }
 
-  async userData(accessToken: string, trace?: string): Promise<GitlabUserData> {
-    this.logger.debug('userData.start', 'fetching user data from gitlab', { trace });
+  async userData(accessToken: string, logger?: Logger): Promise<GitlabUserData> {
+    logger?.debug('userData.start', 'fetching user data from gitlab');
     // or https://gitlab.com/oauth/userinfo
     const response = await fetch('https://gitlab.com/api/v4/user', {
       method: 'GET',
@@ -85,7 +83,7 @@ export class GitlabService {
     tokenId: CreateAuthSession['tokenId'],
     ip: CreateAuthSession['ip'],
     userAgent: CreateAuthSession['userAgent'],
-    trace?: string
+    logger?: Logger
   ): Promise<void> {
     const sessions: CreateAuthSession = {
       userId,
@@ -95,6 +93,6 @@ export class GitlabService {
       provider: GitlabService.PROVIDER,
     };
 
-    await this.authService.createSession(sessions, trace);
+    await this.authService.createSession(sessions, logger);
   }
 }

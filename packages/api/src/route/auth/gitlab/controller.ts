@@ -7,6 +7,7 @@ import { getIp } from '../../../utils/ip';
 import type { TypeBoxGroup } from '@glass-cannon/typebox';
 import { route } from '../../../utils/route';
 import type { Logger } from '@codeduel-backend-crab/logger';
+import { loggerDecorator } from '../../../middleware/logger';
 
 export class GitlabController {
   constructor(
@@ -20,7 +21,7 @@ export class GitlabController {
     this.callback(group);
   }
 
-  login = route({
+  login = route(() => ({
     method: 'GET',
     path: '/',
     schema: {
@@ -29,10 +30,10 @@ export class GitlabController {
         307: Type.String(),
       },
     },
-    handler: async ({ query, headers, context }) => {
-      const { trace } = context;
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ query, headers, logger }) => {
       const { redirect } = query;
-      this.logger.debug('login.start', 'starting gitlab login', { redirect, trace });
+      logger.debug('login.start', 'starting gitlab login', { redirect });
 
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
@@ -53,9 +54,9 @@ export class GitlabController {
         },
       };
     },
-  });
+  }));
 
-  callback = route({
+  callback = route(() => ({
     method: 'GET',
     path: '/callback',
     schema: {
@@ -68,40 +69,39 @@ export class GitlabController {
         400: Type.String(),
       },
     },
-    handler: async ({ query, headers, context }) => {
-      const { trace } = context;
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ query, headers, logger }) => {
       const { code, state } = query;
 
       const cookies = parseCookies(headers.get('cookie'));
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) {
-        this.logger.warn('callback.stateMismatch', 'state mismatch or missing', {
+        logger.warn('callback.stateMismatch', 'state mismatch or missing', {
           state,
           cookieState,
-          trace,
         });
         return { status: 400, body: 'Invalid or missing state' };
       }
       const { redirect, ip, userAgent } = this.authService.decodeState(state);
 
-      const token = await this.service.exchangeCodeForToken(code, trace);
-      const gitlabUser = await this.service.userData(token.access_token, trace);
-      const { user, permissions } = await this.service.create(gitlabUser, trace);
+      const token = await this.service.exchangeCodeForToken(code, logger);
+      const gitlabUser = await this.service.userData(token.access_token, logger);
+      const { user, permissions } = await this.service.create(gitlabUser, logger);
 
       const accessToken = await this.authService.accessToken(
         user,
         permissions.map((p) => p.id),
-        trace
+        Date.now(),
+        logger
       );
       const jti = randomUUIDv7();
-      const refreshToken = await this.authService.refreshToken(user, jti, trace);
+      const refreshToken = await this.authService.refreshToken(user, jti, Date.now(), logger);
 
-      await this.service.createSession(user.id, jti, ip, userAgent, trace);
+      await this.service.createSession(user.id, jti, ip, userAgent, logger);
 
-      this.logger.info('callback.success', 'successfully logged in via gitlab', {
+      logger.info('callback.success', 'successfully logged in via gitlab', {
         userId: user.id,
-        trace,
       });
 
       const accessCookie = createCookie({
@@ -124,5 +124,5 @@ export class GitlabController {
         headers: responseHeaders,
       };
     },
-  });
+  }));
 }

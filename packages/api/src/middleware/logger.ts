@@ -23,3 +23,13 @@ export function logRequests(logger: Logger): Middleware {
     return response;
   };
 }
+
+export function loggerDecorator(logger: Logger): Middleware<{ logger: Logger }> {
+  return async (next, context) => {
+    const trace = 'trace' in context ? context.trace : null;
+    const type = context.route.method
+      ? `${context.route.path}.${context.route.method.toLowerCase()}`
+      : context.route.path;
+    return next({ logger: logger.group({ type, context: { trace } }) });
+  };
+}

@@ -6,16 +6,13 @@ import { PermissionRepository } from '../permission/repository';
 import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class AuthRepository {
-  constructor(
-    private readonly database: Database,
-    private readonly logger: Logger
-  ) {}
+  constructor(private readonly database: Database) {}
 
   async create(
     provider: Provider,
     user: CreateUser,
     role: string,
-    trace?: string
+    logger?: Logger
   ): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
       const userRepository = new UserRepository(tx);
@@ -28,10 +25,9 @@ export class AuthRepository {
         .executeTakeFirst();
       if (existingUser) throw new UserNameAlreadyExistsError(user.username);
 
-      this.logger.debug('create.persisting', 'persisting new user and auth provider', {
+      logger?.debug('create.persisting', 'persisting new user and auth provider', {
         provider: provider.name,
         username: user.username,
-        trace,
       });
       const newUser = await userRepository.create(user);
 
@@ -48,9 +44,8 @@ export class AuthRepository {
       const roleId = await permissionsRepository.assignRole(newUser.id, role);
       const permissions = await permissionsRepository.rolePermissions(roleId);
 
-      this.logger.info('create.success', 'user and auth provider persisted successfully', {
+      logger?.info('create.success', 'user and auth provider persisted successfully', {
         userId: newUser.id,
-        trace,
       });
       return {
         auth: this.selectToAuth(newAuth),
@@ -66,7 +61,7 @@ export class AuthRepository {
     provider: Provider,
     user: CreateUser,
     role: string,
-    trace?: string
+    logger?: Logger
   ): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
       const existingAuth = await tx
@@ -77,23 +72,17 @@ export class AuthRepository {
         .executeTakeFirst();
 
       if (existingAuth) {
-        this.logger.debug('createIfNotExists.authAlreadyExists', 'auth already exists', {
+        logger?.debug('createIfNotExists.authAlreadyExists', 'auth already exists', {
           provider: provider.name,
-          trace,
         });
         const userRepository = new UserRepository(tx);
         const permissionRepository = new PermissionRepository(tx);
 
         const existingUser = await userRepository.byId(existingAuth.user_id);
         if (!existingUser) {
-          this.logger.error(
-            'createIfNotExists.missingUser',
-            'failed to find user for existing auth',
-            {
-              userId: existingAuth.user_id,
-              trace,
-            }
-          );
+          logger?.error('createIfNotExists.missingUser', 'failed to find user for existing auth', {
+            userId: existingAuth.user_id,
+          });
           throw new Error('Failed to find user');
         }
 
@@ -106,16 +95,15 @@ export class AuthRepository {
         };
       }
 
-      return this.create(provider, user, role, trace);
+      return this.create(provider, user, role, logger);
     });
 
     return authUser;
   }
 
-  async createSession(session: CreateAuthSession, trace?: string): Promise<AuthSession> {
-    this.logger.debug('createSession.persisting', 'persisting new session', {
+  async createSession(session: CreateAuthSession, logger?: Logger): Promise<AuthSession> {
+    logger?.debug('createSession.persisting', 'persisting new session', {
       userId: session.userId,
-      trace,
     });
     const newSession = await this.database
       .insertInto('auth_session')
@@ -144,11 +132,7 @@ export class AuthRepository {
     return session && this.selectToSession(session);
   }
 
-  async updateSession(
-    id: AuthSession['id'],
-    tokenId: AuthSession['tokenId'],
-    trace?: string
-  ): Promise<void> {
+  async updateSession(id: AuthSession['id'], tokenId: AuthSession['tokenId']): Promise<void> {
     await this.database
       .updateTable('auth_session')
       .set({ token_id: tokenId })
@@ -156,14 +140,11 @@ export class AuthRepository {
       .executeTakeFirstOrThrow();
   }
 
-  async deleteSession(id: number, trace?: string): Promise<void> {
+  async deleteSession(id: number): Promise<void> {
     await this.database.deleteFrom('auth_session').where('id', '=', id).executeTakeFirstOrThrow();
   }
 
-  async deleteSessionTokenId(
-    tokenId: Exclude<AuthSession['tokenId'], undefined>,
-    trace?: string
-  ): Promise<void> {
+  async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
     await this.database
       .updateTable('auth_session')
       .set({ token_id: null })

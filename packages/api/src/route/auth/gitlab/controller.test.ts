@@ -15,6 +15,7 @@ import { ReadableStream } from 'node:stream/web';
 import { responseBodyToJson } from '../../../utils/stream';
 import { PermissionService } from '../../permission/service';
 import type { PermissionRepository } from '../../permission/repository';
+import { Logger } from '@codeduel-backend-crab/logger';
 
 describe('Route.Auth.Gitlab.Controller', () => {
   let service: GitlabService;
@@ -41,10 +42,11 @@ describe('Route.Auth.Gitlab.Controller', () => {
   beforeAll(() => {
     const authRepository = {} as AuthRepository;
     const permissionRepository = {} as PermissionRepository;
+    const logger = Logger.create({ level: 'silent', serviceName: 'test' });
     permissionService = new PermissionService(permissionRepository);
     authService = new AuthService(authRepository, permissionService, config);
     service = new GitlabService(authService, config.gitlab);
-    controller = new GitlabController(service, authService);
+    controller = new GitlabController(service, authService, logger);
     router = new Router({
       fallback: () => {
         throw new Error('Route not handled');

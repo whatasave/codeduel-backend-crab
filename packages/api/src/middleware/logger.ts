@@ -7,14 +7,13 @@ export function logRequests(logger: Logger): Middleware {
 
     const response = await next(context);
 
-    const { method, route } = context;
+    const { route } = context;
     const trace = 'trace' in context ? context.trace : null;
     const duration = performance.now() - startTime;
     const { status } = response;
 
     logger.info('request.completed', 'Request completed', {
-      method,
-      route: route.path,
+      route: { method: route.method, path: route.path },
       status,
       durationMs: Math.round(duration),
       trace,
@@ -27,9 +26,14 @@ export function logRequests(logger: Logger): Middleware {
 export function loggerDecorator(logger: Logger): Middleware<{ logger: Logger }> {
   return async (next, context) => {
     const trace = 'trace' in context ? context.trace : null;
-    const type = context.route.method
-      ? `${context.route.path}.${context.route.method.toLowerCase()}`
-      : context.route.path;
-    return next({ logger: logger.group({ type, context: { trace } }) });
+    const route = context.route;
+    return next({
+      logger: logger.group({
+        context: {
+          route: { method: route.method, path: route.path },
+          trace,
+        },
+      }),
+    });
   };
 }

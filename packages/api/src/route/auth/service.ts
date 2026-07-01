@@ -15,6 +15,7 @@ import jwt, { type JwtPayload } from 'jsonwebtoken';
 import type { Config } from './config';
 import type { CookieOptions } from '../../utils/cookie';
 import type { PermissionService } from '../permission/service';
+import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class AuthService {
   constructor(
@@ -31,27 +32,47 @@ export class AuthService {
     return this.config.refreshToken.cookie;
   }
 
-  async createIfNotExists(provider: Provider, user: CreateUser): Promise<CreateContext> {
-    return await this.repository.createIfNotExists(provider, user, this.config.userDefaultRole);
+  async createIfNotExists(
+    provider: Provider,
+    user: CreateUser,
+    logger?: Logger
+  ): Promise<CreateContext> {
+    return await this.repository.createIfNotExists(
+      provider,
+      user,
+      this.config.userDefaultRole,
+      logger
+    );
   }
 
-  async createForce(provider: Provider, user: CreateUser): Promise<CreateContext> {
+  async createForce(provider: Provider, user: CreateUser, logger?: Logger): Promise<CreateContext> {
     try {
-      return await this.createIfNotExists(provider, user);
+      return await this.createIfNotExists(provider, user, logger);
     } catch (error) {
       if (!(error instanceof UserNameAlreadyExistsError)) throw error;
+      logger?.info(
+        'createForce.usernameTaken',
+        'username already exists, generating new one with random suffix',
+        { username: user.username }
+      );
       return await this.repository.create(
         provider,
         {
           ...user,
           username: `${user.username}-${randomUUIDv7()}`,
         },
-        this.config.userDefaultRole
+        this.config.userDefaultRole,
+        logger
       );
     }
   }
 
-  accessToken(user: User, permissions: number[], now: number = Date.now()): Promise<string> {
+  accessToken(
+    user: User,
+    permissions: number[],
+    now: number = Date.now(),
+    logger?: Logger
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
         {
@@ -66,7 +87,12 @@ export class AuthService {
         this.config.accessToken.secret,
         { algorithm: 'HS256' },
         (err, token) => {
-          if (err) return reject(err);
+          if (err) {
+            logger?.error('accessToken.signError', 'failed to sign access token', {
+              error: logger.errorData(err),
+            });
+            return reject(err);
+          }
           if (!token) return reject(new Error('Invalid token'));
 
           resolve(token);
@@ -78,7 +104,8 @@ export class AuthService {
   refreshToken(
     user: User,
     jti: string = randomUUIDv7('base64url'),
-    now: number = Date.now()
+    now: number = Date.now(),
+    logger?: Logger
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       jwt.sign(
@@ -92,7 +119,12 @@ export class AuthService {
         this.config.refreshToken.secret,
         { algorithm: 'HS256' },
         (err, token) => {
-          if (err) return reject(err);
+          if (err) {
+            logger?.error('refreshToken.signError', 'failed to sign refresh token', {
+              error: logger.errorData(err),
+            });
+            return reject(err);
+          }
           if (!token) return reject(new Error('Invalid token'));
 
           resolve(token);
@@ -101,14 +133,19 @@ export class AuthService {
     });
   }
 
-  async verifyAccessToken(token: string): Promise<JwtAccessToken> {
+  async verifyAccessToken(token: string, logger?: Logger): Promise<JwtAccessToken> {
     return new Promise((resolve, reject) => {
       jwt.verify(
         token,
         this.config.accessToken.secret,
         { algorithms: ['HS256'] },
         (err, decode) => {
-          if (err) return reject(err);
+          if (err) {
+            logger?.debug('verifyAccessToken.invalid', 'invalid access token', {
+              error: logger.errorData(err),
+            });
+            return reject(err);
+          }
 
           if (!decode) return reject(new Error('Invalid token'));
           const payload = decode as JwtPayload;
@@ -135,14 +172,19 @@ export class AuthService {
     });
   }
 
-  async verifyRefreshToken(token: string): Promise<JwtRefreshToken> {
+  async verifyRefreshToken(token: string, logger?: Logger): Promise<JwtRefreshToken> {
     return new Promise((resolve, reject) => {
       jwt.verify(
         token,
         this.config.refreshToken.secret,
         { algorithms: ['HS256'] },
         (err, decode) => {
-          if (err) return reject(err);
+          if (err) {
+            logger?.debug('verifyRefreshToken.invalid', 'invalid refresh token', {
+              error: logger.errorData(err),
+            });
+            return reject(err);
+          }
 
           if (!decode) return reject(new Error('Invalid token'));
           const payload = decode as JwtPayload;
@@ -193,14 +235,23 @@ export class AuthService {
     return parsedState;
   }
 
-  async createSession(session: CreateAuthSession): Promise<AuthSession> {
-    return await this.repository.createSession(session);
+  async createSession(session: CreateAuthSession, logger?: Logger): Promise<AuthSession> {
+    const newSession = await this.repository.createSession(session, logger);
+    logger?.debug('createSession.success', 'new auth session created', {
+      userId: session.userId,
+      sessionId: newSession.id,
+    });
+    return newSession;
   }
 
   async updateSession(
     id: AuthSession['id'],
-    tokenId: Exclude<AuthSession['tokenId'], undefined>
+    tokenId: Exclude<AuthSession['tokenId'], undefined>,
+    logger?: Logger
   ): Promise<void> {
+    logger?.debug('updateSession.start', 'updating auth session token', {
+      sessionId: id,
+    });
     await this.repository.updateSession(id, tokenId);
   }
 
@@ -210,11 +261,16 @@ export class AuthService {
     return await this.repository.sessionByTokenId(tokenId);
   }
 
-  async deleteSession(id: AuthSession['id']): Promise<void> {
+  async deleteSession(id: AuthSession['id'], logger?: Logger): Promise<void> {
+    logger?.debug('deleteSession.start', 'deleting auth session', { sessionId: id });
     return await this.repository.deleteSession(id);
   }
 
-  async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
-    return await this.repository.deleteSessionTokenId(tokenId);
+  async deleteSessionTokenId(
+    tokenId: Exclude<AuthSession['tokenId'], undefined>,
+    logger?: Logger
+  ): Promise<void> {
+    logger?.debug('deleteSessionTokenId.start', 'deleting auth session by token id');
+    await this.repository.deleteSessionTokenId(tokenId);
   }
 }

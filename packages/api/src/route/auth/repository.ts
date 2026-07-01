@@ -3,11 +3,17 @@ import type { Auth, AuthSession, CreateAuthSession, CreateContext, Provider } fr
 import { UserNameAlreadyExistsError, type CreateUser } from '../user/data';
 import { UserRepository } from '../user/repository';
 import { PermissionRepository } from '../permission/repository';
+import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class AuthRepository {
   constructor(private readonly database: Database) {}
 
-  async create(provider: Provider, user: CreateUser, role: string): Promise<CreateContext> {
+  async create(
+    provider: Provider,
+    user: CreateUser,
+    role: string,
+    logger?: Logger
+  ): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
       const userRepository = new UserRepository(tx);
       const permissionsRepository = new PermissionRepository(tx);
@@ -19,6 +25,10 @@ export class AuthRepository {
         .executeTakeFirst();
       if (existingUser) throw new UserNameAlreadyExistsError(user.username);
 
+      logger?.debug('create.persisting', 'persisting new user and auth provider', {
+        provider: provider.name,
+        username: user.username,
+      });
       const newUser = await userRepository.create(user);
 
       const newAuth = await tx
@@ -34,6 +44,9 @@ export class AuthRepository {
       const roleId = await permissionsRepository.assignRole(newUser.id, role);
       const permissions = await permissionsRepository.rolePermissions(roleId);
 
+      logger?.info('create.success', 'user and auth provider persisted successfully', {
+        userId: newUser.id,
+      });
       return {
         auth: this.selectToAuth(newAuth),
         user: newUser,
@@ -47,7 +60,8 @@ export class AuthRepository {
   async createIfNotExists(
     provider: Provider,
     user: CreateUser,
-    role: string
+    role: string,
+    logger?: Logger
   ): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
       const existingAuth = await tx
@@ -58,11 +72,19 @@ export class AuthRepository {
         .executeTakeFirst();
 
       if (existingAuth) {
+        logger?.debug('createIfNotExists.authAlreadyExists', 'auth already exists', {
+          provider: provider.name,
+        });
         const userRepository = new UserRepository(tx);
         const permissionRepository = new PermissionRepository(tx);
 
         const existingUser = await userRepository.byId(existingAuth.user_id);
-        if (!existingUser) throw new Error('Failed to find user');
+        if (!existingUser) {
+          logger?.error('createIfNotExists.missingUser', 'failed to find user for existing auth', {
+            userId: existingAuth.user_id,
+          });
+          throw new Error('Failed to find user');
+        }
 
         const permissions = await permissionRepository.byUserId(existingUser.id);
 
@@ -73,13 +95,16 @@ export class AuthRepository {
         };
       }
 
-      return this.create(provider, user, role);
+      return this.create(provider, user, role, logger);
     });
 
     return authUser;
   }
 
-  async createSession(session: CreateAuthSession): Promise<AuthSession> {
+  async createSession(session: CreateAuthSession, logger?: Logger): Promise<AuthSession> {
+    logger?.debug('createSession.persisting', 'persisting new session', {
+      userId: session.userId,
+    });
     const newSession = await this.database
       .insertInto('auth_session')
       .values({

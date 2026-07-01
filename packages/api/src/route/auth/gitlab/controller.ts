@@ -6,11 +6,14 @@ import type { GitlabService } from './service';
 import { getIp } from '../../../utils/ip';
 import type { TypeBoxGroup } from '@glass-cannon/typebox';
 import { route } from '../../../utils/route';
+import type { Logger } from '@codeduel-backend-crab/logger';
+import { loggerDecorator } from '../../../middleware/logger';
 
 export class GitlabController {
   constructor(
     private readonly service: GitlabService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly logger: Logger
   ) {}
 
   setup(group: TypeBoxGroup): void {
@@ -18,7 +21,7 @@ export class GitlabController {
     this.callback(group);
   }
 
-  login = route({
+  login = route(() => ({
     method: 'GET',
     path: '/',
     schema: {
@@ -27,8 +30,10 @@ export class GitlabController {
         307: Type.String(),
       },
     },
-    handler: async ({ query, headers }) => {
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ query, headers, logger }) => {
       const { redirect } = query;
+      logger.debug('login.start', 'starting gitlab login', { redirect });
 
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
@@ -49,9 +54,9 @@ export class GitlabController {
         },
       };
     },
-  });
+  }));
 
-  callback = route({
+  callback = route(() => ({
     method: 'GET',
     path: '/callback',
     schema: {
@@ -64,27 +69,40 @@ export class GitlabController {
         400: Type.String(),
       },
     },
-    handler: async ({ query, headers }) => {
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ query, headers, logger }) => {
       const { code, state } = query;
 
       const cookies = parseCookies(headers.get('cookie'));
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
-      if (state !== cookieState) return { status: 400, body: 'Invalid or missing state' };
+      if (state !== cookieState) {
+        logger.warn('callback.stateMismatch', 'state mismatch or missing', {
+          state,
+          cookieState,
+        });
+        return { status: 400, body: 'Invalid or missing state' };
+      }
       const { redirect, ip, userAgent } = this.authService.decodeState(state);
 
-      const token = await this.service.exchangeCodeForToken(code);
-      const gitlabUser = await this.service.userData(token.access_token);
-      const { user, permissions } = await this.service.create(gitlabUser);
+      const token = await this.service.exchangeCodeForToken(code, logger);
+      const gitlabUser = await this.service.userData(token.access_token, logger);
+      const { user, permissions } = await this.service.create(gitlabUser, logger);
 
       const accessToken = await this.authService.accessToken(
         user,
-        permissions.map((p) => p.id)
+        permissions.map((p) => p.id),
+        Date.now(),
+        logger
       );
       const jti = randomUUIDv7();
-      const refreshToken = await this.authService.refreshToken(user, jti);
+      const refreshToken = await this.authService.refreshToken(user, jti, Date.now(), logger);
 
-      await this.service.createSession(user.id, jti, ip, userAgent);
+      await this.service.createSession(user.id, jti, ip, userAgent, logger);
+
+      logger.info('callback.success', 'successfully logged in via gitlab', {
+        userId: user.id,
+      });
 
       const accessCookie = createCookie({
         ...this.authService.accessTokenCookieOptions,
@@ -106,5 +124,5 @@ export class GitlabController {
         headers: responseHeaders,
       };
     },
-  });
+  }));
 }

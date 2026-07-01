@@ -1,13 +1,7 @@
 import type { Kysely } from 'kysely';
 import type DB from '../src/types/Database';
 
-const ROLES = [
-  { name: 'Founder' },
-  { name: 'Admin' },
-  { name: 'Moderator' },
-  { name: 'Trusted Contributor' },
-  { name: 'User' },
-];
+const ROLES = [{ name: 'admin' }, { name: 'moderator' }, { name: 'contributor' }, { name: 'user' }];
 
 const PERMISSIONS = [
   { resource: 'challenge', name: 'create' },

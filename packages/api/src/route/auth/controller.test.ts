@@ -38,7 +38,7 @@ describe('Route.Auth.Controller', () => {
     userService = new UserService(userRepository);
     permissionService = new PermissionService(permissionRepository);
     service = new AuthService(repository, permissionService, config);
-    controller = new AuthController(service, userService, permissionService, config, logger);
+    controller = new AuthController(service, userService, permissionService, logger, config);
     router = new Router();
     controller.setup(typebox(router));
   });

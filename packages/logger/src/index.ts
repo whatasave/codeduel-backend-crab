@@ -40,7 +40,7 @@ export class Logger {
 
   createLog(type: Log['type'], message: Log['message'], context: Log['context']): LogRecord {
     return {
-      type: this.groupOptions.type ? `${this.groupOptions.type}.${type}` : type,
+      type: joinType(this.groupOptions.type, type) ?? type,
       message,
       context: { ...this.groupOptions.context, ...context },
     };
@@ -48,7 +48,7 @@ export class Logger {
 
   group({ type, context }: GroupOptions): Logger {
     return new Logger(this.pino, {
-      type: this.groupOptions.type ? `${this.groupOptions.type}.${type}` : type,
+      type: joinType(this.groupOptions.type, type),
       context: { ...context, ...this.groupOptions.context },
     });
   }
@@ -79,6 +79,11 @@ export class Logger {
   fatal(type: Log['type'], message: Log['message'], context?: Log['context']): void {
     this.pino.fatal(this.createLog(type, message, context));
   }
+}
+
+function joinType(parentType?: string, type?: string): string | undefined {
+  if (parentType && type) return `${parentType}.${type}`;
+  return parentType ?? type;
 }
 
 export * from './config';

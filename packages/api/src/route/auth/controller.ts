@@ -5,44 +5,41 @@ import { GithubService } from './github/service';
 import { GitlabService } from './gitlab/service';
 import type { Config } from './config';
 import { createCookie, parseCookies, removeCookie } from '../../utils/cookie';
-import { Type, type TUndefined } from '@sinclair/typebox';
+import { Type } from '@sinclair/typebox';
 import type { UserService } from '../user/service';
 import { randomUUIDv7 } from 'bun';
 import type { Response, TypeBoxGroup } from '@glass-cannon/typebox';
 import { route } from '../../utils/route';
 import type { PermissionService } from '../permission/service';
 import type { Logger } from '@codeduel-backend-crab/logger';
+import { loggerDecorator } from '../../middleware/logger';
 
 export class AuthController {
   private readonly githubController: GithubController;
   private readonly gitlabController: GitlabController;
-  private readonly logger: Logger;
 
   constructor(
     private readonly service: AuthService,
     private readonly userService: UserService,
     private readonly permissionService: PermissionService,
-    config: Config,
-    logger: Logger
+    private readonly logger: Logger,
+    config: Config
   ) {
-    this.logger = logger.group({ type: 'controller' });
-
-    const githubLogger = logger.group({ type: 'github' });
-    const gitlabLogger = logger.group({ type: 'gitlab' });
+    this.logger = logger;
 
     this.githubController = new GithubController(
       new GithubService(this.service, config.github),
       this.service,
-      githubLogger.group({ type: 'controller' })
+      logger.group({ type: 'github' })
     );
     this.gitlabController = new GitlabController(
       new GitlabService(this.service, config.gitlab),
       this.service,
-      gitlabLogger.group({ type: 'controller' })
+      logger.group({ type: 'gitlab' })
     );
   }
 
-  setup(group: TypeBoxGroup<{ trace: string }>): void {
+  setup(group: TypeBoxGroup): void {
     this.validate(group);
     this.refresh(group);
     this.logout(group);
@@ -62,7 +59,7 @@ export class AuthController {
     },
   });
 
-  refresh = route<{ trace: string }, unknown, { response: { 204: TUndefined } }>({
+  refresh = route(() => ({
     method: 'POST',
     path: '/refresh',
     schema: {
@@ -70,7 +67,8 @@ export class AuthController {
         204: Type.Undefined(),
       },
     },
-    handler: async ({ headers, trace }) => {
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ headers, logger }) => {
       const cookies = parseCookies(headers.get('cookie'));
       const logout = (): Response<204, undefined> => {
         const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
@@ -88,7 +86,7 @@ export class AuthController {
 
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
       if (!refreshToken) {
-        this.logger.debug('refresh.noToken', 'no refresh token found', { trace });
+        logger.debug('noToken', 'no refresh token found');
         return logout();
       }
 
@@ -96,13 +94,13 @@ export class AuthController {
 
       const session = await this.service.sessionByTokenId(jti);
       if (!session) {
-        this.logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId, trace });
+        logger.warn('sessionNotFound', 'session not found', { jti, userId });
         return logout();
       }
 
       const user = await this.userService.byId(userId);
       if (!user) {
-        this.logger.warn('refresh.userNotFound', 'user not found', { userId });
+        logger.warn('userNotFound', 'user not found', { userId });
         return logout();
       }
 
@@ -117,7 +115,7 @@ export class AuthController {
 
       await this.service.updateSession(session.id, newJti);
 
-      this.logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
+      logger.info('success', 'refreshed tokens', { userId: user.id });
 
       const accessTokenCookie = createCookie({
         ...this.service.accessTokenCookieOptions,
@@ -137,9 +135,9 @@ export class AuthController {
         headers: responseHeaders,
       };
     },
-  });
+  }));
 
-  logout = route({
+  logout = route(() => ({
     method: 'POST',
     path: '/logout',
     schema: {
@@ -147,7 +145,8 @@ export class AuthController {
         204: Type.Undefined(),
       },
     },
-    handler: async ({ headers }) => {
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ headers, logger }) => {
       const cookies = parseCookies(headers.get('cookie'));
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
 
@@ -155,10 +154,10 @@ export class AuthController {
         try {
           const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken);
           await this.service.deleteSessionTokenId(jti);
-          this.logger.info('logout.success', 'user logged out', { userId });
+          logger.info('success', 'user logged out', { userId });
         } catch (error) {
-          this.logger.debug('logout.verifyError', 'failed to verify refresh token during logout', {
-            error: this.logger.errorData(error),
+          logger.warn('verifyError', 'failed to verify refresh token during logout', {
+            error: logger.errorData(error),
           });
         }
       }
@@ -175,5 +174,5 @@ export class AuthController {
         headers: responseHeaders,
       };
     },
-  });
+  }));
 }

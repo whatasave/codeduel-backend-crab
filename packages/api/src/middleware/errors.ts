@@ -8,7 +8,9 @@ export function defaultErrorHandler(logger: Logger): Middleware {
       return await next({});
     } catch (error) {
       const trace = 'trace' in context ? context.trace : null;
+      const route = context.route;
       logger.error('request.unhandledError', 'cannot handle request', {
+        route: { method: route.method, path: route.path },
         error: logger.errorData(error),
         trace,
       });
@@ -23,7 +25,9 @@ export function descriptiveErrorHandler(logger: Logger): Middleware {
       return await next({});
     } catch (error) {
       const trace = 'trace' in context ? context.trace : null;
+      const route = context.route;
       logger.error('request.unhandledError', 'cannot handle request', {
+        route: { method: route.method, path: route.path },
         error: logger.errorData(error),
         trace,
       });

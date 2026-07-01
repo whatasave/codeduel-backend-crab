@@ -68,13 +68,13 @@ export class RootController {
       this.authService,
       this.userService,
       this.permissionService,
-      config.auth,
-      authLogger
+      authLogger,
+      config.auth
     );
     this.gameController = new GameController(this.gameService);
   }
 
-  setup(group: TypeBoxGroup<{ trace: string }>): void {
+  setup(group: TypeBoxGroup): void {
     this.scalarController.setup(group.group({ prefix: '/scalar' }));
     this.healthController.setup(group.group({ prefix: '/health' }));
     this.userController.setup(group.group({ prefix: '/user' }));

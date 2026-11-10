@@ -15,6 +15,7 @@ import { ReadableStream } from 'node:stream/web';
 import { responseBodyToJson } from '../../../utils/stream';
 import type { PermissionRepository } from '../../permission/repository';
 import { PermissionService } from '../../permission/service';
+import { Logger } from '@codeduel-backend-crab/logger';
 
 describe('Route.Auth.Github.Controller', () => {
   let service: GithubService;
@@ -37,10 +38,11 @@ describe('Route.Auth.Github.Controller', () => {
   beforeAll(() => {
     const authRepository = {} as AuthRepository;
     const permissionRepository = {} as PermissionRepository;
+    const logger = Logger.create({ level: 'silent', serviceName: 'test' });
     permissionService = new PermissionService(permissionRepository);
     authService = new AuthService(authRepository, permissionService, config);
     service = new GithubService(authService, config.github);
-    controller = new GithubController(service, authService);
+    controller = new GithubController(service, authService, logger);
     router = new Router({
       fallback: () => {
         throw new Error('Route not handled');

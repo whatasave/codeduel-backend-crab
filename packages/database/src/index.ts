@@ -104,7 +104,7 @@ export async function migrateToLatest(db: Database): Promise<void> {
   }
 }
 
-export async function rollbackMigrations(db: Kysely<DB>): Promise<void> {
+export async function rollbackMigrations(db: Database): Promise<void> {
   const provider = new FileMigrationProvider({
     fs,
     path,
@@ -114,5 +114,14 @@ export async function rollbackMigrations(db: Kysely<DB>): Promise<void> {
   const { error } = await migrator.migrateTo(NO_MIGRATIONS);
   if (error) {
     throw new Error('Rollback failed', { cause: error });
+  }
+}
+
+export async function pingDatabase(db: Database): Promise<boolean> {
+  try {
+    await db.executeQuery(db.selectNoFrom((eb) => eb.val(1).as('ok')));
+    return true;
+  } catch {
+    return false;
   }
 }

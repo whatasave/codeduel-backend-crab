@@ -6,11 +6,14 @@ import { randomUUIDv7 } from 'bun';
 import { getIp } from '../../../utils/ip';
 import type { TypeBoxGroup } from '@glass-cannon/typebox';
 import { route } from '../../../utils/route';
+import type { Logger } from '@codeduel-backend-crab/logger';
+import { loggerDecorator } from '../../../middleware/logger';
 
 export class GithubController {
   constructor(
     private readonly service: GithubService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly logger: Logger
   ) {}
 
   setup(group: TypeBoxGroup): void {
@@ -18,7 +21,7 @@ export class GithubController {
     this.callback(group);
   }
 
-  login = route({
+  login = route(() => ({
     method: 'GET',
     path: '/',
     schema: {
@@ -27,8 +30,10 @@ export class GithubController {
         307: Type.String(),
       },
     },
-    handler: async ({ query, headers }) => {
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ query, headers, logger }) => {
       const { redirect } = query;
+      logger.debug('start', 'starting github login', { redirect });
 
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
@@ -49,9 +54,9 @@ export class GithubController {
         },
       };
     },
-  });
+  }));
 
-  callback = route({
+  callback = route(() => ({
     method: 'GET',
     path: '/callback',
     schema: {
@@ -64,27 +69,38 @@ export class GithubController {
         400: Type.String(),
       },
     },
-    handler: async ({ query, headers }) => {
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ query, headers, logger }) => {
       const { code, state } = query;
 
       const cookies = parseCookies(headers.get('cookie'));
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
-      if (state !== cookieState) return { status: 400, body: 'Invalid or missing state' };
+      if (state !== cookieState) {
+        logger.warn('stateMismatch', 'state mismatch or missing', {
+          state,
+          cookieState,
+        });
+        return { status: 400, body: 'Invalid or missing state' };
+      }
       const { redirect, ip, userAgent } = this.authService.decodeState(state);
 
-      const token = await this.service.exchangeCodeForToken(code, state);
-      const githubUser = await this.service.userData(token.access_token);
-      const { user, permissions } = await this.service.create(githubUser);
+      const token = await this.service.exchangeCodeForToken(code, state, logger);
+      const githubUser = await this.service.userData(token.access_token, logger);
+      const { user, permissions } = await this.service.create(githubUser, logger);
 
       const accessToken = await this.authService.accessToken(
         user,
-        permissions.map((p) => p.id)
+        permissions.map((p) => p.id),
+        Date.now(),
+        logger
       );
       const jti = randomUUIDv7();
-      const refreshToken = await this.authService.refreshToken(user, jti);
+      const refreshToken = await this.authService.refreshToken(user, jti, Date.now(), logger);
 
-      await this.service.createSession(user.id, jti, ip, userAgent);
+      await this.service.createSession(user.id, jti, ip, userAgent, logger);
+
+      logger.debug('success', 'successfully logged in via github', { userId: user.id });
 
       const accessCookie = createCookie({
         ...this.authService.accessTokenCookieOptions,
@@ -106,5 +122,5 @@ export class GithubController {
         headers: responseHeaders,
       };
     },
-  });
+  }));
 }

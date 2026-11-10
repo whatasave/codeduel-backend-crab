@@ -11,6 +11,8 @@ import { randomUUIDv7 } from 'bun';
 import type { Response, TypeBoxGroup } from '@glass-cannon/typebox';
 import { route } from '../../utils/route';
 import type { PermissionService } from '../permission/service';
+import type { Logger } from '@codeduel-backend-crab/logger';
+import { loggerDecorator } from '../../middleware/logger';
 
 export class AuthController {
   private readonly githubController: GithubController;
@@ -20,15 +22,20 @@ export class AuthController {
     private readonly service: AuthService,
     private readonly userService: UserService,
     private readonly permissionService: PermissionService,
+    private readonly logger: Logger,
     config: Config
   ) {
+    this.logger = logger;
+
     this.githubController = new GithubController(
       new GithubService(this.service, config.github),
-      this.service
+      this.service,
+      logger.group({ type: 'github' })
     );
     this.gitlabController = new GitlabController(
       new GitlabService(this.service, config.gitlab),
-      this.service
+      this.service,
+      logger.group({ type: 'gitlab' })
     );
   }
 
@@ -52,7 +59,7 @@ export class AuthController {
     },
   });
 
-  refresh = route({
+  refresh = route(() => ({
     method: 'POST',
     path: '/refresh',
     schema: {
@@ -60,7 +67,8 @@ export class AuthController {
         204: Type.Undefined(),
       },
     },
-    handler: async ({ headers }) => {
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ headers, logger }) => {
       const cookies = parseCookies(headers.get('cookie'));
       const logout = (): Response<204, undefined> => {
         const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
@@ -77,14 +85,24 @@ export class AuthController {
       };
 
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
-      if (!refreshToken) return logout();
+      if (!refreshToken) {
+        logger.debug('noToken', 'no refresh token found');
+        return logout();
+      }
+
       const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken);
 
       const session = await this.service.sessionByTokenId(jti);
-      if (!session) return logout();
+      if (!session) {
+        logger.warn('sessionNotFound', 'session not found', { jti, userId });
+        return logout();
+      }
 
       const user = await this.userService.byId(userId);
-      if (!user) return logout();
+      if (!user) {
+        logger.warn('userNotFound', 'user not found', { userId });
+        return logout();
+      }
 
       const permissions = await this.permissionService.byUserId(user.id);
 
@@ -96,6 +114,8 @@ export class AuthController {
       const newRefreshToken = await this.service.refreshToken(user, newJti);
 
       await this.service.updateSession(session.id, newJti);
+
+      logger.info('success', 'refreshed tokens', { userId: user.id });
 
       const accessTokenCookie = createCookie({
         ...this.service.accessTokenCookieOptions,
@@ -115,9 +135,9 @@ export class AuthController {
         headers: responseHeaders,
       };
     },
-  });
+  }));
 
-  logout = route({
+  logout = route(() => ({
     method: 'POST',
     path: '/logout',
     schema: {
@@ -125,13 +145,21 @@ export class AuthController {
         204: Type.Undefined(),
       },
     },
-    handler: async ({ headers }) => {
+    middleware: loggerDecorator(this.logger),
+    handler: async ({ headers, logger }) => {
       const cookies = parseCookies(headers.get('cookie'));
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
 
       if (refreshToken) {
-        const { jti } = await this.service.verifyRefreshToken(refreshToken);
-        await this.service.deleteSessionTokenId(jti);
+        try {
+          const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken);
+          await this.service.deleteSessionTokenId(jti);
+          logger.info('success', 'user logged out', { userId });
+        } catch (error) {
+          logger.warn('verifyError', 'failed to verify refresh token during logout', {
+            error: logger.errorData(error),
+          });
+        }
       }
 
       const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
@@ -146,5 +174,5 @@ export class AuthController {
         headers: responseHeaders,
       };
     },
-  });
+  }));
 }

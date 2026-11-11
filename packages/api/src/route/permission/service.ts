@@ -32,13 +32,16 @@ export class PermissionService {
     return await this.repository.getPermissionsByResource(resource);
   }
 
-  async getUserRole(userId: number): Promise<{ id: number; name: string } | null> {
-    return await this.repository.getUserRole(userId);
+  async getUserRoles(userId: number): Promise<{ id: number; name: string }[]> {
+    return await this.repository.getUserRoles(userId);
   }
 
   async assignRole(userId: number, role: string): Promise<number> {
-    const roleId = await this.repository.assignRole(userId, role);
-    return roleId;
+    return await this.repository.assignRole(userId, role);
+  }
+
+  async revokeRole(userId: number, role: string): Promise<boolean> {
+    return await this.repository.revokeRole(userId, role);
   }
 
   async userHasPermission(userId: number, name: string, resource?: string): Promise<boolean> {

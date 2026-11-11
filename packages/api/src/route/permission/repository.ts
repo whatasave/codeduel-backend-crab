@@ -79,10 +79,20 @@ export class PermissionRepository {
     await this.database
       .insertInto('user_role')
       .values({ user_id: userId, role_id: roleQuery.id })
-      .onConflict((oc) => oc.column('user_id').doUpdateSet({ role_id: roleQuery.id }))
+      .onConflict((oc) => oc.columns(['user_id', 'role_id']).doNothing())
       .execute();
 
     return roleQuery.id;
+  }
+
+  async revokeRole(userId: number, role: string): Promise<boolean> {
+    const result = await this.database
+      .deleteFrom('user_role')
+      .where('user_id', '=', userId)
+      .where('role_id', '=', (eb) => eb.selectFrom('role').where('name', '=', role).select('id'))
+      .executeTakeFirst();
+
+    return result.numDeletedRows > 0n;
   }
 
   async rolePermissions(roleId: number): Promise<Permission[]> {
@@ -148,15 +158,14 @@ export class PermissionRepository {
     return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
   }
 
-  async getUserRole(userId: number): Promise<{ id: number; name: string } | null> {
-    const role = await this.database
+  async getUserRoles(userId: number): Promise<{ id: number; name: string }[]> {
+    return await this.database
       .selectFrom('user_role')
       .innerJoin('role', 'role.id', 'user_role.role_id')
       .where('user_role.user_id', '=', userId)
       .select(['role.id', 'role.name'])
-      .executeTakeFirst();
-
-    return role ?? null;
+      .orderBy('role.id')
+      .execute();
   }
 
   async permissionExists(name: string, resource?: string): Promise<boolean> {

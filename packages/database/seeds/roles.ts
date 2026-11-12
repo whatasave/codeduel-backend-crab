@@ -38,11 +38,7 @@ const PERMISSIONS = [
 
 const permKey = (p: { resource: string; name: string }): string => `${p.resource}:${p.name}`;
 
-// Permissions granted directly by each role. Roles are cumulative: each one also
-// inherits every permission of the roles listed before it in ROLE_HIERARCHY.
-// `role:assign:admin` / `role:revoke:admin` are intentionally not granted to any
-// role: give them per user through `user_permission`.
-const ROLE_OWN_PERMISSIONS: Record<string, string[]> = {
+const ROLE_PERMISSIONS: Record<string, string[]> = {
   user: [
     'challenge:create',
     'challenge:read:public',
@@ -74,18 +70,6 @@ const ROLE_OWN_PERMISSIONS: Record<string, string[]> = {
   ],
 };
 
-const ROLE_HIERARCHY = ['user', 'contributor', 'moderator', 'admin'];
-
-function buildRolePermissionMap(): Map<string, Set<string>> {
-  const map = new Map<string, Set<string>>();
-  const inherited = new Set<string>();
-  for (const role of ROLE_HIERARCHY) {
-    for (const perm of ROLE_OWN_PERMISSIONS[role] ?? []) inherited.add(perm);
-    map.set(role, new Set(inherited));
-  }
-  return map;
-}
-
 export async function seed(db: Kysely<DB>): Promise<void> {
   console.log('Seeding roles and permissions...');
 
@@ -115,17 +99,17 @@ export async function seed(db: Kysely<DB>): Promise<void> {
 
   const rolePermissionsToInsert: { role_id: number; permission_id: number }[] = [];
 
-  for (const [roleName, permissionSet] of buildRolePermissionMap()) {
+  for (const [roleName, permissions] of Object.entries(ROLE_PERMISSIONS)) {
     const roleId = roleIdMap.get(roleName);
-    if (!roleId) {
+    if (roleId === undefined) {
       console.warn(`Role "${roleName}" not found in database. Skipping.`);
       continue;
     }
 
-    for (const pKey of permissionSet) {
-      const permissionId = permissionIdMap.get(pKey);
-      if (!permissionId) {
-        console.warn(`Permission "${pKey}" not found in database. Skipping.`);
+    for (const permission of permissions) {
+      const permissionId = permissionIdMap.get(permission);
+      if (permissionId === undefined) {
+        console.warn(`Permission "${permission}" not found in database. Skipping.`);
         continue;
       }
       rolePermissionsToInsert.push({ role_id: roleId, permission_id: permissionId });

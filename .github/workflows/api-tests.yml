@@ -31,7 +31,7 @@ jobs:
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U user -d codeduel-test"
+          --health-cmd "pg_isready -h 127.0.0.1 -U user -d codeduel-test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -58,3 +58,10 @@ jobs:
 
       - name: Run API tests
         run: bun run --cwd ./packages/api test
+        env:
+          DATABASE_HOST: 127.0.0.1
+          DATABASE_PORT: 5433
+          DATABASE_USER: user
+          DATABASE_PASSWORD: password
+          DATABASE_NAME: codeduel-test
+          DATABASE_MAX_CONNECTIONS: 1

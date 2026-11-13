@@ -39,6 +39,10 @@ export class PermissionService {
     await this.repository.removeUserPermissionOverride(userId, permissionId);
   }
 
+  async getRoleByName(roleName: Role['name']): Promise<Role | undefined> {
+    return await this.repository.getRoleByName(roleName);
+  }
+
   async getUserRoles(userId: User['id']): Promise<Role[]> {
     return await this.repository.getUserRoles(userId);
   }

@@ -79,6 +79,18 @@ export class PermissionRepository {
     return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
   }
 
+  async getRoleByName(roleName: Role['name']): Promise<Role | undefined> {
+    const role = await this.database
+      .selectFrom('role')
+      .where('name', '=', roleName)
+      .selectAll()
+      .executeTakeFirst();
+
+    if (!role) return undefined;
+
+    return PermissionRepository.selectToRole(role);
+  }
+
   async assignRole(userId: User['id'], roleId: Role['id']): Promise<boolean> {
     const result = await this.database
       .insertInto('user_role')
@@ -156,13 +168,15 @@ export class PermissionRepository {
   }
 
   async getUserRoles(userId: User['id']): Promise<Role[]> {
-    return await this.database
+    const roles = await this.database
       .selectFrom('user_role')
       .innerJoin('role', 'role.id', 'user_role.role_id')
       .where('user_role.user_id', '=', userId)
-      .select(['role.id', 'role.name'])
+      .select(['role.id', 'role.name', 'role.created_at', 'role.updated_at'])
       .orderBy('role.id')
       .execute();
+
+    return roles.map((role) => PermissionRepository.selectToRole(role));
   }
 
   async permissionExists(name: string, resource?: string): Promise<boolean> {
@@ -185,6 +199,15 @@ export class PermissionRepository {
       name: permission.name,
       createdAt: permission.created_at,
       updatedAt: permission.updated_at,
+    };
+  }
+
+  static selectToRole(role: Select<'role'>): Role {
+    return {
+      id: role.id,
+      name: role.name,
+      createdAt: role.created_at,
+      updatedAt: role.updated_at,
     };
   }
 }

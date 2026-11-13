@@ -13,4 +13,6 @@ export type Role = Static<typeof Role>;
 export const Role = Type.Object({
   id: Type.Integer(),
   name: Type.String(),
+  createdAt: Type.String({ format: 'date-time' }),
+  updatedAt: Type.String({ format: 'date-time' }),
 });

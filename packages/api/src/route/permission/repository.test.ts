@@ -220,7 +220,9 @@ describe('Route.Permission.Repository', () => {
     });
 
     test('should throw for unknown role', async () => {
-      expect(repository.assignRole(userId, 9999)).rejects.toThrow();
+      const result = await repository.assignRole(userId, 9999).catch((error: unknown) => error);
+
+      expect(result).toBeInstanceOf(Error);
     });
 
     test('should revoke only the given role', async () => {

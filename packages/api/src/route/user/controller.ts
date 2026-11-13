@@ -61,10 +61,16 @@ export class UserController {
     path: '/profile',
     middleware: this.authMiddleware.requireAuth(),
     schema: {
-      response: {},
+      response: {
+        200: User,
+        404: Type.Undefined(),
+      },
     },
-    handler: async () => {
-      throw new Error('not implemented');
+    handler: async ({ user: sessionUser }) => {
+      const user = await this.userService.byId(sessionUser.id);
+      if (!user) return { status: 404 };
+
+      return { status: 200, body: user };
     },
   }));
 }

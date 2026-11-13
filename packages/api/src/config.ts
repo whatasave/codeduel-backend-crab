@@ -33,11 +33,11 @@ export function loadConfig(): Config {
     descriptiveErrors: env.DESCRIPTIVE_ERRORS,
     cors: env.CORS_ALLOWED_ORIGINS && {
       allowedOrigins:
-        env.CORS_ALLOWED_ORIGINS == '*'
+        env.CORS_ALLOWED_ORIGINS === '*'
           ? undefined
           : env.CORS_ALLOWED_ORIGINS.split(',').filter(Boolean),
       allowedMethods:
-        env.CORS_ALLOWED_METHODS == '*'
+        env.CORS_ALLOWED_METHODS === '*'
           ? undefined
           : env.CORS_ALLOWED_METHODS?.split(',').filter(Boolean),
       allowedHeaders: env.CORS_ALLOWED_HEADERS?.split(',').filter(Boolean) ?? [],

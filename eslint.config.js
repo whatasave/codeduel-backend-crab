@@ -20,8 +20,11 @@ export default tseslint.config({
     'no-var': 'error',
     semi: ['error', 'always'],
     quotes: ['error', 'single'],
+    eqeqeq: ['error', 'always'],
     '@typescript-eslint/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
     '@typescript-eslint/explicit-function-return-type': ['error', { allowExpressions: true }],
+    '@typescript-eslint/switch-exhaustiveness-check': 'error',
+    '@typescript-eslint/return-await': ['error', 'always'],
     '@typescript-eslint/strict-boolean-expressions': [
       'error',
       {

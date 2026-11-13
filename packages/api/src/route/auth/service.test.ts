@@ -73,7 +73,7 @@ describe('Route.Auth.Service', () => {
     const { auth, user } = await service.createIfNotExists(mockProvider, mockCreateUser);
 
     expect(spyGetRoleByName).toHaveBeenCalledWith('user');
-    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 1);
+    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 1, undefined);
     expect(spyCreateIfNotExists).toHaveBeenCalledTimes(1);
     expect(auth).toEqual(mockAuth);
     expect(user).toEqual(mockUser);
@@ -121,7 +121,7 @@ describe('Route.Auth.Service', () => {
     });
     const { auth, user } = await service.createForce(mockProvider, mockCreateUser);
 
-    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 1);
+    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 1, undefined);
     expect(spyCreateIfNotExists).toHaveBeenCalledTimes(1);
 
     expect(spyCreate).toHaveBeenCalledWith(
@@ -130,7 +130,8 @@ describe('Route.Auth.Service', () => {
         ...mockCreateUser,
         username: expect.stringContaining('-') as string,
       },
-      1
+      1,
+      undefined
     );
     expect(spyCreate).toHaveBeenCalledTimes(1);
     expect(auth).toEqual(mockAuth);
@@ -250,7 +251,7 @@ describe('Route.Auth.Service', () => {
 
     const result = await service.createSession(mockCreateAuthSession);
 
-    expect(spyCreateSession).toHaveBeenCalledWith(mockCreateAuthSession);
+    expect(spyCreateSession).toHaveBeenCalledWith(mockCreateAuthSession, undefined);
     expect(spyCreateSession).toHaveBeenCalledTimes(1);
     expect(result).toEqual(mockAuthSession);
   });

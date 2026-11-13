@@ -70,7 +70,8 @@ describe('Route.Auth.Github.Service', () => {
           username: mockGithubUserData.login,
           name: mockGithubUserData.login,
           avatar: mockGithubUserData.avatar_url,
-        }
+        },
+        undefined
       );
       expect(spyCreateForce).toHaveBeenCalledTimes(1);
       expect(auth).toEqual(mockAuth);
@@ -111,7 +112,8 @@ describe('Route.Auth.Github.Service', () => {
           username: mockGithubUserData.login,
           name: mockGithubUserData.name,
           avatar: mockGithubUserData.avatar_url,
-        }
+        },
+        undefined
       );
       expect(spyCreateForce).toHaveBeenCalledTimes(1);
       expect(auth).toEqual(mockAuth);
@@ -214,7 +216,7 @@ describe('Route.Auth.Github.Service', () => {
       mockCreateSession.userAgent
     );
 
-    expect(spyCreateSession).toHaveBeenCalledWith(mockCreateSession);
+    expect(spyCreateSession).toHaveBeenCalledWith(mockCreateSession, undefined);
     expect(spyCreateSession).toHaveBeenCalledTimes(1);
   });
 });

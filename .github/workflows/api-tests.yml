@@ -8,12 +8,21 @@ on:
       - 'packages/**'
       - 'package.json'
       - 'bun.lock'
-      - '.env.test'
       - '.github/workflows/api-tests.yml'
+  push:
+    branches: [main, release]
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/api-tests.yml'
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -41,7 +50,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.2.4
 

@@ -263,26 +263,37 @@ describe('Route.Auth.Gitlab.Controller', () => {
       expect(spyDecodeState).toHaveBeenCalledWith(mockStateString);
       expect(spyDecodeState).toHaveBeenCalledTimes(1);
 
-      expect(spyExchange).toHaveBeenCalledWith(mockCode);
+      expect(spyExchange).toHaveBeenCalledWith(mockCode, expect.any(Object));
       expect(spyExchange).toHaveBeenCalledTimes(1);
 
-      expect(spyUserData).toHaveBeenCalledWith(mockToken.access_token);
+      expect(spyUserData).toHaveBeenCalledWith(mockToken.access_token, expect.any(Object));
       expect(spyUserData).toHaveBeenCalledTimes(1);
 
-      expect(spyCreate).toHaveBeenCalledWith(mockGitlabUser);
+      expect(spyCreate).toHaveBeenCalledWith(mockGitlabUser, expect.any(Object));
       expect(spyCreate).toHaveBeenCalledTimes(1);
 
-      expect(spyAccessToken).toHaveBeenCalledWith(mockUser, []);
+      expect(spyAccessToken).toHaveBeenCalledWith(
+        mockUser,
+        [],
+        expect.any(Number),
+        expect.any(Object)
+      );
       expect(spyAccessToken).toHaveBeenCalledTimes(1);
 
-      expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));
+      expect(spyRefreshToken).toHaveBeenCalledWith(
+        mockUser,
+        expect.any(String),
+        expect.any(Number),
+        expect.any(Object)
+      );
       expect(spyRefreshToken).toHaveBeenCalledTimes(1);
 
       expect(spyCreateSession).toHaveBeenCalledWith(
         mockUser.id,
         expect.any(String),
         mockState.ip,
-        mockState.userAgent
+        mockState.userAgent,
+        expect.any(Object)
       );
       expect(spyCreateSession).toHaveBeenCalledTimes(1);
 

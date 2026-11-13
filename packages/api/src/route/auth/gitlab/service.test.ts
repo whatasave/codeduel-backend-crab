@@ -216,7 +216,7 @@ describe('Route.Auth.Gitlab.Service', () => {
       mockCreateSession.userAgent
     );
 
-    expect(spyCreateSession).toHaveBeenCalledWith(mockCreateSession);
+    expect(spyCreateSession).toHaveBeenCalledWith(mockCreateSession, undefined);
     expect(spyCreateSession).toHaveBeenCalledTimes(1);
   });
 });

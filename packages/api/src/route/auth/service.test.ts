@@ -59,6 +59,12 @@ describe('Route.Auth.Service', () => {
       createdAt: mockDate,
       updatedAt: mockDate,
     };
+    const spyGetRoleByName = spyOn(permissionService, 'getRoleByName').mockResolvedValue({
+      id: 1,
+      name: 'user',
+      createdAt: mockDate,
+      updatedAt: mockDate,
+    });
     const spyCreateIfNotExists = spyOn(repository, 'createIfNotExists').mockResolvedValue({
       auth: mockAuth,
       user: mockUser,
@@ -66,7 +72,8 @@ describe('Route.Auth.Service', () => {
     });
     const { auth, user } = await service.createIfNotExists(mockProvider, mockCreateUser);
 
-    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 'user');
+    expect(spyGetRoleByName).toHaveBeenCalledWith('user');
+    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 1);
     expect(spyCreateIfNotExists).toHaveBeenCalledTimes(1);
     expect(auth).toEqual(mockAuth);
     expect(user).toEqual(mockUser);
@@ -98,6 +105,12 @@ describe('Route.Auth.Service', () => {
       createdAt: mockDate,
       updatedAt: mockDate,
     };
+    spyOn(permissionService, 'getRoleByName').mockResolvedValue({
+      id: 1,
+      name: 'user',
+      createdAt: mockDate,
+      updatedAt: mockDate,
+    });
     const spyCreateIfNotExists = spyOn(repository, 'createIfNotExists').mockRejectedValue(
       new UserNameAlreadyExistsError(`Username already exists: ${mockCreateUser.username}`)
     );
@@ -108,7 +121,7 @@ describe('Route.Auth.Service', () => {
     });
     const { auth, user } = await service.createForce(mockProvider, mockCreateUser);
 
-    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 'user');
+    expect(spyCreateIfNotExists).toHaveBeenCalledWith(mockProvider, mockCreateUser, 1);
     expect(spyCreateIfNotExists).toHaveBeenCalledTimes(1);
 
     expect(spyCreate).toHaveBeenCalledWith(
@@ -117,7 +130,7 @@ describe('Route.Auth.Service', () => {
         ...mockCreateUser,
         username: expect.stringContaining('-') as string,
       },
-      'user'
+      1
     );
     expect(spyCreate).toHaveBeenCalledTimes(1);
     expect(auth).toEqual(mockAuth);

@@ -50,7 +50,7 @@ export class AuthMiddleware {
           },
         });
       }
-      return next({ user, permissions });
+      return await next({ user, permissions });
     };
   }
 

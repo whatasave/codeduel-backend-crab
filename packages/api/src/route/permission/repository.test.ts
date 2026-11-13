@@ -111,7 +111,7 @@ describe('Route.Permission.Repository', () => {
       }
 
       await db.transaction().execute(async (tx) => {
-        await tx.insertInto('user_role').values({ role_id: userId, user_id: userId }).execute();
+        await tx.insertInto('user_role').values({ role_id: userRoleId, user_id: userId }).execute();
 
         await tx
           .insertInto('user_permission')
@@ -155,8 +155,9 @@ describe('Route.Permission.Repository', () => {
     });
   });
 
-  describe('assignRole', () => {
+  describe('roles', () => {
     let userId: number;
+    let adminRoleId: number;
 
     beforeEach(async () => {
       userId = await db
@@ -165,50 +166,92 @@ describe('Route.Permission.Repository', () => {
         .returning('id')
         .executeTakeFirstOrThrow()
         .then((row) => row.id);
+
+      adminRoleId = await db
+        .insertInto('role')
+        .values({ name: 'admin' })
+        .returning('id')
+        .executeTakeFirstOrThrow()
+        .then((row) => row.id);
     });
+
+    const userRoleIds = (): Promise<number[]> =>
+      db
+        .selectFrom('user_role')
+        .where('user_id', '=', userId)
+        .select('role_id')
+        .orderBy('role_id')
+        .execute()
+        .then((rows) => rows.map((row) => row.role_id));
 
     test('should assign role to user', async () => {
-      const newRole = 'admin';
-      const newRoleId = await db
-        .insertInto('role')
-        .values({ name: newRole })
-        .returning('id')
-        .executeTakeFirstOrThrow()
-        .then((row) => row.id);
+      const assigned = await repository.assignRole(userId, adminRoleId);
 
-      const assignedRoleId = await repository.assignRole(userId, newRole);
-
-      expect(assignedRoleId).toBe(newRoleId);
-
-      const userRole = await db
-        .selectFrom('user_role')
-        .where('user_id', '=', userId)
-        .selectAll()
-        .executeTakeFirstOrThrow();
-
-      expect(userRole.role_id).toBe(newRoleId);
+      expect(assigned).toBe(true);
+      expect(await userRoleIds()).toEqual([adminRoleId]);
     });
 
-    test('should assign role to user without role', async () => {
-      const newRole = 'guest';
-      const newRoleId = await db
-        .insertInto('role')
-        .values({ name: newRole })
-        .returning('id')
-        .executeTakeFirstOrThrow()
-        .then((row) => row.id);
+    test('should keep existing roles when assigning a new one', async () => {
+      await repository.assignRole(userId, userRoleId);
+      await repository.assignRole(userId, adminRoleId);
 
-      const assignedRoleId = await repository.assignRole(userId, newRole);
+      expect(await userRoleIds()).toEqual([userRoleId, adminRoleId].sort((a, b) => a - b));
+      expect(await repository.getUserRoles(userId)).toEqual([
+        {
+          id: userRoleId,
+          name: 'user',
+          createdAt: expect.any(String) as string,
+          updatedAt: expect.any(String) as string,
+        },
+        {
+          id: adminRoleId,
+          name: 'admin',
+          createdAt: expect.any(String) as string,
+          updatedAt: expect.any(String) as string,
+        },
+      ]);
+    });
 
-      expect(assignedRoleId).toBe(newRoleId);
+    test('should be idempotent when assigning the same role twice', async () => {
+      expect(await repository.assignRole(userId, adminRoleId)).toBe(true);
+      expect(await repository.assignRole(userId, adminRoleId)).toBe(false);
 
-      const userRole = await db
-        .selectFrom('user_role')
-        .where('user_id', '=', userId)
-        .selectAll()
-        .executeTakeFirstOrThrow();
+      expect(await userRoleIds()).toEqual([adminRoleId]);
+    });
 
-      expect(userRole.role_id).toBe(newRoleId);
+    test('should throw for unknown role', async () => {
+      expect(repository.assignRole(userId, 9999)).rejects.toThrow();
+    });
+
+    test('should revoke only the given role', async () => {
+      await repository.assignRole(userId, userRoleId);
+      await repository.assignRole(userId, adminRoleId);
+
+      expect(await repository.revokeRole(userId, adminRoleId)).toBe(true);
+      expect(await userRoleIds()).toEqual([userRoleId]);
+      expect(await repository.revokeRole(userId, adminRoleId)).toBe(false);
+    });
+
+    test('should merge permissions of all roles without duplicates', async () => {
+      const [create, login, view] = mockPermissions;
+      if (!create || !login || !view) {
+        throw new Error('Mock permissions are not set up correctly');
+      }
+
+      await db
+        .insertInto('role_permission')
+        .values([
+          { role_id: adminRoleId, permission_id: create.id },
+          { role_id: adminRoleId, permission_id: view.id },
+        ])
+        .execute();
+
+      await repository.assignRole(userId, userRoleId);
+      await repository.assignRole(userId, adminRoleId);
+
+      const permissions = await repository.byUserId(userId);
+
+      expect(permissions.toSorted((a, b) => a.id - b.id)).toEqual([create, login, view]);
     });
   });
 

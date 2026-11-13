@@ -1,47 +1,61 @@
-import type { Permission } from './data';
+import type { User } from '../user/data';
+import type { Permission, Role } from './data';
 import type { PermissionRepository } from './repository';
 
 export class PermissionService {
   constructor(private readonly repository: PermissionRepository) {}
 
-  async byUserId(userId: number): Promise<Permission[]> {
+  async byUserId(userId: User['id']): Promise<Permission[]> {
     return await this.repository.byUserId(userId);
   }
 
-  async byIds(ids: number[]): Promise<Permission[]> {
+  async byIds(ids: Permission['id'][]): Promise<Permission[]> {
     return await this.repository.byIds(ids);
   }
 
-  async createPermission(name: string, resource: string): Promise<Permission> {
+  async byResource(resource?: string): Promise<Permission[]> {
+    return await this.repository.byResource(resource);
+  }
+
+  async create(name: string, resource: string): Promise<Permission> {
     return await this.repository.createPermission(name, resource);
   }
 
-  async grantPermissionToUser(userId: number, permissionId: number): Promise<void> {
+  async grantPermissionToUser(userId: User['id'], permissionId: Permission['id']): Promise<void> {
     await this.repository.grantPermissionToUser(userId, permissionId);
   }
 
-  async revokePermissionFromUser(userId: number, permissionId: number): Promise<void> {
+  async revokePermissionFromUser(
+    userId: User['id'],
+    permissionId: Permission['id']
+  ): Promise<void> {
     await this.repository.revokePermissionFromUser(userId, permissionId);
   }
 
-  async removeUserPermissionOverride(userId: number, permissionId: number): Promise<void> {
+  async removeUserPermissionOverride(
+    userId: User['id'],
+    permissionId: Permission['id']
+  ): Promise<void> {
     await this.repository.removeUserPermissionOverride(userId, permissionId);
   }
 
-  async getPermissionsByResource(resource?: string): Promise<Permission[]> {
-    return await this.repository.getPermissionsByResource(resource);
+  async getRoleByName(roleName: Role['name']): Promise<Role | undefined> {
+    return await this.repository.getRoleByName(roleName);
   }
 
-  async getUserRole(userId: number): Promise<{ id: number; name: string } | null> {
-    return await this.repository.getUserRole(userId);
+  async getUserRoles(userId: User['id']): Promise<Role[]> {
+    return await this.repository.getUserRoles(userId);
   }
 
-  async assignRole(userId: number, role: string): Promise<number> {
-    const roleId = await this.repository.assignRole(userId, role);
-    return roleId;
+  async assignRole(userId: User['id'], roleId: Role['id']): Promise<boolean> {
+    return await this.repository.assignRole(userId, roleId);
   }
 
-  async userHasPermission(userId: number, name: string, resource?: string): Promise<boolean> {
+  async revokeRole(userId: User['id'], roleId: Role['id']): Promise<boolean> {
+    return await this.repository.revokeRole(userId, roleId);
+  }
+
+  async userHasPermission(userId: User['id'], name: string, resource?: string): Promise<boolean> {
     const permissions = await this.byUserId(userId);
     return permissions.some((p) => p.name === name && p.resource === resource);
   }

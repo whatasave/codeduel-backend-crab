@@ -4,6 +4,7 @@ import { UserNameAlreadyExistsError, type CreateUser } from '../user/data';
 import { UserRepository } from '../user/repository';
 import { PermissionRepository } from '../permission/repository';
 import type { Logger } from '@codeduel-backend-crab/logger';
+import type { Role } from '../permission/data';
 
 export class AuthRepository {
   constructor(private readonly database: Database) {}
@@ -11,7 +12,7 @@ export class AuthRepository {
   async create(
     provider: Provider,
     user: CreateUser,
-    role: string,
+    roleId: Role['id'],
     logger?: Logger
   ): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
@@ -41,7 +42,7 @@ export class AuthRepository {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      const roleId = await permissionsRepository.assignRole(newUser.id, role);
+      await permissionsRepository.assignRole(newUser.id, roleId);
       const permissions = await permissionsRepository.rolePermissions(roleId);
 
       logger?.info('create.success', 'user and auth provider persisted successfully', {
@@ -60,7 +61,7 @@ export class AuthRepository {
   async createIfNotExists(
     provider: Provider,
     user: CreateUser,
-    role: string,
+    roleId: Role['id'],
     logger?: Logger
   ): Promise<CreateContext> {
     const authUser = await this.database.transaction().execute(async (tx) => {
@@ -95,7 +96,7 @@ export class AuthRepository {
         };
       }
 
-      return this.create(provider, user, role, logger);
+      return await this.create(provider, user, roleId, logger);
     });
 
     return authUser;

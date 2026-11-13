@@ -27,7 +27,7 @@ export function loggerDecorator(logger: Logger): Middleware<{ logger: Logger }> 
   return async (next, context) => {
     const trace = 'trace' in context ? context.trace : null;
     const route = context.route;
-    return next({
+    return await next({
       logger: logger.group({
         context: {
           route: { method: route.method, path: route.path },

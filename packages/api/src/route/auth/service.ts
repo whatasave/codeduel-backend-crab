@@ -16,8 +16,11 @@ import type { Config } from './config';
 import type { CookieOptions } from '../../utils/cookie';
 import type { PermissionService } from '../permission/service';
 import type { Logger } from '@codeduel-backend-crab/logger';
+import type { Role } from '../permission/data';
 
 export class AuthService {
+  private userDefaultRoleId: Role['id'] | undefined;
+
   constructor(
     private readonly repository: AuthRepository,
     private readonly permissionsService: PermissionService,
@@ -37,12 +40,8 @@ export class AuthService {
     user: CreateUser,
     logger?: Logger
   ): Promise<CreateContext> {
-    return await this.repository.createIfNotExists(
-      provider,
-      user,
-      this.config.userDefaultRole,
-      logger
-    );
+    const roleId = await this.getUserDefaultRoleId();
+    return await this.repository.createIfNotExists(provider, user, roleId, logger);
   }
 
   async createForce(provider: Provider, user: CreateUser, logger?: Logger): Promise<CreateContext> {
@@ -61,7 +60,7 @@ export class AuthService {
           ...user,
           username: `${user.username}-${randomUUIDv7()}`,
         },
-        this.config.userDefaultRole,
+        await this.getUserDefaultRoleId(),
         logger
       );
     }
@@ -133,7 +132,7 @@ export class AuthService {
     });
   }
 
-  async verifyAccessToken(token: string, logger?: Logger): Promise<JwtAccessToken> {
+  verifyAccessToken(token: string, logger?: Logger): Promise<JwtAccessToken> {
     return new Promise((resolve, reject) => {
       jwt.verify(
         token,
@@ -147,7 +146,7 @@ export class AuthService {
             return reject(err);
           }
 
-          if (!decode) return reject(new Error('Invalid token'));
+          if (decode === undefined) return reject(new Error('Invalid token'));
           const payload = decode as JwtPayload;
 
           if (payload.iss !== this.config.jwt.issuer)
@@ -172,7 +171,7 @@ export class AuthService {
     });
   }
 
-  async verifyRefreshToken(token: string, logger?: Logger): Promise<JwtRefreshToken> {
+  verifyRefreshToken(token: string, logger?: Logger): Promise<JwtRefreshToken> {
     return new Promise((resolve, reject) => {
       jwt.verify(
         token,
@@ -186,7 +185,7 @@ export class AuthService {
             return reject(err);
           }
 
-          if (!decode) return reject(new Error('Invalid token'));
+          if (decode === undefined) return reject(new Error('Invalid token'));
           const payload = decode as JwtPayload;
 
           if (payload.iss !== this.config.jwt.issuer)
@@ -272,5 +271,15 @@ export class AuthService {
   ): Promise<void> {
     logger?.debug('deleteSessionTokenId.start', 'deleting auth session by token id');
     await this.repository.deleteSessionTokenId(tokenId);
+  }
+
+  private async getUserDefaultRoleId(): Promise<Role['id']> {
+    if (this.userDefaultRoleId !== undefined) return this.userDefaultRoleId;
+
+    const role = await this.permissionsService.getRoleByName(this.config.userDefaultRole);
+    if (!role) throw new Error(`Default role "${this.config.userDefaultRole}" not found`);
+
+    this.userDefaultRoleId = role.id;
+    return role.id;
   }
 }

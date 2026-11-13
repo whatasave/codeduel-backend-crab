@@ -1,10 +1,23 @@
 import { type Database, type Select } from '@codeduel-backend-crab/database';
-import type { Permission } from './data';
+import type { User } from '../user/data';
+import type { Permission, Role } from './data';
 
 export class PermissionRepository {
   constructor(private readonly database: Database) {}
 
-  async byUserId(userId: number): Promise<Permission[]> {
+  async byIds(ids: Permission['id'][]): Promise<Permission[]> {
+    if (ids.length === 0) return [];
+
+    const permissions = await this.database
+      .selectFrom('permission')
+      .where('id', 'in', ids)
+      .select(['id', 'resource', 'name', 'created_at', 'updated_at'])
+      .execute();
+
+    return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
+  }
+
+  async byUserId(userId: User['id']): Promise<Permission[]> {
     // SELECT ur.user_id, r."name", p.resource, p."name", up.allow
     // FROM user_role ur
     // INNER JOIN role_permission rp ON ur.role_id = rp.role_id
@@ -53,39 +66,52 @@ export class PermissionRepository {
     return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
   }
 
-  async byIds(ids: number[]): Promise<Permission[]> {
-    if (ids.length === 0) return [];
+  async byResource(resource?: string): Promise<Permission[]> {
+    let query = this.database.selectFrom('permission').selectAll();
 
-    const permissions = await this.database
-      .selectFrom('permission')
-      .where('id', 'in', ids)
-      .select(['id', 'resource', 'name', 'created_at', 'updated_at'])
-      .execute();
+    if (resource === undefined) {
+      query = query.where('resource', 'is', null);
+    } else {
+      query = query.where('resource', '=', resource);
+    }
 
+    const permissions = await query.execute();
     return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
   }
 
-  async assignRole(userId: number, role: string): Promise<number> {
-    const roleQuery = await this.database
+  async getRoleByName(roleName: Role['name']): Promise<Role | undefined> {
+    const role = await this.database
       .selectFrom('role')
-      .where('name', '=', role)
-      .select('id')
+      .where('name', '=', roleName)
+      .selectAll()
       .executeTakeFirst();
 
-    if (!roleQuery) {
-      throw new Error(`Role '${role}' not found`);
-    }
+    if (!role) return undefined;
 
-    await this.database
-      .insertInto('user_role')
-      .values({ user_id: userId, role_id: roleQuery.id })
-      .onConflict((oc) => oc.column('user_id').doUpdateSet({ role_id: roleQuery.id }))
-      .execute();
-
-    return roleQuery.id;
+    return PermissionRepository.selectToRole(role);
   }
 
-  async rolePermissions(roleId: number): Promise<Permission[]> {
+  async assignRole(userId: User['id'], roleId: Role['id']): Promise<boolean> {
+    const result = await this.database
+      .insertInto('user_role')
+      .values({ user_id: userId, role_id: roleId })
+      .onConflict((oc) => oc.columns(['user_id', 'role_id']).doNothing())
+      .executeTakeFirst();
+
+    return (result.numInsertedOrUpdatedRows ?? 0n) > 0n;
+  }
+
+  async revokeRole(userId: User['id'], roleId: Role['id']): Promise<boolean> {
+    const result = await this.database
+      .deleteFrom('user_role')
+      .where('user_id', '=', userId)
+      .where('role_id', '=', roleId)
+      .executeTakeFirst();
+
+    return result.numDeletedRows > 0n;
+  }
+
+  async rolePermissions(roleId: Role['id']): Promise<Permission[]> {
     const permissions = await this.database
       .selectFrom('role_permission')
       .innerJoin('permission', 'permission.id', 'role_permission.permission_id')
@@ -111,7 +137,7 @@ export class PermissionRepository {
     return PermissionRepository.selectToPermission(permission);
   }
 
-  async grantPermissionToUser(userId: number, permissionId: number): Promise<void> {
+  async grantPermissionToUser(userId: User['id'], permissionId: Permission['id']): Promise<void> {
     await this.database
       .insertInto('user_permission')
       .values({ user_id: userId, permission_id: permissionId, allow: true })
@@ -119,7 +145,10 @@ export class PermissionRepository {
       .execute();
   }
 
-  async revokePermissionFromUser(userId: number, permissionId: number): Promise<void> {
+  async revokePermissionFromUser(
+    userId: User['id'],
+    permissionId: Permission['id']
+  ): Promise<void> {
     await this.database
       .insertInto('user_permission')
       .values({ user_id: userId, permission_id: permissionId, allow: false })
@@ -127,7 +156,10 @@ export class PermissionRepository {
       .execute();
   }
 
-  async removeUserPermissionOverride(userId: number, permissionId: number): Promise<void> {
+  async removeUserPermissionOverride(
+    userId: User['id'],
+    permissionId: Permission['id']
+  ): Promise<void> {
     await this.database
       .deleteFrom('user_permission')
       .where('user_id', '=', userId)
@@ -135,28 +167,16 @@ export class PermissionRepository {
       .execute();
   }
 
-  async getPermissionsByResource(resource?: string): Promise<Permission[]> {
-    let query = this.database.selectFrom('permission').selectAll();
-
-    if (resource === undefined) {
-      query = query.where('resource', 'is', null);
-    } else {
-      query = query.where('resource', '=', resource);
-    }
-
-    const permissions = await query.execute();
-    return permissions.map((permission) => PermissionRepository.selectToPermission(permission));
-  }
-
-  async getUserRole(userId: number): Promise<{ id: number; name: string } | null> {
-    const role = await this.database
+  async getUserRoles(userId: User['id']): Promise<Role[]> {
+    const roles = await this.database
       .selectFrom('user_role')
       .innerJoin('role', 'role.id', 'user_role.role_id')
       .where('user_role.user_id', '=', userId)
-      .select(['role.id', 'role.name'])
-      .executeTakeFirst();
+      .select(['role.id', 'role.name', 'role.created_at', 'role.updated_at'])
+      .orderBy('role.id')
+      .execute();
 
-    return role ?? null;
+    return roles.map((role) => PermissionRepository.selectToRole(role));
   }
 
   async permissionExists(name: string, resource?: string): Promise<boolean> {
@@ -179,6 +199,15 @@ export class PermissionRepository {
       name: permission.name,
       createdAt: permission.created_at,
       updatedAt: permission.updated_at,
+    };
+  }
+
+  static selectToRole(role: Select<'role'>): Role {
+    return {
+      id: role.id,
+      name: role.name,
+      createdAt: role.created_at,
+      updatedAt: role.updated_at,
     };
   }
 }

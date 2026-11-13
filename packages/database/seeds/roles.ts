@@ -1,13 +1,7 @@
 import type { Kysely } from 'kysely';
 import type DB from '../src/types/Database';
 
-const ROLES = [
-  { name: 'Founder' },
-  { name: 'Admin' },
-  { name: 'Moderator' },
-  { name: 'Trusted Contributor' },
-  { name: 'User' },
-];
+const ROLES = [{ name: 'admin' }, { name: 'moderator' }, { name: 'contributor' }, { name: 'user' }];
 
 const PERMISSIONS = [
   { resource: 'challenge', name: 'create' },
@@ -44,8 +38,8 @@ const PERMISSIONS = [
 
 const permKey = (p: { resource: string; name: string }): string => `${p.resource}:${p.name}`;
 
-const ROLE_PERMISSION_MAP: Record<string, Set<string>> = {
-  User: new Set([
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  user: [
     'challenge:create',
     'challenge:read:public',
     'challenge:update:own',
@@ -58,48 +52,41 @@ const ROLE_PERMISSION_MAP: Record<string, Set<string>> = {
     'lobby:manage:own',
     'user:read:profile',
     'user:update:own_profile',
-  ]),
-  TrustedContributor: new Set(['challenge:review', 'challenge:approve']),
-  Moderator: new Set([
+  ],
+  contributor: ['challenge:review', 'challenge:approve'],
+  moderator: [
     'challenge:update:any',
     'challenge:delete:any',
     'challenge:hide',
     'user:ban:challenge_submission',
     'user:unban:challenge_submission',
-  ]),
-  Admin: new Set([
+  ],
+  admin: [
     'user:ban:global',
     'user:unban:global',
     'role:assign:moderator',
     'role:revoke:moderator',
     'system:toggle_challenge_premoderation',
-  ]),
-  Founder: new Set(['role:assign:admin', 'role:revoke:admin']),
+  ],
 };
 
 export async function seed(db: Kysely<DB>): Promise<void> {
   console.log('Seeding roles and permissions...');
 
-  const insertedRoles = await db
+  await db
     .insertInto('role')
     .values(ROLES)
     .onConflict((oc) => oc.column('name').doNothing())
-    .returningAll()
     .execute();
 
-  const insertedPermissions = await db
+  await db
     .insertInto('permission')
     .values(PERMISSIONS)
     .onConflict((oc) => oc.columns(['resource', 'name']).doNothing())
-    .returningAll()
     .execute();
 
-  const allRoles =
-    insertedRoles.length > 0 ? insertedRoles : await db.selectFrom('role').selectAll().execute();
-  const allPermissions =
-    insertedPermissions.length > 0
-      ? insertedPermissions
-      : await db.selectFrom('permission').selectAll().execute();
+  const allRoles = await db.selectFrom('role').selectAll().execute();
+  const allPermissions = await db.selectFrom('permission').selectAll().execute();
 
   if (allRoles.length === 0 || allPermissions.length === 0) {
     throw new Error('Failed to seed or retrieve roles and permissions. Aborting.');
@@ -112,38 +99,17 @@ export async function seed(db: Kysely<DB>): Promise<void> {
 
   const rolePermissionsToInsert: { role_id: number; permission_id: number }[] = [];
 
-  const userPerms = ROLE_PERMISSION_MAP.User ?? new Set<string>();
-  const trustedContributorPerms = ROLE_PERMISSION_MAP.TrustedContributor ?? new Set<string>();
-  const moderatorPerms = ROLE_PERMISSION_MAP.Moderator ?? new Set<string>();
-  const adminPerms = ROLE_PERMISSION_MAP.Admin ?? new Set<string>();
-
-  ROLE_PERMISSION_MAP.Moderator = new Set([
-    ...Array.from(userPerms),
-    ...Array.from(trustedContributorPerms),
-    ...Array.from(moderatorPerms),
-  ]);
-  ROLE_PERMISSION_MAP.Admin = new Set([
-    ...Array.from(userPerms),
-    ...Array.from(trustedContributorPerms),
-    ...Array.from(moderatorPerms),
-    ...Array.from(adminPerms),
-  ]);
-  ROLE_PERMISSION_MAP.Founder = new Set(
-    allPermissions.map(({ resource, name }) => permKey({ resource, name }))
-  );
-
-  for (const roleName in ROLE_PERMISSION_MAP) {
+  for (const [roleName, permissions] of Object.entries(ROLE_PERMISSIONS)) {
     const roleId = roleIdMap.get(roleName);
-    if (!roleId) {
+    if (roleId === undefined) {
       console.warn(`Role "${roleName}" not found in database. Skipping.`);
       continue;
     }
 
-    const permissionSet = ROLE_PERMISSION_MAP[roleName] ?? new Set<string>();
-    for (const pKey of permissionSet) {
-      const permissionId = permissionIdMap.get(pKey);
-      if (!permissionId) {
-        console.warn(`Permission "${pKey}" not found in database. Skipping.`);
+    for (const permission of permissions) {
+      const permissionId = permissionIdMap.get(permission);
+      if (permissionId === undefined) {
+        console.warn(`Permission "${permission}" not found in database. Skipping.`);
         continue;
       }
       rolePermissionsToInsert.push({ role_id: roleId, permission_id: permissionId });

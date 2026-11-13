@@ -22,7 +22,16 @@ export default tseslint.config({
     quotes: ['error', 'single'],
     '@typescript-eslint/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
     '@typescript-eslint/explicit-function-return-type': ['error', { allowExpressions: true }],
-    '@typescript-eslint/strict-boolean-expressions': 'error',
+    '@typescript-eslint/strict-boolean-expressions': [
+      'error',
+      {
+        allowNullableBoolean: true,
+        allowNullableString: true,
+        allowNullableEnum: true,
+        allowAny: true,
+        allowNullableNumber: false,
+      },
+    ],
     '@typescript-eslint/restrict-template-expressions': [
       'error',
       {

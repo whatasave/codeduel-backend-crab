@@ -50,7 +50,7 @@ describe('Route.Game.Repository', () => {
       expect(game).toMatchObject(requiremets);
       expect(game.challenge.id).toBe(createGame.challengeId ?? -1);
       expect(game.host.id).toBe(createGame.hostId);
-      if (!createGame.userIds[0]) throw new Error('Should never happen');
+      if (createGame.userIds[0] === undefined) throw new Error('Should never happen');
       expect(users).toEqual([
         {
           userId: createGame.userIds[0],
@@ -80,7 +80,7 @@ describe('Route.Game.Repository', () => {
       const { challengeId: _, hostId: __, userIds: ___, ...requiremets } = createGame;
       expect(game).toMatchObject(requiremets);
       expect(game.host.id).toBe(createGame.hostId);
-      if (!createGame.userIds[0]) throw new Error('Should never happen');
+      if (createGame.userIds[0] === undefined) throw new Error('Should never happen');
       expect(users).toEqual([
         {
           userId: createGame.userIds[0],

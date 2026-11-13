@@ -147,7 +147,7 @@ export class AuthService {
             return reject(err);
           }
 
-          if (!decode) return reject(new Error('Invalid token'));
+          if (decode === undefined) return reject(new Error('Invalid token'));
           const payload = decode as JwtPayload;
 
           if (payload.iss !== this.config.jwt.issuer)
@@ -186,7 +186,7 @@ export class AuthService {
             return reject(err);
           }
 
-          if (!decode) return reject(new Error('Invalid token'));
+          if (decode === undefined) return reject(new Error('Invalid token'));
           const payload = decode as JwtPayload;
 
           if (payload.iss !== this.config.jwt.issuer)

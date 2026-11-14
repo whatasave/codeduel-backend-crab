@@ -86,7 +86,7 @@ export class AuthController {
 
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
       if (!refreshToken) {
-        logger.debug('noToken', 'no refresh token found');
+        logger.debug('refresh.noToken', 'no refresh token found');
         return logout();
       }
 
@@ -94,17 +94,17 @@ export class AuthController {
 
       const session = await this.service.sessionByTokenId(jti);
       if (!session) {
-        logger.warn('sessionNotFound', 'session not found', { jti, userId });
+        logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
         return logout();
       }
 
-      const user = await this.userService.byId(userId);
+      const user = await this.userService.byId(userId, logger);
       if (!user) {
-        logger.warn('userNotFound', 'user not found', { userId });
+        logger.warn('refresh.userNotFound', 'user not found', { userId });
         return logout();
       }
 
-      const permissions = await this.permissionService.byUserId(user.id);
+      const permissions = await this.permissionService.byUserId(user.id, logger);
 
       const newAccessToken = await this.service.accessToken(
         user,
@@ -117,7 +117,7 @@ export class AuthController {
 
       await this.service.updateSession(session.id, newJti, logger);
 
-      logger.info('success', 'refreshed tokens', { userId: user.id });
+      logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
 
       const accessTokenCookie = createCookie({
         ...this.service.accessTokenCookieOptions,
@@ -153,14 +153,14 @@ export class AuthController {
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
 
       if (!refreshToken) {
-        logger.debug('noToken', 'logout without refresh token, clearing cookies only');
+        logger.debug('logout.noToken', 'logout without refresh token, clearing cookies only');
       } else {
         try {
           const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken, logger);
           await this.service.deleteSessionTokenId(jti, logger);
-          logger.info('success', 'user logged out', { userId });
+          logger.info('logout.success', 'user logged out', { userId });
         } catch (error) {
-          logger.warn('verifyError', 'failed to verify refresh token during logout', {
+          logger.warn('logout.verifyError', 'failed to verify refresh token during logout', {
             error: logger.errorData(error),
           });
         }

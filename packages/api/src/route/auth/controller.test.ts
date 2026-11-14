@@ -123,7 +123,7 @@ describe('Route.Auth.Controller', () => {
       expect(spySessionByTokenId).toHaveBeenCalledWith(mockJwtRefreshToken.jti);
       expect(spySessionByTokenId).toHaveBeenCalledTimes(1);
 
-      expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub);
+      expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub, expect.any(Object));
       expect(spyUserById).toHaveBeenCalledTimes(1);
 
       expect(spyAccessToken).toHaveBeenCalledWith(
@@ -149,7 +149,7 @@ describe('Route.Auth.Controller', () => {
       );
       expect(spyUpdateSession).toHaveBeenCalledTimes(1);
 
-      expect(spyByUserId).toHaveBeenCalledWith(mockUser.id);
+      expect(spyByUserId).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
       expect(spyByUserId).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(204);

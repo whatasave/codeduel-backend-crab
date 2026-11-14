@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "useTabs": false,
+  "tabWidth": 2,
+  "endOfLine": "lf",
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "semi": true,
+  "singleQuote": true,
+  "sortPackageJson": false,
+  "ignorePatterns": ["**/node_modules", "packages/database/src/types"]
+}

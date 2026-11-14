@@ -1,16 +1,19 @@
 {
   "name": "codeduel-backend-crab",
   "devDependencies": {
-    "@eslint/js": "9.21.0",
     "@types/bun": "1.2.4",
     "editorconfig": "^2.0.1",
-    "eslint": "9.21.0",
+    "oxlint": "^1.93.0",
+    "oxlint-tsgolint": "^7.0.2007",
     "prettier": "3.5.2",
-    "typescript-eslint": "8.31.0"
+    "typescript": "npm:@tsc-rs/typescript@0.8.0"
   },
-  "peerDependencies": {
-    "typescript": "^5.8.2"
+  "overrides": {
+    "typescript": "npm:@tsc-rs/typescript@0.8.0"
   },
+  "trustedDependencies": [
+    "typescript"
+  ],
   "private": true,
   "scripts": {
     "build": "bun run --cwd ./packages/api build",
@@ -19,7 +22,8 @@
     "db": "bun run --cwd ./packages/database",
     "prettier:check": "prettier --check .",
     "prettier:fix": "prettier --write .",
-    "lint": "eslint ."
+    "lint": "oxlint",
+    "typecheck": "bun run --cwd ./packages/api typecheck && bun run --cwd ./packages/database typecheck && bun run --cwd ./packages/logger typecheck"
   },
   "type": "module",
   "workspaces": [

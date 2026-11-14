@@ -1,0 +1,64 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript"],
+  "categories": {
+    "correctness": "error"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "ignorePatterns": ["packages/database/src/types/**"],
+  "rules": {
+    "no-var": "error",
+    "eqeqeq": ["error", "always"],
+    "no-empty-function": "off",
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": ".*",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "typescript/explicit-member-accessibility": [
+      "error",
+      {
+        "accessibility": "no-public"
+      }
+    ],
+    "typescript/explicit-function-return-type": [
+      "error",
+      {
+        "allowExpressions": true
+      }
+    ],
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/return-await": ["error", "always"],
+    "typescript/strict-boolean-expressions": [
+      "error",
+      {
+        "allowNullableBoolean": true,
+        "allowNullableString": true,
+        "allowNullableEnum": true,
+        "allowAny": true,
+        "allowNullableNumber": false
+      }
+    ],
+    "typescript/restrict-template-expressions": [
+      "error",
+      {
+        "allowNumber": true,
+        "allowBoolean": true,
+        "allowNever": true,
+        "allow": ["Error", "URL", "URLSearchParams"]
+      }
+    ],
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports"
+      }
+    ],
+    "typescript/no-confusing-void-expression": "off",
+    "typescript/require-await": "off"
+  }
+}

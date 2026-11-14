@@ -9,9 +9,14 @@ import {
 } from './data';
 import type { ChallengeService } from './service';
 import { Type } from '@sinclair/typebox';
+import type { Logger } from '@codeduel-backend-crab/logger';
+import { loggerDecorator } from '../../middleware/logger';
 
 export class ChallengeController {
-  constructor(private readonly challengeService: ChallengeService) {}
+  constructor(
+    private readonly challengeService: ChallengeService,
+    private readonly logger: Logger
+  ) {}
 
   setup(group: TypeBoxGroup): void {
     this.byId(group);
@@ -22,9 +27,10 @@ export class ChallengeController {
     this.random(group);
   }
 
-  byId = route({
+  byId = route(() => ({
     method: 'GET',
     path: '/:id',
+    middleware: loggerDecorator(this.logger),
     schema: {
       params: { id: Type.Number() },
       response: {
@@ -32,31 +38,33 @@ export class ChallengeController {
         404: Type.Undefined(),
       },
     },
-    handler: async ({ params }) => {
+    handler: async ({ params, logger }) => {
       const { id } = params;
-      const challenge = await this.challengeService.byId(id);
+      const challenge = await this.challengeService.byId(id, logger);
       if (!challenge) return { status: 404 };
       return { status: 200, body: challenge };
     },
-  });
+  }));
 
-  all = route({
+  all = route(() => ({
     method: 'GET',
     path: '/',
+    middleware: loggerDecorator(this.logger),
     schema: {
       request: {},
       response: {
         200: Type.Array(ChallengeWithUser),
       },
     },
-    handler: async () => {
-      return { status: 200, body: await this.challengeService.all() };
+    handler: async ({ logger }) => {
+      return { status: 200, body: await this.challengeService.all(logger) };
     },
-  });
+  }));
 
-  create = route({
+  create = route(() => ({
     method: 'POST',
     path: '/',
+    middleware: loggerDecorator(this.logger),
     schema: {
       body: CreateChallenge,
       response: {
@@ -64,16 +72,17 @@ export class ChallengeController {
         409: Type.Undefined(),
       },
     },
-    handler: async ({ body }) => {
-      const challenge = await this.challengeService.create(body);
+    handler: async ({ body, logger }) => {
+      const challenge = await this.challengeService.create(body, logger);
       if (!challenge) return { status: 409 };
       return { status: 201, body: challenge };
     },
-  });
+  }));
 
-  update = route({
+  update = route(() => ({
     method: 'PUT',
     path: '/',
+    middleware: loggerDecorator(this.logger),
     schema: {
       body: UpdateChallenge,
       response: {
@@ -81,16 +90,17 @@ export class ChallengeController {
         404: Type.Undefined(),
       },
     },
-    handler: async ({ body }) => {
-      const challenge = await this.challengeService.update(body);
+    handler: async ({ body, logger }) => {
+      const challenge = await this.challengeService.update(body, logger);
       if (!challenge) return { status: 404 };
       return { status: 200, body: challenge };
     },
-  });
+  }));
 
-  delete = route({
+  delete = route(() => ({
     method: 'DELETE',
     path: '/:id',
+    middleware: loggerDecorator(this.logger),
     schema: {
       params: { id: Type.Number() },
       response: {
@@ -98,27 +108,28 @@ export class ChallengeController {
         404: Type.Undefined(),
       },
     },
-    handler: async ({ params }) => {
+    handler: async ({ params, logger }) => {
       const { id } = params;
-      const deleted = await this.challengeService.delete(id);
+      const deleted = await this.challengeService.delete(id, logger);
       if (!deleted) return { status: 404 };
       return { status: 204 };
     },
-  });
+  }));
 
-  random = route({
+  random = route(() => ({
     method: 'GET',
     path: '/random',
+    middleware: loggerDecorator(this.logger),
     schema: {
       response: {
         200: ChallengeWithUserAndTestCases,
         404: Type.Undefined(),
       },
     },
-    handler: async () => {
-      const challenge = await this.challengeService.random();
+    handler: async ({ logger }) => {
+      const challenge = await this.challengeService.random(logger);
       if (!challenge) return { status: 404 };
       return { status: 200, body: challenge };
     },
-  });
+  }));
 }

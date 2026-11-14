@@ -65,8 +65,15 @@ export class RootController {
     );
     this.scalarController = new ScalarController();
     this.healthController = new HealthController(this.healthService);
-    this.userController = new UserController(this.userService, this.authMiddleware);
-    this.challengeController = new ChallengeController(this.challengeService);
+    this.userController = new UserController(
+      this.userService,
+      this.authMiddleware,
+      logger.group({ type: 'user' })
+    );
+    this.challengeController = new ChallengeController(
+      this.challengeService,
+      logger.group({ type: 'challenge' })
+    );
     this.authController = new AuthController(
       this.authService,
       this.userService,
@@ -74,7 +81,7 @@ export class RootController {
       authLogger,
       config.auth
     );
-    this.gameController = new GameController(this.gameService);
+    this.gameController = new GameController(this.gameService, logger.group({ type: 'game' }));
   }
 
   setup(group: TypeBoxGroup): void {

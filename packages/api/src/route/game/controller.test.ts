@@ -1,5 +1,6 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
 import { GameController } from './controller';
+import { Logger } from '@codeduel-backend-crab/logger';
 import { GameService } from './service';
 import type { CreateGame, Game, GameOfUser, GameWithUserData, UpdateGameUser } from './data';
 import type { GameRepository } from './repository';
@@ -70,7 +71,10 @@ describe('Route.Game.Controller', () => {
 
   beforeAll(async () => {
     service = new GameService({} as GameRepository);
-    controller = new GameController(service);
+    controller = new GameController(
+      service,
+      Logger.create({ level: 'silent', serviceName: 'test' })
+    );
     router = new Router();
     controller.setup(typebox(router));
   });
@@ -91,7 +95,7 @@ describe('Route.Game.Controller', () => {
       });
 
       expect(spyById).toHaveBeenCalledTimes(1);
-      expect(spyById).toHaveBeenCalledWith(1);
+      expect(spyById).toHaveBeenCalledWith(1, expect.any(Object));
       expect(result.status).toBe(200);
       expect(await responseBodyToJson(result.body)).toEqual(mockGameWithUsers);
     });
@@ -107,7 +111,7 @@ describe('Route.Game.Controller', () => {
       });
 
       expect(spyById).toHaveBeenCalledTimes(1);
-      expect(spyById).toHaveBeenCalledWith(999);
+      expect(spyById).toHaveBeenCalledWith(999, expect.any(Object));
       expect(result.status).toBe(404);
       expect(result.body).toBeUndefined();
     });
@@ -134,7 +138,7 @@ describe('Route.Game.Controller', () => {
       });
 
       expect(spyCreate).toHaveBeenCalledTimes(1);
-      expect(spyCreate).toHaveBeenCalledWith(createGame);
+      expect(spyCreate).toHaveBeenCalledWith(createGame, expect.any(Object));
       expect(result.status).toBe(201);
       expect(await responseBodyToJson(result.body)).toEqual(mockGameWithUsers);
     });
@@ -160,7 +164,7 @@ describe('Route.Game.Controller', () => {
       });
 
       expect(spyUpdateSubmission).toHaveBeenCalledTimes(1);
-      expect(spyUpdateSubmission).toHaveBeenCalledWith(updateGameUser);
+      expect(spyUpdateSubmission).toHaveBeenCalledWith(updateGameUser, expect.any(Object));
       expect(result.status).toBe(204);
       expect(result.body).toBeUndefined();
     });
@@ -178,7 +182,7 @@ describe('Route.Game.Controller', () => {
       });
 
       expect(spyEndGame).toHaveBeenCalledTimes(1);
-      expect(spyEndGame).toHaveBeenCalledWith(1);
+      expect(spyEndGame).toHaveBeenCalledWith(1, expect.any(Object));
       expect(result.status).toBe(204);
       expect(result.body).toBeUndefined();
     });
@@ -202,7 +206,7 @@ describe('Route.Game.Controller', () => {
       });
 
       expect(spyShareCode).toHaveBeenCalledTimes(1);
-      expect(spyShareCode).toHaveBeenCalledWith(shareCode);
+      expect(spyShareCode).toHaveBeenCalledWith(shareCode, expect.any(Object));
       expect(result.status).toBe(204);
       expect(result.body).toBeUndefined();
     });
@@ -220,7 +224,7 @@ describe('Route.Game.Controller', () => {
       });
 
       expect(spyByUserId).toHaveBeenCalledTimes(1);
-      expect(spyByUserId).toHaveBeenCalledWith(1);
+      expect(spyByUserId).toHaveBeenCalledWith(1, expect.any(Object));
       expect(result.status).toBe(200);
       expect(await responseBodyToJson(result.body)).toEqual([mockGamesOfUser]);
     });

@@ -144,7 +144,7 @@ describe('Route.User.Controller', () => {
     expect(byIdSpy).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
     expect(byIdSpy).toHaveBeenCalledTimes(1);
 
-    expect(spyVerifySession).toHaveBeenCalledWith('token_value');
+    expect(spyVerifySession).toHaveBeenCalledWith('token_value', expect.any(Object));
     expect(spyVerifySession).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);

@@ -80,7 +80,7 @@ export class AuthMiddleware {
       const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
       if (!token) return null;
 
-      return await this.service.verifySession(token);
+      return await this.service.verifySession(token, this.logger);
     } catch (error) {
       this.logger.debug('userSession.invalid', 'cannot verify session token', {
         error: this.logger.errorData(error),

@@ -208,9 +208,9 @@ export class AuthService {
     });
   }
 
-  async verifySession(token: string): Promise<SessionUser> {
-    const payload = await this.verifyAccessToken(token);
-    const permissions = await this.permissionsService.byIds(payload.permissions);
+  async verifySession(token: string, logger?: Logger): Promise<SessionUser> {
+    const payload = await this.verifyAccessToken(token, logger);
+    const permissions = await this.permissionsService.byIds(payload.permissions, logger);
     return {
       id: payload.sub,
       username: payload.username,

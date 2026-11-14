@@ -25,8 +25,6 @@ export class AuthController {
     private readonly logger: Logger,
     config: Config
   ) {
-    this.logger = logger;
-
     this.githubController = new GithubController(
       new GithubService(this.service, config.github),
       this.service,

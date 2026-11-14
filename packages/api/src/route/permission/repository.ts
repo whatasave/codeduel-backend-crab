@@ -61,6 +61,7 @@ export class PermissionRepository {
     const permissions = await this.database
       .selectFrom(rolePermissions.union(extraPermissions).as('permission'))
       .selectAll()
+      .orderBy('id')
       .execute();
 
     return permissions.map((permission) => PermissionRepository.selectToPermission(permission));

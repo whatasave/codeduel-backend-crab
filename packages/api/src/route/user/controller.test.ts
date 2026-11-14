@@ -13,6 +13,7 @@ import type { AuthRepository } from '../auth/repository';
 import type { PermissionRepository } from '../permission/repository';
 import { PermissionService } from '../permission/service';
 import type { Config as AuthConfig } from '../auth/config';
+import { Logger } from '@codeduel-backend-crab/logger';
 
 describe('Route.User.Controller', () => {
   let service: UserService;
@@ -61,8 +62,9 @@ describe('Route.User.Controller', () => {
     const permissionRepository = {} as PermissionRepository;
     const permissionService = new PermissionService(permissionRepository);
     authService = new AuthService(authRepository, permissionService, authConfig);
+    const logger = Logger.create({ level: 'silent', serviceName: 'test' });
     service = new UserService(repository);
-    controller = new UserController(service, new AuthMiddleware(authService));
+    controller = new UserController(service, new AuthMiddleware(authService, logger));
     router = new Router();
     controller.setup(typebox(router));
   });

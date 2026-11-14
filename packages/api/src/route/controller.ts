@@ -59,7 +59,10 @@ export class RootController {
     this.authService = new AuthService(this.authRepository, this.permissionService, config.auth);
     this.gameService = new GameService(this.gameRepository);
 
-    this.authMiddleware = new AuthMiddleware(this.authService);
+    this.authMiddleware = new AuthMiddleware(
+      this.authService,
+      authLogger.group({ type: 'middleware' })
+    );
     this.scalarController = new ScalarController();
     this.healthController = new HealthController(this.healthService);
     this.userController = new UserController(this.userService, this.authMiddleware);

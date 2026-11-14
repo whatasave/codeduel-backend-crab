@@ -4,14 +4,22 @@ import { json } from '@glass-cannon/server-bun';
 import type { SessionUser } from './data';
 import type { RouteContext } from '@glass-cannon/router';
 import { Permissions } from '../permission/permissions';
+import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class AuthMiddleware {
-  constructor(private readonly service: AuthService) {}
+  constructor(
+    private readonly service: AuthService,
+    private readonly logger: Logger
+  ) {}
 
   requireAuth(): Middleware<{ user: SessionUser; permissions: Permissions }> {
     return async (next, context) => {
       const user = await this.userSession(context);
       if (!user) {
+        this.logger.debug('requireAuth.unauthenticated', 'request without a valid session', {
+          route: routeOf(context),
+          trace: traceOf(context),
+        });
         return json({
           status: 401,
           body: { error: 'Authentication required', code: 'MISSING_TOKEN' },
@@ -29,6 +37,10 @@ export class AuthMiddleware {
       const user =
         'user' in context ? (context.user as SessionUser | null) : await this.userSession(context);
       if (!user) {
+        this.logger.debug('requirePermission.unauthenticated', 'request without a valid session', {
+          route: routeOf(context),
+          trace: traceOf(context),
+        });
         return json({
           status: 401,
           body: { error: 'Authentication required', code: 'MISSING_TOKEN' },
@@ -40,6 +52,12 @@ export class AuthMiddleware {
           : new Permissions(user.permissions);
 
       if (!permissions.hasAll(requiredPermissions)) {
+        this.logger.warn('requirePermission.forbidden', 'user lacks required permissions', {
+          userId: user.id,
+          required: requiredPermissions,
+          route: routeOf(context),
+          trace: traceOf(context),
+        });
         return json({
           status: 403,
           body: {
@@ -64,8 +82,20 @@ export class AuthMiddleware {
 
       return await this.service.verifySession(token);
     } catch (error) {
-      console.error('Auth error:', error);
+      this.logger.debug('userSession.invalid', 'cannot verify session token', {
+        error: this.logger.errorData(error),
+        route: routeOf(context),
+        trace: traceOf(context),
+      });
       return null;
     }
   }
+}
+
+function routeOf(context: RouteContext): { method?: string; path?: string } {
+  return { method: context.route.method, path: context.route.path };
+}
+
+function traceOf(context: RouteContext): unknown {
+  return 'trace' in context ? context.trace : null;
 }

@@ -40,7 +40,7 @@ export class AuthService {
     user: CreateUser,
     logger?: Logger
   ): Promise<CreateContext> {
-    const roleId = await this.getUserDefaultRoleId();
+    const roleId = await this.getUserDefaultRoleId(logger);
     return await this.repository.createIfNotExists(provider, user, roleId, logger);
   }
 
@@ -60,7 +60,7 @@ export class AuthService {
           ...user,
           username: `${user.username}-${randomUUIDv7()}`,
         },
-        await this.getUserDefaultRoleId(),
+        await this.getUserDefaultRoleId(logger),
         logger
       );
     }
@@ -208,9 +208,9 @@ export class AuthService {
     });
   }
 
-  async verifySession(token: string): Promise<SessionUser> {
-    const payload = await this.verifyAccessToken(token);
-    const permissions = await this.permissionsService.byIds(payload.permissions);
+  async verifySession(token: string, logger?: Logger): Promise<SessionUser> {
+    const payload = await this.verifyAccessToken(token, logger);
+    const permissions = await this.permissionsService.byIds(payload.permissions, logger);
     return {
       id: payload.sub,
       username: payload.username,
@@ -273,11 +273,16 @@ export class AuthService {
     await this.repository.deleteSessionTokenId(tokenId);
   }
 
-  private async getUserDefaultRoleId(): Promise<Role['id']> {
+  private async getUserDefaultRoleId(logger?: Logger): Promise<Role['id']> {
     if (this.userDefaultRoleId !== undefined) return this.userDefaultRoleId;
 
     const role = await this.permissionsService.getRoleByName(this.config.userDefaultRole);
-    if (!role) throw new Error(`Default role "${this.config.userDefaultRole}" not found`);
+    if (!role) {
+      logger?.error('defaultRole.notFound', 'configured default user role does not exist', {
+        role: this.config.userDefaultRole,
+      });
+      throw new Error(`Default role "${this.config.userDefaultRole}" not found`);
+    }
 
     this.userDefaultRoleId = role.id;
     return role.id;

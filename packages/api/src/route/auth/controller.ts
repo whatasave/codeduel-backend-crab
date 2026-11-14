@@ -86,36 +86,38 @@ export class AuthController {
 
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
       if (!refreshToken) {
-        logger.debug('noToken', 'no refresh token found');
+        logger.debug('refresh.noToken', 'no refresh token found');
         return logout();
       }
 
-      const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken);
+      const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken, logger);
 
       const session = await this.service.sessionByTokenId(jti);
       if (!session) {
-        logger.warn('sessionNotFound', 'session not found', { jti, userId });
+        logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
         return logout();
       }
 
-      const user = await this.userService.byId(userId);
+      const user = await this.userService.byId(userId, logger);
       if (!user) {
-        logger.warn('userNotFound', 'user not found', { userId });
+        logger.warn('refresh.userNotFound', 'user not found', { userId });
         return logout();
       }
 
-      const permissions = await this.permissionService.byUserId(user.id);
+      const permissions = await this.permissionService.byUserId(user.id, logger);
 
       const newAccessToken = await this.service.accessToken(
         user,
-        permissions.map((p) => p.id)
+        permissions.map((p) => p.id),
+        Date.now(),
+        logger
       );
       const newJti = randomUUIDv7();
-      const newRefreshToken = await this.service.refreshToken(user, newJti);
+      const newRefreshToken = await this.service.refreshToken(user, newJti, Date.now(), logger);
 
-      await this.service.updateSession(session.id, newJti);
+      await this.service.updateSession(session.id, newJti, logger);
 
-      logger.info('success', 'refreshed tokens', { userId: user.id });
+      logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
 
       const accessTokenCookie = createCookie({
         ...this.service.accessTokenCookieOptions,
@@ -150,13 +152,15 @@ export class AuthController {
       const cookies = parseCookies(headers.get('cookie'));
       const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
 
-      if (refreshToken) {
+      if (!refreshToken) {
+        logger.debug('logout.noToken', 'logout without refresh token, clearing cookies only');
+      } else {
         try {
-          const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken);
-          await this.service.deleteSessionTokenId(jti);
-          logger.info('success', 'user logged out', { userId });
+          const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken, logger);
+          await this.service.deleteSessionTokenId(jti, logger);
+          logger.info('logout.success', 'user logged out', { userId });
         } catch (error) {
-          logger.warn('verifyError', 'failed to verify refresh token during logout', {
+          logger.warn('logout.verifyError', 'failed to verify refresh token during logout', {
             error: logger.errorData(error),
           });
         }

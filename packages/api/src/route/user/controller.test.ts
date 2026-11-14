@@ -13,6 +13,7 @@ import type { AuthRepository } from '../auth/repository';
 import type { PermissionRepository } from '../permission/repository';
 import { PermissionService } from '../permission/service';
 import type { Config as AuthConfig } from '../auth/config';
+import { Logger } from '@codeduel-backend-crab/logger';
 
 describe('Route.User.Controller', () => {
   let service: UserService;
@@ -61,8 +62,9 @@ describe('Route.User.Controller', () => {
     const permissionRepository = {} as PermissionRepository;
     const permissionService = new PermissionService(permissionRepository);
     authService = new AuthService(authRepository, permissionService, authConfig);
+    const logger = Logger.create({ level: 'silent', serviceName: 'test' });
     service = new UserService(repository);
-    controller = new UserController(service, new AuthMiddleware(authService));
+    controller = new UserController(service, new AuthMiddleware(authService, logger), logger);
     router = new Router();
     controller.setup(typebox(router));
   });
@@ -81,7 +83,7 @@ describe('Route.User.Controller', () => {
       headers: new Headers(),
     });
 
-    expect(allSpy).toHaveBeenCalledWith();
+    expect(allSpy).toHaveBeenCalledWith(expect.any(Object));
     expect(allSpy).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);
@@ -100,7 +102,7 @@ describe('Route.User.Controller', () => {
       headers: new Headers(),
     });
 
-    expect(byUsernameSpy).toHaveBeenCalledWith(mockUser.username);
+    expect(byUsernameSpy).toHaveBeenCalledWith(mockUser.username, expect.any(Object));
     expect(byUsernameSpy).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);
@@ -117,7 +119,7 @@ describe('Route.User.Controller', () => {
       headers: new Headers(),
     });
 
-    expect(byIdSpy).toHaveBeenCalledWith(mockUser.id);
+    expect(byIdSpy).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
     expect(byIdSpy).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);
@@ -139,10 +141,10 @@ describe('Route.User.Controller', () => {
       headers: new Headers({ authorization: 'Bearer token_value' }),
     });
 
-    expect(byIdSpy).toHaveBeenCalledWith(mockUser.id);
+    expect(byIdSpy).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
     expect(byIdSpy).toHaveBeenCalledTimes(1);
 
-    expect(spyVerifySession).toHaveBeenCalledWith('token_value');
+    expect(spyVerifySession).toHaveBeenCalledWith('token_value', expect.any(Object));
     expect(spyVerifySession).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);

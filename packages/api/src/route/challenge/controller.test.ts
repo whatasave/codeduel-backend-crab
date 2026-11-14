@@ -7,6 +7,7 @@ import type {
   Challenge,
 } from './data';
 import { ChallengeController } from './controller';
+import { Logger } from '@codeduel-backend-crab/logger';
 import type { ChallengeRepository } from './repository';
 import { Router } from '@glass-cannon/router';
 import { typebox } from '@glass-cannon/typebox';
@@ -54,7 +55,10 @@ describe('Route.Challenge.Controller', () => {
 
   beforeAll(async () => {
     service = new ChallengeService({} as ChallengeRepository);
-    controller = new ChallengeController(service);
+    controller = new ChallengeController(
+      service,
+      Logger.create({ level: 'silent', serviceName: 'test' })
+    );
     router = new Router();
     controller.setup(typebox(router));
   });
@@ -82,7 +86,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyCreate).toHaveBeenCalledTimes(1);
-      expect(spyCreate).toHaveBeenCalledWith(mockCreateChallenge);
+      expect(spyCreate).toHaveBeenCalledWith(mockCreateChallenge, expect.any(Object));
       expect(response.status).toBe(201);
       expect(await responseBodyToJson(response.body)).toEqual(mockChallenge);
     });
@@ -100,7 +104,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyById).toHaveBeenCalledTimes(1);
-      expect(spyById).toHaveBeenCalledWith(1);
+      expect(spyById).toHaveBeenCalledWith(1, expect.any(Object));
       expect(response.status).toBe(200);
       expect(await responseBodyToJson(response.body)).toEqual(mockChallengeWithUserAndTestCases);
     });
@@ -116,7 +120,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyById).toHaveBeenCalledTimes(1);
-      expect(spyById).toHaveBeenCalledWith(1);
+      expect(spyById).toHaveBeenCalledWith(1, expect.any(Object));
       expect(response.status).toBe(404);
     });
   });
@@ -133,7 +137,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyAll).toHaveBeenCalledTimes(1);
-      expect(spyAll).toHaveBeenCalledWith();
+      expect(spyAll).toHaveBeenCalledWith(expect.any(Object));
       expect(response.status).toEqual(200);
       expect(await responseBodyToJson(response.body)).toEqual([mockChallengeWithUser]);
     });
@@ -158,7 +162,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyUpdate).toHaveBeenCalledTimes(1);
-      expect(spyUpdate).toHaveBeenCalledWith(updatedChallenge);
+      expect(spyUpdate).toHaveBeenCalledWith(updatedChallenge, expect.any(Object));
       expect(response.status).toEqual(200);
       expect(await responseBodyToJson(response.body)).toEqual(mockChallenge);
     });
@@ -181,7 +185,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyUpdate).toHaveBeenCalledTimes(1);
-      expect(spyUpdate).toHaveBeenCalledWith(updatedChallenge);
+      expect(spyUpdate).toHaveBeenCalledWith(updatedChallenge, expect.any(Object));
       expect(response.status).toBe(404);
     });
   });
@@ -198,7 +202,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyDelete).toHaveBeenCalledTimes(1);
-      expect(spyDelete).toHaveBeenCalledWith(1);
+      expect(spyDelete).toHaveBeenCalledWith(1, expect.any(Object));
       expect(response.status).toBe(204);
     });
   });
@@ -217,7 +221,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyRandom).toHaveBeenCalledTimes(1);
-      expect(spyRandom).toHaveBeenCalledWith();
+      expect(spyRandom).toHaveBeenCalledWith(expect.any(Object));
       expect(response.status).toBe(200);
       expect(await responseBodyToJson(response.body)).toEqual(mockChallengeWithUserAndTestCases);
     });
@@ -233,7 +237,7 @@ describe('Route.Challenge.Controller', () => {
       });
 
       expect(spyRandom).toHaveBeenCalledTimes(1);
-      expect(spyRandom).toHaveBeenCalledWith();
+      expect(spyRandom).toHaveBeenCalledWith(expect.any(Object));
       expect(response.status).toBe(404);
     });
   });

@@ -51,7 +51,18 @@ export class GithubService {
         state,
       }),
     });
-    return (await response.json()) as GithubAccessToken;
+    if (!response.ok) {
+      logger?.warn('exchangeCodeForToken.failed', 'GitHub token exchange failed', {
+        status: response.status,
+      });
+    }
+    const token = (await response.json()) as GithubAccessToken;
+    if (!token.access_token) {
+      logger?.warn('exchangeCodeForToken.missingToken', 'GitHub did not return an access token', {
+        status: response.status,
+      });
+    }
+    return token;
   }
 
   async userData(accessToken: string, logger?: Logger): Promise<GithubUserData> {
@@ -64,6 +75,11 @@ export class GithubService {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+    if (!response.ok) {
+      logger?.warn('userData.failed', 'cannot fetch user data from GitHub', {
+        status: response.status,
+      });
+    }
     return (await response.json()) as GithubUserData;
   }
 

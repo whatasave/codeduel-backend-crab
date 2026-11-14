@@ -117,25 +117,39 @@ describe('Route.Auth.Controller', () => {
         headers: new Headers(mockHeaders),
       });
 
-      expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken);
+      expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken, expect.any(Object));
       expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
 
       expect(spySessionByTokenId).toHaveBeenCalledWith(mockJwtRefreshToken.jti);
       expect(spySessionByTokenId).toHaveBeenCalledTimes(1);
 
-      expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub);
+      expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub, expect.any(Object));
       expect(spyUserById).toHaveBeenCalledTimes(1);
 
-      expect(spyAccessToken).toHaveBeenCalledWith(mockUser, []);
+      expect(spyAccessToken).toHaveBeenCalledWith(
+        mockUser,
+        [],
+        expect.any(Number),
+        expect.any(Object)
+      );
       expect(spyAccessToken).toHaveBeenCalledTimes(1);
 
-      expect(spyRefreshToken).toHaveBeenCalledWith(mockUser, expect.any(String));
+      expect(spyRefreshToken).toHaveBeenCalledWith(
+        mockUser,
+        expect.any(String),
+        expect.any(Number),
+        expect.any(Object)
+      );
       expect(spyRefreshToken).toHaveBeenCalledTimes(1);
 
-      expect(spyUpdateSession).toHaveBeenCalledWith(mockAuthSession.id, expect.any(String));
+      expect(spyUpdateSession).toHaveBeenCalledWith(
+        mockAuthSession.id,
+        expect.any(String),
+        expect.any(Object)
+      );
       expect(spyUpdateSession).toHaveBeenCalledTimes(1);
 
-      expect(spyByUserId).toHaveBeenCalledWith(mockUser.id);
+      expect(spyByUserId).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
       expect(spyByUserId).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(204);
@@ -215,10 +229,13 @@ describe('Route.Auth.Controller', () => {
         headers: new Headers(mockHeaders),
       });
 
-      expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken);
+      expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken, expect.any(Object));
       expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
 
-      expect(spyDeleteSessionTokenId).toHaveBeenCalledWith(mockJwtRefreshToken.jti);
+      expect(spyDeleteSessionTokenId).toHaveBeenCalledWith(
+        mockJwtRefreshToken.jti,
+        expect.any(Object)
+      );
       expect(spyDeleteSessionTokenId).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(204);

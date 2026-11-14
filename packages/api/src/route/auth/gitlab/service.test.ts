@@ -70,7 +70,8 @@ describe('Route.Auth.Gitlab.Service', () => {
           username: mockGitlabUserData.username,
           name: mockGitlabUserData.username,
           avatar: mockGitlabUserData.avatar_url,
-        }
+        },
+        undefined
       );
       expect(spyCreateForce).toHaveBeenCalledTimes(1);
       expect(auth).toEqual(mockAuth);
@@ -111,7 +112,8 @@ describe('Route.Auth.Gitlab.Service', () => {
           username: mockGitlabUserData.username,
           name: mockGitlabUserData.name,
           avatar: mockGitlabUserData.avatar_url,
-        }
+        },
+        undefined
       );
       expect(spyCreateForce).toHaveBeenCalledTimes(1);
       expect(auth).toEqual(mockAuth);

@@ -26,7 +26,8 @@ export class GitlabService {
         username: gitlabUser.username,
         name: gitlabUser.name ?? gitlabUser.username,
         avatar: gitlabUser.avatar_url,
-      }
+      },
+      logger
     );
   }
 
@@ -47,7 +48,18 @@ export class GitlabService {
         redirect_uri: this.config.callbackUri,
       }),
     });
-    return (await response.json()) as GitlabAccessToken;
+    if (!response.ok) {
+      logger?.warn('exchangeCodeForToken.failed', 'GitLab token exchange failed', {
+        status: response.status,
+      });
+    }
+    const token = (await response.json()) as GitlabAccessToken;
+    if (!token.access_token) {
+      logger?.warn('exchangeCodeForToken.missingToken', 'GitLab did not return an access token', {
+        status: response.status,
+      });
+    }
+    return token;
   }
 
   async userData(accessToken: string, logger?: Logger): Promise<GitlabUserData> {
@@ -61,6 +73,11 @@ export class GitlabService {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+    if (!response.ok) {
+      logger?.warn('userData.failed', 'cannot fetch user data from GitLab', {
+        status: response.status,
+      });
+    }
     return (await response.json()) as GitlabUserData;
   }
 

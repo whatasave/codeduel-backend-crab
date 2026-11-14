@@ -33,7 +33,7 @@ export class GithubController {
     middleware: loggerDecorator(this.logger),
     handler: async ({ query, headers, logger }) => {
       const { redirect } = query;
-      logger.debug('start', 'starting github login', { redirect });
+      logger.debug('login.start', 'starting github login', { redirect });
 
       const state = this.authService.encodeState({
         csrfToken: randomUUIDv7('base64url'),
@@ -77,9 +77,9 @@ export class GithubController {
       const cookieState = cookies[this.service.stateCookieOptions.name];
 
       if (state !== cookieState) {
-        logger.warn('stateMismatch', 'state mismatch or missing', {
-          state,
-          cookieState,
+        logger.warn('callback.stateMismatch', 'state mismatch or missing', {
+          hasState: Boolean(state),
+          hasCookieState: Boolean(cookieState),
         });
         return { status: 400, body: 'Invalid or missing state' };
       }
@@ -100,7 +100,7 @@ export class GithubController {
 
       await this.service.createSession(user.id, jti, ip, userAgent, logger);
 
-      logger.debug('success', 'successfully logged in via github', { userId: user.id });
+      logger.info('callback.success', 'successfully logged in via github', { userId: user.id });
 
       const accessCookie = createCookie({
         ...this.authService.accessTokenCookieOptions,

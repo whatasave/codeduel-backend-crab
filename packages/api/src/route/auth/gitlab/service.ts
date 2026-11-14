@@ -26,7 +26,8 @@ export class GitlabService {
         username: gitlabUser.username,
         name: gitlabUser.name ?? gitlabUser.username,
         avatar: gitlabUser.avatar_url,
-      }
+      },
+      logger
     );
   }
 

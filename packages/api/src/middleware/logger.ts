@@ -12,12 +12,14 @@ export function logRequests(logger: Logger): Middleware {
     const duration = performance.now() - startTime;
     const { status } = response;
 
-    logger.info('request.completed', 'Request completed', {
+    const log = {
       route: { method: route.method, path: route.path },
       status,
       durationMs: Math.round(duration),
       trace,
-    });
+    };
+    if (status >= 500) logger.warn('request.completed', 'Request completed with server error', log);
+    else logger.info('request.completed', 'Request completed', log);
 
     return response;
   };

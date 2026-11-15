@@ -78,8 +78,8 @@ export class GitlabController {
 
       if (state !== cookieState) {
         logger.warn('callback.stateMismatch', 'state mismatch or missing', {
-          state,
-          cookieState,
+          hasState: Boolean(state),
+          hasCookieState: Boolean(cookieState),
         });
         return { status: 400, body: 'Invalid or missing state' };
       }

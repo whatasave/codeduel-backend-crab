@@ -44,27 +44,44 @@ export const Config = Type.Object({
   maxConnections: Type.Optional(Type.Number({ minimum: 1, default: 10 })),
 });
 
-export function createDatabase({
-  host,
-  port,
-  database,
-  user,
-  password,
-  ssl,
-  maxConnections,
-}: Config): Database {
-  const dialect = new PostgresDialect({
-    pool: new Pool({
-      database,
-      host,
-      user,
-      port,
-      password,
-      ssl,
-      max: maxConnections,
-    }),
+export interface DatabaseHooks {
+  /** Called when a query fails. Only the SQL text is provided, never the bound parameters. */
+  onQueryError?: (event: { sql: string; durationMs: number; error: unknown }) => void;
+  /** Called after every successful query. */
+  onQuery?: (event: { sql: string; durationMs: number }) => void;
+  /** Called when an idle client of the connection pool emits an error. */
+  onPoolError?: (error: Error) => void;
+}
+
+export function createDatabase(
+  { host, port, database, user, password, ssl, maxConnections }: Config,
+  hooks: DatabaseHooks = {}
+): Database {
+  const pool = new Pool({
+    database,
+    host,
+    user,
+    port,
+    password,
+    ssl,
+    max: maxConnections,
   });
-  return new Kysely<DB>({ dialect });
+  const { onQuery, onQueryError, onPoolError } = hooks;
+  if (onPoolError) pool.on('error', onPoolError);
+
+  const dialect = new PostgresDialect({ pool });
+  return new Kysely<DB>({
+    dialect,
+    log:
+      onQuery || onQueryError
+        ? (event): void => {
+            const sql = event.query.sql;
+            const durationMs = Math.round(event.queryDurationMillis);
+            if (event.level === 'error') onQueryError?.({ sql, durationMs, error: event.error });
+            else onQuery?.({ sql, durationMs });
+          }
+        : undefined,
+  });
 }
 
 export function loadConfig(): Config {
@@ -117,11 +134,15 @@ export async function rollbackMigrations(db: Database): Promise<void> {
   }
 }
 
-export async function pingDatabase(db: Database): Promise<boolean> {
+export async function pingDatabase(
+  db: Database,
+  onError?: (error: unknown) => void
+): Promise<boolean> {
   try {
     await db.executeQuery(db.selectNoFrom((eb) => eb.val(1).as('ok')));
     return true;
-  } catch {
+  } catch (error) {
+    onError?.(error);
     return false;
   }
 }

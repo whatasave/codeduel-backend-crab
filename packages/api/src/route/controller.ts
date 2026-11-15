@@ -15,13 +15,21 @@ import { AuthController } from './auth/controller';
 import { GameRepository } from './game/repository';
 import { GameService } from './game/service';
 import { GameController } from './game/controller';
-import type { TypeBoxGroup } from '@glass-cannon/typebox';
+import { routes, type NodeBuilder } from '@glass-cannon/router';
 import { AuthMiddleware } from './auth/middleware';
 import { PermissionRepository } from './permission/repository';
 import { PermissionService } from './permission/service';
 import type { Logger } from '@codeduel-backend-crab/logger';
+import { traceRequests } from '../middleware/trace';
+import { loggerDecorator, logRequests } from '../middleware/logger';
+import { errorHandler } from '../middleware/errors';
+import { openapi } from '@glass-cannon/typebox';
+import { json, text } from '@glass-cannon/server-bun';
 
 export class RootController {
+  private readonly logger: Logger;
+  private readonly descriptiveErrors: boolean;
+
   private readonly userRepository: UserRepository;
   private readonly challengeRepository: ChallengeRepository;
   private readonly authRepository: AuthRepository;
@@ -46,6 +54,9 @@ export class RootController {
   constructor(database: Database, logger: Logger, config: Config) {
     const authLogger = logger.group({ type: 'auth' });
 
+    this.logger = logger;
+    this.descriptiveErrors = config.descriptiveErrors;
+
     this.userRepository = new UserRepository(database);
     this.challengeRepository = new ChallengeRepository(database);
     this.authRepository = new AuthRepository(database);
@@ -59,10 +70,7 @@ export class RootController {
     this.authService = new AuthService(this.authRepository, this.permissionService, config.auth);
     this.gameService = new GameService(this.gameRepository);
 
-    this.authMiddleware = new AuthMiddleware(
-      this.authService,
-      authLogger.group({ type: 'middleware' })
-    );
+    this.authMiddleware = new AuthMiddleware(this.authService);
     this.scalarController = new ScalarController();
     this.healthController = new HealthController(this.healthService);
     this.userController = new UserController(
@@ -84,12 +92,41 @@ export class RootController {
     this.gameController = new GameController(this.gameService, logger.group({ type: 'game' }));
   }
 
-  setup(group: TypeBoxGroup): void {
-    this.scalarController.setup(group.group({ prefix: '/scalar' }));
-    this.healthController.setup(group.group({ prefix: '/health' }));
-    this.userController.setup(group.group({ prefix: '/user' }));
-    this.challengeController.setup(group.group({ prefix: '/challenge' }));
-    this.authController.setup(group.group({ prefix: '/auth' }));
-    this.gameController.setup(group.group({ prefix: '/game' }));
+  setup(): NodeBuilder {
+    const node = routes({
+      prefix: '/v1',
+      middleware: traceRequests(this.logger)
+        .pipe(loggerDecorator(this.logger))
+        .pipe(logRequests)
+        .pipe(errorHandler(this.descriptiveErrors)),
+    })
+      .group({ prefix: '/scalar' }, this.scalarController.setup())
+      .group({ prefix: '/health' }, this.healthController.setup())
+      .group({ prefix: '/user' }, this.userController.setup())
+      .group({ prefix: '/challenge' }, this.challengeController.setup())
+      .group({ prefix: '/auth' }, this.authController.setup())
+      .group({ prefix: '/game' }, this.gameController.setup());
+
+    const openApiSpec = openapi(node);
+    node.route({
+      method: 'GET',
+      path: '/openapi',
+      handler: async () => json({ status: 200, body: openApiSpec }),
+    });
+
+    node.route({
+      method: 'GET',
+      path: '/',
+      handler: async () =>
+        text({
+          status: 301,
+          body: 'Redirecting to /v1/scalar',
+          headers: {
+            Location: '/v1/scalar',
+          },
+        }),
+    });
+
+    return node;
   }
 }

@@ -1,10 +1,9 @@
-import type { RouteOptions } from '@glass-cannon/router';
+import { route, type NodeBuilder, type RouteOptions } from '@glass-cannon/router';
 import { html } from '@glass-cannon/server-bun';
-import type { TypeBoxGroup } from '@glass-cannon/typebox';
 
 export class ScalarController {
-  setup(group: TypeBoxGroup): void {
-    group.route(this.redoc);
+  setup(): NodeBuilder {
+    return route(this.redoc);
   }
 
   redoc: RouteOptions = {
@@ -25,7 +24,7 @@ export class ScalarController {
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
     <script>
       Scalar.createApiReference('#app', {
-        url: '/openapi',
+        url: '/v1/openapi',
       })
     </script>
   </body>

@@ -18,7 +18,7 @@ type GroupOptions = Partial<Omit<Log, 'message'>>;
 export class Logger {
   static create({ level, serviceName }: Config): Logger {
     const pinoLogger = pino({
-      base: { service: serviceName },
+      base: { service: serviceName ?? 'backend' },
       level,
       formatters: {
         level: (label) => ({ level: label }),

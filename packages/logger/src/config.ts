@@ -13,5 +13,5 @@ export const LogLevel = Type.Union([
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
   level: LogLevel,
-  serviceName: Type.String(),
+  serviceName: Type.Optional(Type.String()),
 });

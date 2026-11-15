@@ -8,8 +8,8 @@ import { createCookie, parseCookies, removeCookie } from '../../utils/cookie';
 import { Type } from '@sinclair/typebox';
 import type { UserService } from '../user/service';
 import { randomUUIDv7 } from 'bun';
-import type { Response, TypeBoxGroup } from '@glass-cannon/typebox';
-import { route } from '../../utils/route';
+import { route, routes, type NodeBuilder } from '@glass-cannon/router';
+import { validated, type Response } from '@glass-cannon/typebox';
 import type { PermissionService } from '../permission/service';
 import type { Logger } from '@codeduel-backend-crab/logger';
 import { loggerDecorator } from '../../middleware/logger';
@@ -39,144 +39,151 @@ export class AuthController {
     );
   }
 
-  setup(group: TypeBoxGroup): void {
-    this.validate(group);
-    this.refresh(group);
-    this.logout(group);
-
-    this.githubController.setup(group.group({ prefix: '/github' }));
-    this.gitlabController.setup(group.group({ prefix: '/gitlab' }));
+  setup(): NodeBuilder {
+    return routes({ middleware: loggerDecorator(this.logger) })
+      .use(this.validate)
+      .use(this.refresh)
+      .use(this.logout)
+      .group({ prefix: '/github' }, this.githubController.setup())
+      .group({ prefix: '/gitlab' }, this.gitlabController.setup());
   }
 
-  validate = route({
-    method: 'GET',
-    path: '/validate',
-    schema: {
-      response: {},
-    },
-    handler: async () => {
-      throw new Error('not implemented');
-    },
-  });
-
-  refresh = route(() => ({
-    method: 'POST',
-    path: '/refresh',
-    schema: {
-      response: {
-        204: Type.Undefined(),
+  validate = route(
+    validated({
+      method: 'GET',
+      path: '/validate',
+      schema: {
+        response: {},
       },
-    },
-    middleware: loggerDecorator(this.logger),
-    handler: async ({ headers, logger }) => {
-      const cookies = parseCookies(headers.get('cookie'));
-      const logout = (): Response<204, undefined> => {
-        const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
-        const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
+      handler: async () => {
+        throw new Error('not implemented');
+      },
+    })
+  );
 
-        const headers = new Headers();
-        headers.append('Set-Cookie', accessTokenCookie);
-        headers.append('Set-Cookie', refreshTokenCookie);
+  refresh = route<{ logger: Logger }>(
+    validated({
+      method: 'POST',
+      path: '/refresh',
+      schema: {
+        response: {
+          204: Type.Undefined(),
+        },
+      },
+      handler: async ({ request, logger }) => {
+        const cookies = parseCookies(request.headers.get('cookie'));
+        const logout = (): Response<204, undefined> => {
+          const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
+          const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
+
+          const headers = new Headers();
+          headers.append('Set-Cookie', accessTokenCookie);
+          headers.append('Set-Cookie', refreshTokenCookie);
+
+          return {
+            status: 204,
+            headers,
+          };
+        };
+
+        const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
+        if (!refreshToken) {
+          logger.debug('refresh.noToken', 'no refresh token found');
+          return logout();
+        }
+
+        const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken, logger);
+
+        const session = await this.service.sessionByTokenId(jti);
+        if (!session) {
+          logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
+          return logout();
+        }
+
+        const user = await this.userService.byId(userId, logger);
+        if (!user) {
+          logger.warn('refresh.userNotFound', 'user not found', { userId });
+          return logout();
+        }
+
+        const permissions = await this.permissionService.byUserId(user.id, logger);
+
+        const newAccessToken = await this.service.accessToken(
+          user,
+          permissions.map((p) => p.id),
+          Date.now(),
+          logger
+        );
+        const newJti = randomUUIDv7();
+        const newRefreshToken = await this.service.refreshToken(user, newJti, Date.now(), logger);
+
+        await this.service.updateSession(session.id, newJti, logger);
+
+        logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
+
+        const accessTokenCookie = createCookie({
+          ...this.service.accessTokenCookieOptions,
+          value: newAccessToken,
+        });
+        const refreshTokenCookie = createCookie({
+          ...this.service.refreshTokenCookieOptions,
+          value: newRefreshToken,
+        });
+
+        const responseHeaders = new Headers();
+        responseHeaders.append('Set-Cookie', accessTokenCookie);
+        responseHeaders.append('Set-Cookie', refreshTokenCookie);
 
         return {
           status: 204,
-          headers,
+          headers: responseHeaders,
         };
-      };
-
-      const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
-      if (!refreshToken) {
-        logger.debug('refresh.noToken', 'no refresh token found');
-        return logout();
-      }
-
-      const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken, logger);
-
-      const session = await this.service.sessionByTokenId(jti);
-      if (!session) {
-        logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
-        return logout();
-      }
-
-      const user = await this.userService.byId(userId, logger);
-      if (!user) {
-        logger.warn('refresh.userNotFound', 'user not found', { userId });
-        return logout();
-      }
-
-      const permissions = await this.permissionService.byUserId(user.id, logger);
-
-      const newAccessToken = await this.service.accessToken(
-        user,
-        permissions.map((p) => p.id),
-        Date.now(),
-        logger
-      );
-      const newJti = randomUUIDv7();
-      const newRefreshToken = await this.service.refreshToken(user, newJti, Date.now(), logger);
-
-      await this.service.updateSession(session.id, newJti, logger);
-
-      logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
-
-      const accessTokenCookie = createCookie({
-        ...this.service.accessTokenCookieOptions,
-        value: newAccessToken,
-      });
-      const refreshTokenCookie = createCookie({
-        ...this.service.refreshTokenCookieOptions,
-        value: newRefreshToken,
-      });
-
-      const responseHeaders = new Headers();
-      responseHeaders.append('Set-Cookie', accessTokenCookie);
-      responseHeaders.append('Set-Cookie', refreshTokenCookie);
-
-      return {
-        status: 204,
-        headers: responseHeaders,
-      };
-    },
-  }));
-
-  logout = route(() => ({
-    method: 'POST',
-    path: '/logout',
-    schema: {
-      response: {
-        204: Type.Undefined(),
       },
-    },
-    middleware: loggerDecorator(this.logger),
-    handler: async ({ headers, logger }) => {
-      const cookies = parseCookies(headers.get('cookie'));
-      const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
+    })
+  );
 
-      if (!refreshToken) {
-        logger.debug('logout.noToken', 'logout without refresh token, clearing cookies only');
-      } else {
-        try {
-          const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken, logger);
-          await this.service.deleteSessionTokenId(jti, logger);
-          logger.info('logout.success', 'user logged out', { userId });
-        } catch (error) {
-          logger.warn('logout.verifyError', 'failed to verify refresh token during logout', {
-            error: logger.errorData(error),
-          });
+  logout = route<{ logger: Logger }>(
+    validated({
+      method: 'POST',
+      path: '/logout',
+      schema: {
+        response: {
+          204: Type.Undefined(),
+        },
+      },
+      handler: async ({ request, logger }) => {
+        const cookies = parseCookies(request.headers.get('cookie'));
+        const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
+
+        if (!refreshToken) {
+          logger.debug('logout.noToken', 'logout without refresh token, clearing cookies only');
+        } else {
+          try {
+            const { sub: userId, jti } = await this.service.verifyRefreshToken(
+              refreshToken,
+              logger
+            );
+            await this.service.deleteSessionTokenId(jti, logger);
+            logger.info('logout.success', 'user logged out', { userId });
+          } catch (error) {
+            logger.warn('logout.verifyError', 'failed to verify refresh token during logout', {
+              error: logger.errorData(error),
+            });
+          }
         }
-      }
 
-      const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
-      const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
+        const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
+        const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
 
-      const responseHeaders = new Headers();
-      responseHeaders.append('Set-Cookie', accessTokenCookie);
-      responseHeaders.append('Set-Cookie', refreshTokenCookie);
+        const responseHeaders = new Headers();
+        responseHeaders.append('Set-Cookie', accessTokenCookie);
+        responseHeaders.append('Set-Cookie', refreshTokenCookie);
 
-      return {
-        status: 204,
-        headers: responseHeaders,
-      };
-    },
-  }));
+        return {
+          status: 204,
+          headers: responseHeaders,
+        };
+      },
+    })
+  );
 }

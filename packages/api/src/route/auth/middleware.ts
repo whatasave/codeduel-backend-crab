@@ -1,4 +1,4 @@
-import type { Middleware } from '@glass-cannon/router/middleware';
+import { middleware, type MiddlewareWrapper } from '@glass-cannon/router/middleware';
 import type { AuthService } from './service';
 import { json } from '@glass-cannon/server-bun';
 import type { SessionUser } from './data';
@@ -7,56 +7,51 @@ import { Permissions } from '../permission/permissions';
 import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class AuthMiddleware {
-  constructor(
-    private readonly service: AuthService,
-    private readonly logger: Logger
-  ) {}
+  constructor(private readonly service: AuthService) {}
 
-  requireAuth(): Middleware<{ user: SessionUser; permissions: Permissions }> {
-    return async (next, context) => {
-      const user = await this.userSession(context);
-      if (!user) {
-        this.logger.debug('requireAuth.unauthenticated', 'request without a valid session', {
-          route: routeOf(context),
-          trace: traceOf(context),
-        });
-        return json({
-          status: 401,
-          body: { error: 'Authentication required', code: 'MISSING_TOKEN' },
-        });
+  requireAuth(): MiddlewareWrapper<
+    { user: SessionUser; permissions: Permissions },
+    { logger: Logger }
+  > {
+    return middleware<{ user: SessionUser; permissions: Permissions }, { logger: Logger }>(
+      async (next, context) => {
+        const { logger } = context;
+        const user = await this.userSession(context);
+        if (!user) {
+          logger.debug('requireAuth.unauthenticated', 'request without a valid session');
+          return json({
+            status: 401,
+            body: { error: 'Authentication required', code: 'MISSING_TOKEN' },
+          });
+        }
+
+        return await next({ ...context, user, permissions: new Permissions(user.permissions) });
       }
-
-      return await next({ user, permissions: new Permissions(user.permissions) });
-    };
+    );
   }
 
   requirePermission(
     ...requiredPermissions: { resource: string; name: string }[]
-  ): Middleware<{ user: SessionUser; permissions: Permissions }> {
-    return async (next, context) => {
-      const user =
-        'user' in context ? (context.user as SessionUser | null) : await this.userSession(context);
+  ): MiddlewareWrapper<
+    { user: SessionUser; permissions: Permissions },
+    { logger: Logger; user?: SessionUser | null; permissions?: Permissions }
+  > {
+    return middleware(async (next, context) => {
+      const { logger } = context;
+      const user = context.user !== undefined ? context.user : await this.userSession(context);
       if (!user) {
-        this.logger.debug('requirePermission.unauthenticated', 'request without a valid session', {
-          route: routeOf(context),
-          trace: traceOf(context),
-        });
+        logger.debug('requirePermission.unauthenticated', 'request without a valid session');
         return json({
           status: 401,
           body: { error: 'Authentication required', code: 'MISSING_TOKEN' },
         });
       }
-      const permissions =
-        'permissions' in context
-          ? (context.permissions as Permissions)
-          : new Permissions(user.permissions);
+      const permissions = context.permissions ?? new Permissions(user.permissions);
 
       if (!permissions.hasAll(requiredPermissions)) {
-        this.logger.warn('requirePermission.forbidden', 'user lacks required permissions', {
+        logger.warn('requirePermission.forbidden', 'user lacks required permissions', {
           userId: user.id,
           required: requiredPermissions,
-          route: routeOf(context),
-          trace: traceOf(context),
         });
         return json({
           status: 403,
@@ -68,34 +63,27 @@ export class AuthMiddleware {
           },
         });
       }
-      return await next({ user, permissions });
-    };
+      return await next({ ...context, user, permissions });
+    });
   }
 
-  private async userSession(context: RouteContext): Promise<SessionUser | null> {
+  private async userSession(
+    context: RouteContext & { logger: Logger }
+  ): Promise<SessionUser | null> {
+    const { logger } = context;
     try {
-      const authHeader = context.headers.get('Authorization');
+      const authHeader = context.request.headers.get('Authorization');
       if (!authHeader) return null;
 
       const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
       if (!token) return null;
 
-      return await this.service.verifySession(token, this.logger);
+      return await this.service.verifySession(token, logger);
     } catch (error) {
-      this.logger.debug('userSession.invalid', 'cannot verify session token', {
-        error: this.logger.errorData(error),
-        route: routeOf(context),
-        trace: traceOf(context),
+      logger.debug('userSession.invalid', 'cannot verify session token', {
+        error: logger.errorData(error),
       });
       return null;
     }
   }
-}
-
-function routeOf(context: RouteContext): { method?: string; path?: string } {
-  return { method: context.route.method, path: context.route.path };
-}
-
-function traceOf(context: RouteContext): unknown {
-  return 'trace' in context ? context.trace : null;
 }

@@ -1,10 +1,10 @@
-import type { Middleware } from '@glass-cannon/router/middleware';
+import { middleware, type MiddlewareWrapper } from '@glass-cannon/router/middleware';
 import { createTrace, parseTrace, type TraceContext } from '../utils/trace';
 import type { Logger } from '@codeduel-backend-crab/logger';
 
-export function traceRequests(logger: Logger): Middleware<{ trace: string }> {
-  return async (next, { headers }) => {
-    const traceParentHeader = headers.get('traceparent');
+export function traceRequests(logger: Logger): MiddlewareWrapper<{ trace: string }> {
+  return middleware<{ trace: string }>(async (next, context) => {
+    const traceParentHeader = context.request.headers.get('traceparent');
     let traceParent: TraceContext | undefined;
     try {
       traceParent = traceParentHeader ? parseTrace(traceParentHeader) : undefined;
@@ -18,9 +18,8 @@ export function traceRequests(logger: Logger): Middleware<{ trace: string }> {
       traceId: traceParent?.traceId,
       flags: traceParent?.flags,
     });
-    const response = await next({ trace });
-    response.headers ??= new Headers();
+    const response = await next({ ...context, trace });
     response.headers.set('traceparent', trace);
     return response;
-  };
+  });
 }

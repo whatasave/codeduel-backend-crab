@@ -28,10 +28,10 @@ describe('Route.Auth.Github.Controller', () => {
       stateCookie: { name: 'github-state-cookie' } as CookieOptions,
     } as GithubConfig,
     accessToken: {
-      cookie: { name: 'access-token' } as CookieOptions,
+      cookie: { name: 'access-token' },
     },
     refreshToken: {
-      cookie: { name: 'refresh-token' } as CookieOptions,
+      cookie: { name: 'refresh-token' },
     },
   } as AuthConfig;
 

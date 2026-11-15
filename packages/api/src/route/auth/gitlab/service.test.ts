@@ -2,8 +2,6 @@ import { afterEach, beforeAll, describe, expect, spyOn, test, jest } from 'bun:t
 import { GitlabService } from './service';
 import { AuthService } from '../service';
 import type { AuthRepository } from '../repository';
-import type { CookieOptions } from '../../../utils/cookie';
-import type { Config as GitlabConfig } from './config';
 import type { Config as AuthConfig } from '../config';
 import type { Auth, AuthSession, CreateAuthSession } from '../data';
 import type { User } from '../../user/data';
@@ -20,8 +18,8 @@ describe('Route.Auth.Gitlab.Service', () => {
       applicationId: 'gitlab-app-id',
       secret: 'gitlab-client-secret',
       callbackUri: 'gitlab-redirect-uri',
-      stateCookie: { name: 'gitlab-state-cookie' } as CookieOptions,
-    } as GitlabConfig,
+      stateCookie: { name: 'gitlab-state-cookie' },
+    },
   } as AuthConfig;
 
   beforeAll(() => {
@@ -129,7 +127,7 @@ describe('Route.Auth.Gitlab.Service', () => {
       expires_in: 3600,
       refresh_token: 'refresh-token',
       created_at: Math.floor(Date.now() / 1000),
-    } as GitlabAccessToken;
+    } satisfies GitlabAccessToken;
 
     const spyExchangeCodeForTokenFetch = spyOn(globalThis, 'fetch').mockResolvedValue({
       json: async () => mockResponse,

@@ -3,9 +3,9 @@
   "devDependencies": {
     "@types/bun": "1.2.4",
     "editorconfig": "^2.0.1",
-    "oxfmt": "^0.78.0",
-    "oxlint": "^1.93.0",
-    "oxlint-tsgolint": "^7.0.2007",
+    "oxfmt": "0.78.0",
+    "oxlint": "1.93.0",
+    "oxlint-tsgolint": "7.0.2007",
     "typescript": "npm:@tsc-rs/typescript@0.8.0"
   },
   "overrides": {

@@ -82,7 +82,7 @@ export class AuthService {
 
           username: user.username,
           permissions,
-        } as JwtAccessToken,
+        } satisfies JwtAccessToken,
         this.config.accessToken.secret,
         { algorithm: 'HS256' },
         (err, token) => {
@@ -114,7 +114,7 @@ export class AuthService {
           exp: Math.floor(now / 1000) + this.config.refreshToken.expiresIn,
           jti,
           sub: user.id,
-        } as JwtRefreshToken,
+        } satisfies JwtRefreshToken,
         this.config.refreshToken.secret,
         { algorithm: 'HS256' },
         (err, token) => {

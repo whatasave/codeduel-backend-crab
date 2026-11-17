@@ -2,8 +2,6 @@ import { afterEach, beforeAll, describe, expect, spyOn, test, jest, beforeEach }
 import { GithubService } from './service';
 import { AuthService } from '../service';
 import type { AuthRepository } from '../repository';
-import type { CookieOptions } from '../../../utils/cookie';
-import type { Config as GithubConfig } from './config';
 import type { Config as AuthConfig } from '../config';
 import type { Auth } from '../data';
 import type { User } from '../../user/data';
@@ -22,13 +20,13 @@ describe('Route.Auth.Github.Controller', () => {
   let router: Router;
   const config = {
     github: {
-      stateCookie: { name: 'github-state-cookie' } as CookieOptions,
-    } as GithubConfig,
+      stateCookie: { name: 'github-state-cookie' },
+    },
     accessToken: {
-      cookie: { name: 'access-token' } as CookieOptions,
+      cookie: { name: 'access-token' },
     },
     refreshToken: {
-      cookie: { name: 'refresh-token' } as CookieOptions,
+      cookie: { name: 'refresh-token' },
     },
   } as AuthConfig;
 

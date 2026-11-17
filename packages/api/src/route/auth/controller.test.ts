@@ -5,7 +5,6 @@ import { AuthController } from './controller';
 import type { AuthRepository } from './repository';
 import type { UserRepository } from '../user/repository';
 import type { Config } from './config';
-import type { CookieOptions } from '../../utils/cookie';
 import type { AuthSession, JwtRefreshToken } from './data';
 import type { User } from '../user/data';
 import { Router } from '@glass-cannon/router';
@@ -21,10 +20,10 @@ describe('Route.Auth.Controller', () => {
   let router: Router;
   const config = {
     accessToken: {
-      cookie: { name: 'access-token' } as CookieOptions,
+      cookie: { name: 'access-token' },
     },
     refreshToken: {
-      cookie: { name: 'refresh-token' } as CookieOptions,
+      cookie: { name: 'refresh-token' },
     },
   } as Config;
 

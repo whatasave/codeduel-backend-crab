@@ -11,8 +11,7 @@
     "@sinclair/typebox": "^0.34.29",
     "pino": "^10.3.1"
   },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "scripts": {}
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
 }

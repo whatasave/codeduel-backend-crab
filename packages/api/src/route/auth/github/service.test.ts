@@ -2,8 +2,6 @@ import { afterEach, beforeAll, describe, expect, spyOn, test, jest } from 'bun:t
 import { GithubService } from './service';
 import { AuthService } from '../service';
 import type { AuthRepository } from '../repository';
-import type { CookieOptions } from '../../../utils/cookie';
-import type { Config as GithubConfig } from './config';
 import type { Config as AuthConfig } from '../config';
 import type { Auth, AuthSession, CreateAuthSession } from '../data';
 import type { User } from '../../user/data';
@@ -20,8 +18,8 @@ describe('Route.Auth.Github.Service', () => {
       clientId: 'github-client-id',
       clientSecret: 'github-client-secret',
       redirectUri: 'github-redirect-uri',
-      stateCookie: { name: 'github-state-cookie' } as CookieOptions,
-    } as GithubConfig,
+      stateCookie: { name: 'github-state-cookie' },
+    },
   } as AuthConfig;
 
   beforeAll(() => {
@@ -128,7 +126,7 @@ describe('Route.Auth.Github.Service', () => {
       access_token: 'access-token',
       token_type: 'bearer',
       scope: 'read:user,user:email',
-    } as GithubAccessToken;
+    } satisfies GithubAccessToken;
 
     const spyExchangeCodeForTokenFetch = spyOn(globalThis, 'fetch').mockResolvedValue({
       json: async () => mockResponse,

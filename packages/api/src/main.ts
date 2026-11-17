@@ -82,9 +82,9 @@ const appRoutes = routes()
     handler: async () =>
       text({
         status: 301,
-        body: 'Redirecting to /v1',
+        body: 'Redirecting to /v1/scalar',
         headers: {
-          Location: '/v1',
+          Location: '/v1/scalar',
         },
       }),
   });

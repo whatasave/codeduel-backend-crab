@@ -3,15 +3,7 @@ import { Value, AssertError } from '@sinclair/typebox/value';
 import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
 import { Config as AuthConfig } from './route/auth/config';
 import { Config as LoggerConfig } from '@codeduel-backend-crab/logger';
-
-export const CorsOptions = Type.Object({
-  allowedOrigins: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
-  allowedMethods: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
-  allowedHeaders: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
-  allowCredentials: Type.Optional(Type.Boolean()),
-  exposeHeaders: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Undefined()])),
-  maxAge: Type.Optional(Type.Number()),
-});
+import { CorsOptions } from './cors';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({

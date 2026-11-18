@@ -8,8 +8,6 @@ import type { Config } from './config';
 import type { AuthSession, JwtRefreshToken } from './data';
 import type { User } from '../user/data';
 import { Router } from '@glass-cannon/router';
-import { typebox } from '@glass-cannon/typebox';
-import { ReadableStream } from 'node:stream/web';
 import { PermissionService } from '../permission/service';
 import type { PermissionRepository } from '../permission/repository';
 import { Logger } from '@codeduel-backend-crab/logger';
@@ -38,8 +36,7 @@ describe('Route.Auth.Controller', () => {
     permissionService = new PermissionService(permissionRepository);
     service = new AuthService(repository, permissionService, config);
     controller = new AuthController(service, userService, permissionService, logger, config);
-    router = new Router();
-    controller.setup(typebox(router));
+    router = Router.from(controller.setup());
   });
 
   afterEach(() => {
@@ -109,12 +106,12 @@ describe('Route.Auth.Controller', () => {
     });
 
     test('should refresh access and refresh token', async () => {
-      const response = await router.handle({
-        method: 'POST',
-        url: new URL('http://localhost/refresh'),
-        stream: new ReadableStream(),
-        headers: new Headers(mockHeaders),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/refresh', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        })
+      );
 
       expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken, expect.any(Object));
       expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
@@ -152,22 +149,20 @@ describe('Route.Auth.Controller', () => {
       expect(spyByUserId).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(204);
-      if (!response.headers) throw new Error('Response headers are undefined');
       expect(response.headers.get('set-cookie')).toEqual(
         `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
       );
     });
 
     test('should logout user due to a failed refresh token', async () => {
-      const response = await router.handle({
-        method: 'POST',
-        url: new URL('http://localhost/refresh'),
-        stream: new ReadableStream(),
-        headers: new Headers({}),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/refresh', {
+          method: 'POST',
+          headers: new Headers({}),
+        })
+      );
 
       expect(response.status).toEqual(204);
-      if (!response.headers) throw new Error('Response headers are undefined');
 
       expect(response.headers.get('set-cookie')).toEqual(
         `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
@@ -200,15 +195,14 @@ describe('Route.Auth.Controller', () => {
       const mockHeaders = {
         cookie: `${config.accessToken.cookie.name}=${mockAccessToken}; ${config.refreshToken.cookie.name}=${mockRefreshToken}`,
       };
-      const response = await router.handle({
-        method: 'POST',
-        url: new URL('http://localhost/logout'),
-        stream: new ReadableStream(),
-        headers: new Headers(mockHeaders),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/logout', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        })
+      );
 
       expect(response.status).toEqual(204);
-      if (!response.headers) throw new Error('Response headers are undefined');
       expect(response.headers.get('set-cookie')).toEqual(
         `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
       );
@@ -221,12 +215,12 @@ describe('Route.Auth.Controller', () => {
         cookie: `${config.accessToken.cookie.name}=${mockAccessToken}; ${config.refreshToken.cookie.name}=${mockRefreshToken}`,
       };
 
-      const response = await router.handle({
-        method: 'POST',
-        url: new URL('http://localhost/logout'),
-        stream: new ReadableStream(),
-        headers: new Headers(mockHeaders),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/logout', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        })
+      );
 
       expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken, expect.any(Object));
       expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
@@ -238,7 +232,6 @@ describe('Route.Auth.Controller', () => {
       expect(spyDeleteSessionTokenId).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(204);
-      if (!response.headers) throw new Error('Response headers are undefined');
 
       expect(response.headers.get('set-cookie')).toEqual(
         `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`

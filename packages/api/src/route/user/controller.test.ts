@@ -4,9 +4,6 @@ import { UserService } from './service';
 import { UserController } from './controller';
 import type { UserRepository } from './repository';
 import { Router } from '@glass-cannon/router';
-import { typebox } from '@glass-cannon/typebox';
-import { ReadableStream } from 'node:stream/web';
-import { responseBodyToJson } from '../../utils/stream';
 import { AuthMiddleware } from '../auth/middleware';
 import { AuthService } from '../auth/service';
 import type { AuthRepository } from '../auth/repository';
@@ -64,9 +61,8 @@ describe('Route.User.Controller', () => {
     authService = new AuthService(authRepository, permissionService, authConfig);
     const logger = Logger.create({ level: 'silent', serviceName: 'test' });
     service = new UserService(repository);
-    controller = new UserController(service, new AuthMiddleware(authService, logger), logger);
-    router = new Router();
-    controller.setup(typebox(router));
+    controller = new UserController(service, new AuthMiddleware(authService), logger);
+    router = Router.from(controller.setup());
   });
 
   afterEach(() => {
@@ -76,54 +72,46 @@ describe('Route.User.Controller', () => {
   test('should return all the users', async () => {
     const allSpy = spyOn(service, 'all').mockResolvedValue(mockUsers);
 
-    const response = await router.handle({
-      method: 'GET',
-      url: new URL('http://localhost/'),
-      stream: new ReadableStream(),
-      headers: new Headers(),
-    });
+    const response = await router.handle(new Request('http://localhost/', { method: 'GET' }));
 
     expect(allSpy).toHaveBeenCalledWith(expect.any(Object));
     expect(allSpy).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);
-    expect(await responseBodyToJson(response.body)).toEqual(mockUsers);
+    expect(await response.json()).toEqual(mockUsers);
   });
 
   test('should return a user by username', async () => {
     const byUsernameSpy = spyOn(service, 'byUsername').mockResolvedValue(mockUser);
 
-    const response = await router.handle({
-      method: 'GET',
-      url: new URL(
-        'http://localhost/?' + new URLSearchParams({ username: mockUser.username }).toString()
-      ),
-      stream: new ReadableStream(),
-      headers: new Headers(),
-    });
+    const response = await router.handle(
+      new Request(
+        'http://localhost/?' + new URLSearchParams({ username: mockUser.username }).toString(),
+        {
+          method: 'GET',
+        }
+      )
+    );
 
     expect(byUsernameSpy).toHaveBeenCalledWith(mockUser.username, expect.any(Object));
     expect(byUsernameSpy).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);
-    expect(await responseBodyToJson(response.body)).toEqual(mockUser);
+    expect(await response.json()).toEqual(mockUser);
   });
 
   test('should return a user by id', async () => {
     const byIdSpy = spyOn(service, 'byId').mockResolvedValue(mockUser);
 
-    const response = await router.handle({
-      method: 'GET',
-      url: new URL(`http://localhost/${mockUser.id}`),
-      stream: new ReadableStream(),
-      headers: new Headers(),
-    });
+    const response = await router.handle(
+      new Request(`http://localhost/${mockUser.id}`, { method: 'GET' })
+    );
 
     expect(byIdSpy).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
     expect(byIdSpy).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);
-    expect(await responseBodyToJson(response.body)).toEqual(mockUser);
+    expect(await response.json()).toEqual(mockUser);
   });
 
   test('should return a user profile', async () => {
@@ -134,12 +122,12 @@ describe('Route.User.Controller', () => {
       permissions: [],
     });
 
-    const response = await router.handle({
-      method: 'GET',
-      url: new URL('http://localhost/profile'),
-      stream: new ReadableStream(),
-      headers: new Headers({ authorization: 'Bearer token_value' }),
-    });
+    const response = await router.handle(
+      new Request('http://localhost/profile', {
+        method: 'GET',
+        headers: new Headers({ authorization: 'Bearer token_value' }),
+      })
+    );
 
     expect(byIdSpy).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
     expect(byIdSpy).toHaveBeenCalledTimes(1);
@@ -148,6 +136,6 @@ describe('Route.User.Controller', () => {
     expect(spyVerifySession).toHaveBeenCalledTimes(1);
 
     expect(response.status).toEqual(200);
-    expect(await responseBodyToJson(response.body)).toEqual(mockUser);
+    expect(await response.json()).toEqual(mockUser);
   });
 });

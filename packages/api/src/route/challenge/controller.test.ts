@@ -10,9 +10,6 @@ import { ChallengeController } from './controller';
 import { Logger } from '@codeduel-backend-crab/logger';
 import type { ChallengeRepository } from './repository';
 import { Router } from '@glass-cannon/router';
-import { typebox } from '@glass-cannon/typebox';
-import { jsonToRequestBody, responseBodyToJson } from '../../utils/stream';
-import { ReadableStream } from 'node:stream/web';
 
 describe('Route.Challenge.Controller', () => {
   let service: ChallengeService;
@@ -59,8 +56,7 @@ describe('Route.Challenge.Controller', () => {
       service,
       Logger.create({ level: 'silent', serviceName: 'test' })
     );
-    router = new Router();
-    controller.setup(typebox(router));
+    router = Router.from(controller.setup());
   });
 
   afterEach(() => {
@@ -78,17 +74,18 @@ describe('Route.Challenge.Controller', () => {
     test('should create a challenge', async () => {
       const spyCreate = spyOn(service, 'create').mockResolvedValue(mockChallenge);
 
-      const response = await router.handle({
-        method: 'POST',
-        url: new URL('http://localhost/'),
-        stream: jsonToRequestBody(mockCreateChallenge),
-        headers: new Headers({ 'Content-Type': 'application/json' }),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/', {
+          method: 'POST',
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(mockCreateChallenge),
+        })
+      );
 
       expect(spyCreate).toHaveBeenCalledTimes(1);
       expect(spyCreate).toHaveBeenCalledWith(mockCreateChallenge, expect.any(Object));
       expect(response.status).toBe(201);
-      expect(await responseBodyToJson(response.body)).toEqual(mockChallenge);
+      expect(await response.json()).toEqual(mockChallenge);
     });
   });
 
@@ -96,28 +93,18 @@ describe('Route.Challenge.Controller', () => {
     test('should get a challenge by id', async () => {
       const spyById = spyOn(service, 'byId').mockResolvedValue(mockChallengeWithUserAndTestCases);
 
-      const response = await router.handle({
-        method: 'GET',
-        url: new URL('http://localhost/1'),
-        stream: new ReadableStream(),
-        headers: new Headers(),
-      });
+      const response = await router.handle(new Request('http://localhost/1', { method: 'GET' }));
 
       expect(spyById).toHaveBeenCalledTimes(1);
       expect(spyById).toHaveBeenCalledWith(1, expect.any(Object));
       expect(response.status).toBe(200);
-      expect(await responseBodyToJson(response.body)).toEqual(mockChallengeWithUserAndTestCases);
+      expect(await response.json()).toEqual(mockChallengeWithUserAndTestCases);
     });
 
     test('should return 404 if challenge not found', async () => {
       const spyById = spyOn(service, 'byId').mockResolvedValue(undefined);
 
-      const response = await router.handle({
-        method: 'GET',
-        url: new URL('http://localhost/1'),
-        stream: new ReadableStream(),
-        headers: new Headers(),
-      });
+      const response = await router.handle(new Request('http://localhost/1', { method: 'GET' }));
 
       expect(spyById).toHaveBeenCalledTimes(1);
       expect(spyById).toHaveBeenCalledWith(1, expect.any(Object));
@@ -129,17 +116,12 @@ describe('Route.Challenge.Controller', () => {
     test('should get all challenges', async () => {
       const spyAll = spyOn(service, 'all').mockResolvedValue([mockChallengeWithUser]);
 
-      const response = await router.handle({
-        method: 'GET',
-        url: new URL('http://localhost/'),
-        stream: new ReadableStream(),
-        headers: new Headers(),
-      });
+      const response = await router.handle(new Request('http://localhost/', { method: 'GET' }));
 
       expect(spyAll).toHaveBeenCalledTimes(1);
       expect(spyAll).toHaveBeenCalledWith(expect.any(Object));
       expect(response.status).toEqual(200);
-      expect(await responseBodyToJson(response.body)).toEqual([mockChallengeWithUser]);
+      expect(await response.json()).toEqual([mockChallengeWithUser]);
     });
   });
 
@@ -154,17 +136,18 @@ describe('Route.Challenge.Controller', () => {
         content: 'print("Hello, Updated World!")',
       };
 
-      const response = await router.handle({
-        method: 'PUT',
-        url: new URL('http://localhost/'),
-        stream: jsonToRequestBody(updatedChallenge),
-        headers: new Headers({ 'Content-Type': 'application/json' }),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/', {
+          method: 'PUT',
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(updatedChallenge),
+        })
+      );
 
       expect(spyUpdate).toHaveBeenCalledTimes(1);
       expect(spyUpdate).toHaveBeenCalledWith(updatedChallenge, expect.any(Object));
       expect(response.status).toEqual(200);
-      expect(await responseBodyToJson(response.body)).toEqual(mockChallenge);
+      expect(await response.json()).toEqual(mockChallenge);
     });
 
     test('should return 404 on update not found', async () => {
@@ -177,12 +160,13 @@ describe('Route.Challenge.Controller', () => {
         content: 'print("Hello, Updated World!")',
       };
 
-      const response = await router.handle({
-        method: 'PUT',
-        url: new URL('http://localhost/'),
-        stream: jsonToRequestBody(updatedChallenge),
-        headers: new Headers({ 'Content-Type': 'application/json' }),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/', {
+          method: 'PUT',
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(updatedChallenge),
+        })
+      );
 
       expect(spyUpdate).toHaveBeenCalledTimes(1);
       expect(spyUpdate).toHaveBeenCalledWith(updatedChallenge, expect.any(Object));
@@ -194,12 +178,7 @@ describe('Route.Challenge.Controller', () => {
     test('should delete a challenge', async () => {
       const spyDelete = spyOn(service, 'delete').mockResolvedValue(true);
 
-      const response = await router.handle({
-        method: 'DELETE',
-        url: new URL('http://localhost/1'),
-        stream: new ReadableStream(),
-        headers: new Headers(),
-      });
+      const response = await router.handle(new Request('http://localhost/1', { method: 'DELETE' }));
 
       expect(spyDelete).toHaveBeenCalledTimes(1);
       expect(spyDelete).toHaveBeenCalledWith(1, expect.any(Object));
@@ -213,28 +192,22 @@ describe('Route.Challenge.Controller', () => {
         mockChallengeWithUserAndTestCases
       );
 
-      const response = await router.handle({
-        method: 'GET',
-        url: new URL('http://localhost/random'),
-        stream: new ReadableStream(),
-        headers: new Headers(),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/random', { method: 'GET' })
+      );
 
       expect(spyRandom).toHaveBeenCalledTimes(1);
       expect(spyRandom).toHaveBeenCalledWith(expect.any(Object));
       expect(response.status).toBe(200);
-      expect(await responseBodyToJson(response.body)).toEqual(mockChallengeWithUserAndTestCases);
+      expect(await response.json()).toEqual(mockChallengeWithUserAndTestCases);
     });
 
     test('should return undefined if no challenges exist', async () => {
       const spyRandom = spyOn(service, 'random').mockResolvedValue(undefined);
 
-      const response = await router.handle({
-        method: 'GET',
-        url: new URL('http://localhost/random'),
-        stream: new ReadableStream(),
-        headers: new Headers(),
-      });
+      const response = await router.handle(
+        new Request('http://localhost/random', { method: 'GET' })
+      );
 
       expect(spyRandom).toHaveBeenCalledTimes(1);
       expect(spyRandom).toHaveBeenCalledWith(expect.any(Object));

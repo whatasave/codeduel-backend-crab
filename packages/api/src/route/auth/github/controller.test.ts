@@ -8,9 +8,6 @@ import type { User } from '../../user/data';
 import type { GithubAccessToken, GithubUserData } from './data';
 import { GithubController } from './controller';
 import { Router } from '@glass-cannon/router';
-import { typebox } from '@glass-cannon/typebox';
-import { ReadableStream } from 'node:stream/web';
-import { responseBodyToJson } from '../../../utils/stream';
 import type { PermissionRepository } from '../../permission/repository';
 import { PermissionService } from '../../permission/service';
 import { Logger } from '@codeduel-backend-crab/logger';
@@ -41,12 +38,11 @@ describe('Route.Auth.Github.Controller', () => {
     authService = new AuthService(authRepository, permissionService, config);
     service = new GithubService(authService, config.github);
     controller = new GithubController(service, authService, logger);
-    router = new Router({
+    router = Router.from(controller.setup(), {
       fallback: () => {
         throw new Error('Route not handled');
       },
     });
-    controller.setup(typebox(router));
   });
 
   afterEach(() => {
@@ -73,14 +69,15 @@ describe('Route.Auth.Github.Controller', () => {
     });
 
     test('should redirects to github login page', async () => {
-      const response = await router.handle({
-        method: 'GET',
-        url: new URL(
-          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
-        ),
-        stream: new ReadableStream(),
-        headers: new Headers(mockHeader),
-      });
+      const response = await router.handle(
+        new Request(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString(),
+          {
+            method: 'GET',
+            headers: new Headers(mockHeader),
+          }
+        )
+      );
 
       expect(spyEncodeState).toHaveBeenCalledWith({
         csrfToken: expect.any(String) as string,
@@ -94,21 +91,21 @@ describe('Route.Auth.Github.Controller', () => {
       expect(spyAuthorizationUrl).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(307);
-      if (!response.headers) throw new Error('Response headers are undefined');
       expect(response.headers.get('location')).toEqual(authorizationUrl);
       expect(response.headers.get('set-cookie')).toEqual(stateCookie);
-      expect(await responseBodyToJson(response.body)).toEqual(`Redirecting to ${authorizationUrl}`);
+      expect(await response.json()).toEqual(`Redirecting to ${authorizationUrl}`);
     });
 
     test('should redirects without IP and User-Agent', async () => {
-      await router.handle({
-        method: 'GET',
-        url: new URL(
-          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
-        ),
-        stream: new ReadableStream(),
-        headers: new Headers(),
-      });
+      await router.handle(
+        new Request(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString(),
+          {
+            method: 'GET',
+            headers: new Headers(),
+          }
+        )
+      );
 
       expect(spyEncodeState).toHaveBeenCalledWith({
         csrfToken: expect.any(String) as unknown as string,
@@ -120,14 +117,15 @@ describe('Route.Auth.Github.Controller', () => {
 
     test('should redirects using x-real-ip header', async () => {
       const mockHeader = { 'x-real-ip': '9.11.69.420' };
-      await router.handle({
-        method: 'GET',
-        url: new URL(
-          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
-        ),
-        stream: new ReadableStream(),
-        headers: new Headers(mockHeader),
-      });
+      await router.handle(
+        new Request(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString(),
+          {
+            method: 'GET',
+            headers: new Headers(mockHeader),
+          }
+        )
+      );
 
       expect(spyEncodeState).toHaveBeenCalledWith({
         csrfToken: expect.any(String) as unknown as string,
@@ -139,14 +137,15 @@ describe('Route.Auth.Github.Controller', () => {
 
     test('should prioritizes x-real-ip over x-forwarded-for', async () => {
       const mockHeader = { 'x-real-ip': '9.11.69.420', 'x-forwarded-for': '9.11.69.421' };
-      await router.handle({
-        method: 'GET',
-        url: new URL(
-          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
-        ),
-        stream: new ReadableStream(),
-        headers: new Headers(mockHeader),
-      });
+      await router.handle(
+        new Request(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString(),
+          {
+            method: 'GET',
+            headers: new Headers(mockHeader),
+          }
+        )
+      );
 
       expect(spyEncodeState).toHaveBeenCalledWith({
         csrfToken: expect.any(String) as unknown as string,
@@ -159,14 +158,15 @@ describe('Route.Auth.Github.Controller', () => {
     test('should select correct IP from x-forwarded-for chain', async () => {
       const rightIp = '9.11.69.420';
       const mockHeader = { 'x-forwarded-for': `${rightIp},9.11.69.421,9.11.69.422` };
-      await router.handle({
-        method: 'GET',
-        url: new URL(
-          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString()
-        ),
-        stream: new ReadableStream(),
-        headers: new Headers(mockHeader),
-      });
+      await router.handle(
+        new Request(
+          'http://localhost/?' + new URLSearchParams({ redirect: redirectUrl }).toString(),
+          {
+            method: 'GET',
+            headers: new Headers(mockHeader),
+          }
+        )
+      );
 
       expect(spyEncodeState).toHaveBeenCalledWith({
         csrfToken: expect.any(String) as unknown as string,
@@ -242,15 +242,16 @@ describe('Route.Auth.Github.Controller', () => {
     });
 
     test('should sets refresh and access token cookies correctly', async () => {
-      const response = await router.handle({
-        method: 'GET',
-        url: new URL(
+      const response = await router.handle(
+        new Request(
           'http://localhost/callback?' +
-            new URLSearchParams({ code: mockCode, state: mockStateString }).toString()
-        ),
-        stream: new ReadableStream(),
-        headers: new Headers(mockHeaders),
-      });
+            new URLSearchParams({ code: mockCode, state: mockStateString }).toString(),
+          {
+            method: 'GET',
+            headers: new Headers(mockHeaders),
+          }
+        )
+      );
 
       expect(spyDecodeState).toHaveBeenCalledWith(mockStateString);
       expect(spyDecodeState).toHaveBeenCalledTimes(1);
@@ -290,14 +291,11 @@ describe('Route.Auth.Github.Controller', () => {
       expect(spyCreateSession).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(307);
-      if (!response.headers) throw new Error('Response headers are undefined');
       expect(response.headers.get('location')).toEqual(mockState.redirect);
       expect(response.headers.get('set-cookie')).toEqual(
         `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
       );
-      expect(await responseBodyToJson(response.body)).toEqual(
-        `Redirecting to ${mockState.redirect}`
-      );
+      expect(await response.json()).toEqual(`Redirecting to ${mockState.redirect}`);
     });
   });
 });

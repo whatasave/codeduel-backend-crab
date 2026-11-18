@@ -63,13 +63,6 @@ const { database, closeDatabase } = setupDatabase(
   logger.group({ type: 'database' })
 );
 
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.once(signal, () => {
-    logger.info('process.shutdown', `received ${signal}, shutting down`, { signal });
-    void closeDatabase().finally(() => process.exit(0));
-  });
-}
-
 const controller = new RootController(database, logger, config);
 
 const appRoutes = routes()
@@ -94,3 +87,21 @@ const server = new BunServer(router.handle);
 const running = await server.listen({ host: config.host, port: config.port });
 
 logger.info('listening', `Server is running on ${running.url}`, { url: running.url });
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, () => {
+    logger.info('process.shutdown', `received ${signal}, shutting down`, { signal });
+    void shutdown().finally(() => process.exit(0));
+  });
+}
+
+// Stop accepting connections and let in-flight requests finish before the database goes away.
+async function shutdown(): Promise<void> {
+  try {
+    await running.stop();
+    logger.info('server.stopped', 'server stopped');
+  } catch (error) {
+    logger.error('server.stopFailed', 'failed to stop server', { error: logger.errorData(error) });
+  }
+  await closeDatabase();
+}

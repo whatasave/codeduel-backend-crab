@@ -9,10 +9,10 @@
   "dependencies": {
     "@codeduel-backend-crab/database": "workspace:*",
     "@codeduel-backend-crab/logger": "workspace:*",
-    "@glass-cannon/cors": "^0.12.2",
-    "@glass-cannon/router": "^0.12.2",
-    "@glass-cannon/server-bun": "^0.12.2",
-    "@glass-cannon/typebox": "^0.12.2",
+    "@glass-cannon/cors": "^0.12.3",
+    "@glass-cannon/router": "^0.12.3",
+    "@glass-cannon/server-bun": "^0.12.3",
+    "@glass-cannon/typebox": "^0.12.3",
     "@sinclair/typebox": "^0.34.29",
     "jsonwebtoken": "^9.0.2"
   },

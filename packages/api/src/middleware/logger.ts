@@ -24,12 +24,12 @@ export const logRequests = middleware<unknown, { logger: Logger }>(async (next, 
 export function loggerDecorator(logger: Logger): MiddlewareWrapper<{ logger: Logger }> {
   return middleware<{ logger: Logger }>(
     async (next, context: RouteContext & { trace?: string }) => {
-      const { method, url, trace } = context;
+      const { route, trace } = context;
       return await next({
         ...context,
         logger: logger.group({
           context: {
-            route: { method, path: url.pathname },
+            route: { method: route.method, path: route.path },
             trace,
           },
         }),

@@ -38,10 +38,14 @@ export class AuthController {
   }
 
   setup(): NodeBuilder {
-    return routes({ middleware: loggerDecorator(this.logger) })
+    // github and gitlab decorate their own logger, keep the auth one off their routes
+    const ownRoutes = routes({ middleware: loggerDecorator(this.logger) })
       .use(this.validate)
       .use(this.refresh)
-      .use(this.logout)
+      .use(this.logout);
+
+    return routes()
+      .use(ownRoutes)
       .group({ prefix: '/github' }, this.githubController.setup())
       .group({ prefix: '/gitlab' }, this.gitlabController.setup());
   }

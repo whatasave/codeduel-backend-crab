@@ -2,74 +2,73 @@ import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:t
 import { GameController } from './controller';
 import { Logger } from '@codeduel-backend-crab/logger';
 import { GameService } from './service';
-import type { CreateGame, Game, GameOfUser, GameWithUserData, UpdateGameUser } from './data';
+import { DEFAULT_MODE, type GameWithUserData, type GameWithUsersData } from './data';
 import type { GameRepository } from './repository';
 import { Router } from '@glass-cannon/router';
+import { AuthMiddleware } from '../auth/middleware';
+import { AuthService } from '../auth/service';
+import type { AuthRepository } from '../auth/repository';
+import { PermissionService } from '../permission/service';
+import type { PermissionRepository } from '../permission/repository';
+import type { Config as AuthConfig } from '../auth/config';
 
 describe('Route.Game.Controller', () => {
   let service: GameService;
-  let controller: GameController;
+  let authService: AuthService;
   let router: Router;
 
-  const mockGame: Game = {
-    id: 1,
-    host: {
+  const mockUser = { id: 1, username: 'testuser', createdAt: new Date().toISOString() };
+  const uniqueId = '6a1f7f8e-2c4b-4d39-9a43-5f0f7d3c1b11';
+
+  const mockGame: GameWithUsersData = {
+    game: {
       id: 1,
-      username: 'testuser',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    challenge: {
-      id: 1,
-      title: 'Test Challenge',
-      description: 'This is a test challenge',
-      content: 'print("Hello, World!")',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      owner: {
+      uniqueId,
+      challenge: {
         id: 1,
-        username: 'testuser',
+        owner: mockUser,
+        title: 'Test Challenge',
+        description: 'This is a test challenge',
+        content: 'print("Hello, World!")',
+        testCases: 2,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       },
-      testCases: [
-        {
-          input: 'input',
-          output: 'output',
-        },
-      ],
+      ownerId: 1,
+      ended: false,
+      mode: DEFAULT_MODE,
+      maxPlayers: 8,
+      duration: 900,
+      allowedLanguages: ['python', 'javascript'],
+      createdAt: new Date().toISOString(),
     },
-    duration: 60,
-    allowedLanguages: ['python', 'javascript'],
-    maxPlayers: 2,
+    userData: [{ user: mockUser, code: 'print(1)', testsPassed: 1, showCode: false }],
   };
 
-  const mockGameWithUsers: GameWithUserData = {
-    game: mockGame,
-    users: [
-      {
-        userId: 1,
-        showCode: false,
-        testsPassed: 0,
-        code: 'print("Hello, World!")',
-      },
-    ],
+  const mockGameOfUser: GameWithUserData = {
+    game: mockGame.game,
+    userData: { user: mockUser, testsPassed: 1, showCode: false },
   };
 
-  const mockGamesOfUser: GameOfUser = {
-    game: mockGame,
-    user: {
-      userId: 1,
-      showCode: false,
-      testsPassed: 0,
-      code: 'print("Hello, World!")',
-    },
-  };
+  const json = (
+    method: string,
+    body: unknown,
+    headers: Record<string, string> = {}
+  ): RequestInit => ({
+    method,
+    headers: new Headers({ 'Content-Type': 'application/json', ...headers }),
+    body: JSON.stringify(body),
+  });
 
   beforeAll(async () => {
+    authService = new AuthService(
+      {} as AuthRepository,
+      new PermissionService({} as PermissionRepository),
+      {} as AuthConfig
+    );
     service = new GameService({} as GameRepository);
-    controller = new GameController(
+    const controller = new GameController(
       service,
+      new AuthMiddleware(authService),
       Logger.create({ level: 'silent', serviceName: 'test' })
     );
     router = Router.from(controller.setup());
@@ -79,133 +78,200 @@ describe('Route.Game.Controller', () => {
     jest.restoreAllMocks();
   });
 
-  describe('byId', () => {
-    test('should return 200 if game found', async () => {
-      const spyById = spyOn(service, 'byId').mockResolvedValue(mockGameWithUsers);
+  describe('all', () => {
+    test('should return all the games', async () => {
+      spyOn(service, 'all').mockResolvedValue([mockGame]);
 
-      const result = await router.handle(new Request('http://localhost/1', { method: 'GET' }));
+      const response = await router.handle(new Request('http://localhost/'));
 
-      expect(spyById).toHaveBeenCalledTimes(1);
-      expect(spyById).toHaveBeenCalledWith(1, expect.any(Object));
-      expect(result.status).toBe(200);
-      expect(await result.json()).toEqual(mockGameWithUsers);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual([mockGame]);
+    });
+  });
+
+  describe('byUniqueId', () => {
+    test.each(['', '/results'])('GET /:uniqueId%s should return the game', async (suffix) => {
+      const spy = spyOn(service, 'byUniqueId').mockResolvedValue(mockGame);
+
+      const response = await router.handle(new Request(`http://localhost/${uniqueId}${suffix}`));
+
+      expect(spy).toHaveBeenCalledWith(uniqueId, expect.any(Object));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(mockGame);
     });
 
-    test('should return 404 if game not found', async () => {
-      const spyById = spyOn(service, 'byId').mockResolvedValue(undefined);
+    test.each(['', '/results'])('GET /:uniqueId%s should return 404', async (suffix) => {
+      spyOn(service, 'byUniqueId').mockResolvedValue(undefined);
 
-      const result = await router.handle(new Request('http://localhost/999', { method: 'GET' }));
+      const response = await router.handle(new Request(`http://localhost/${uniqueId}${suffix}`));
 
-      expect(spyById).toHaveBeenCalledTimes(1);
-      expect(spyById).toHaveBeenCalledWith(999, expect.any(Object));
-      expect(result.status).toBe(404);
-      expect(result.body).toBeNull();
+      expect(response.status).toBe(404);
     });
   });
 
   describe('create', () => {
-    const createGame: CreateGame = {
+    // Body sent by the lobby when a game starts.
+    const lobbyBody = {
+      uniqueId,
+      ownerId: 1,
+      users: [1, 2],
       challengeId: 1,
-      hostId: 1,
-      duration: 60,
-      maxPlayers: 2,
-      allowedLanguages: ['python', 'javascript'],
-      userIds: [1],
+      modeId: 1,
+      ended: false,
+      maxPlayers: 8,
+      allowedLanguages: 'python,javascript',
+      gameDuration: 900,
     };
 
-    test('should return 201 if game created', async () => {
-      const spyCreate = spyOn(service, 'create').mockResolvedValue(mockGameWithUsers);
+    test('should create the game sent by the lobby', async () => {
+      const spy = spyOn(service, 'create').mockResolvedValue(mockGame);
 
-      const result = await router.handle(
-        new Request('http://localhost/', {
-          method: 'POST',
-          headers: new Headers({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify(createGame),
-        })
+      const response = await router.handle(
+        new Request('http://localhost/', json('POST', lobbyBody))
       );
 
-      expect(spyCreate).toHaveBeenCalledTimes(1);
-      expect(spyCreate).toHaveBeenCalledWith(createGame, expect.any(Object));
-      expect(result.status).toBe(201);
-      expect(await result.json()).toEqual(mockGameWithUsers);
+      expect(spy).toHaveBeenCalledWith(lobbyBody, expect.any(Object));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(mockGame);
+    });
+
+    test('should accept the allowed languages as a list', async () => {
+      const body = { ...lobbyBody, allowedLanguages: ['python'] };
+      const spy = spyOn(service, 'create').mockResolvedValue(mockGame);
+
+      const response = await router.handle(new Request('http://localhost/', json('POST', body)));
+
+      expect(spy).toHaveBeenCalledWith(body, expect.any(Object));
+      expect(response.status).toBe(200);
+    });
+
+    test('should return 409 if the game already exists', async () => {
+      spyOn(service, 'create').mockResolvedValue(undefined);
+
+      const response = await router.handle(
+        new Request('http://localhost/', json('POST', lobbyBody))
+      );
+
+      expect(response.status).toBe(409);
     });
   });
 
   describe('submit', () => {
-    const updateGameUser: UpdateGameUser = {
-      gameId: 1,
+    // Body sent by the lobby on submission.
+    const lobbyBody = {
       userId: 1,
-      code: 'print("Hello, World!")',
+      gameId: uniqueId,
+      code: 'print(1)',
       language: 'python',
-      testsPassed: 1,
+      testsPassed: 2,
+      submittedAt: '2025-11-19 10:00:00.123 +0000 UTC',
     };
 
-    test('should return 204 if submission updated', async () => {
-      const spyUpdateSubmission = spyOn(service, 'updateSubmission').mockResolvedValue();
+    test('should save the submission', async () => {
+      const spy = spyOn(service, 'updateSubmission').mockResolvedValue(true);
 
-      const result = await router.handle(
-        new Request('http://localhost/submit', {
-          method: 'POST',
-          headers: new Headers({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify(updateGameUser),
-        })
+      const response = await router.handle(
+        new Request(`http://localhost/${uniqueId}/submit`, json('PATCH', lobbyBody))
       );
 
-      expect(spyUpdateSubmission).toHaveBeenCalledTimes(1);
-      expect(spyUpdateSubmission).toHaveBeenCalledWith(updateGameUser, expect.any(Object));
-      expect(result.status).toBe(204);
-      expect(result.body).toBeNull();
+      expect(spy).toHaveBeenCalledWith(uniqueId, lobbyBody, expect.any(Object));
+      expect(response.status).toBe(204);
+    });
+
+    test('should return 404 if game or player not found', async () => {
+      spyOn(service, 'updateSubmission').mockResolvedValue(false);
+
+      const response = await router.handle(
+        new Request(`http://localhost/${uniqueId}/submit`, json('PATCH', lobbyBody))
+      );
+
+      expect(response.status).toBe(404);
     });
   });
 
   describe('endGame', () => {
-    test('should return 204 if game ended', async () => {
-      const spyEndGame = spyOn(service, 'endGame').mockResolvedValue();
+    test('should end the game', async () => {
+      const spy = spyOn(service, 'endGame').mockResolvedValue(true);
 
-      const result = await router.handle(new Request('http://localhost/1/end', { method: 'POST' }));
+      const response = await router.handle(
+        new Request(`http://localhost/${uniqueId}/endgame`, json('PATCH', {}))
+      );
 
-      expect(spyEndGame).toHaveBeenCalledTimes(1);
-      expect(spyEndGame).toHaveBeenCalledWith(1, expect.any(Object));
-      expect(result.status).toBe(204);
-      expect(result.body).toBeNull();
+      expect(spy).toHaveBeenCalledWith(uniqueId, expect.any(Object));
+      expect(response.status).toBe(204);
+    });
+
+    test('should return 404 if game not found', async () => {
+      spyOn(service, 'endGame').mockResolvedValue(false);
+
+      const response = await router.handle(
+        new Request(`http://localhost/${uniqueId}/endgame`, json('PATCH', {}))
+      );
+
+      expect(response.status).toBe(404);
     });
   });
 
   describe('shareCode', () => {
-    const shareCode = {
-      gameId: 1,
-      userId: 1,
-      showCode: true,
-    };
+    test('should share the code of the logged user', async () => {
+      spyOn(authService, 'verifySession').mockResolvedValue({
+        id: 1,
+        username: 'testuser',
+        permissions: [],
+      });
+      const spy = spyOn(service, 'shareCode').mockResolvedValue(true);
 
-    test('should return 204 if code shared', async () => {
-      const spyShareCode = spyOn(service, 'shareCode').mockResolvedValue();
-
-      const result = await router.handle(
-        new Request('http://localhost/sharecode', {
-          method: 'POST',
-          headers: new Headers({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify(shareCode),
-        })
+      const response = await router.handle(
+        new Request(
+          'http://localhost/sharecode',
+          json('PATCH', { lobbyId: 1, showCode: true }, { authorization: 'Bearer token' })
+        )
       );
 
-      expect(spyShareCode).toHaveBeenCalledTimes(1);
-      expect(spyShareCode).toHaveBeenCalledWith(shareCode, expect.any(Object));
-      expect(result.status).toBe(204);
-      expect(result.body).toBeNull();
+      expect(spy).toHaveBeenCalledWith(1, 1, true, expect.any(Object));
+      expect(response.status).toBe(204);
+    });
+
+    test('should accept the unique id of the game', async () => {
+      spyOn(authService, 'verifySession').mockResolvedValue({
+        id: 1,
+        username: 'testuser',
+        permissions: [],
+      });
+      const spy = spyOn(service, 'shareCode').mockResolvedValue(true);
+
+      const response = await router.handle(
+        new Request(
+          'http://localhost/sharecode',
+          json('PATCH', { lobbyId: uniqueId, showCode: true }, { authorization: 'Bearer token' })
+        )
+      );
+
+      expect(spy).toHaveBeenCalledWith(uniqueId, 1, true, expect.any(Object));
+      expect(response.status).toBe(204);
+    });
+
+    test('should return 401 without a session', async () => {
+      const spy = spyOn(service, 'shareCode');
+
+      const response = await router.handle(
+        new Request('http://localhost/sharecode', json('PATCH', { lobbyId: 1, showCode: true }))
+      );
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(response.status).toBe(401);
     });
   });
 
   describe('byUserId', () => {
-    test('should return 200 if games found for user', async () => {
-      const spyByUserId = spyOn(service, 'byUserId').mockResolvedValue([mockGamesOfUser]);
+    test('should return the games of the user', async () => {
+      const spy = spyOn(service, 'byUserId').mockResolvedValue([mockGameOfUser]);
 
-      const result = await router.handle(new Request('http://localhost/user/1', { method: 'GET' }));
+      const response = await router.handle(new Request('http://localhost/user/1'));
 
-      expect(spyByUserId).toHaveBeenCalledTimes(1);
-      expect(spyByUserId).toHaveBeenCalledWith(1, expect.any(Object));
-      expect(result.status).toBe(200);
-      expect(await result.json()).toEqual([mockGamesOfUser]);
+      expect(spy).toHaveBeenCalledWith(1, expect.any(Object));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual([mockGameOfUser]);
     });
   });
 });

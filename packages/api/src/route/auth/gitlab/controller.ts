@@ -27,13 +27,14 @@ export class GitlabController {
       method: 'GET',
       path: '/',
       schema: {
-        query: { redirect: Type.String() },
+        query: { redirect: Type.Optional(Type.String()) },
         response: {
           307: Type.String(),
         },
       },
       handler: async ({ query, request, logger }) => {
-        const { redirect } = query;
+        // Without an explicit redirect go back to the page the login started from.
+        const redirect = query.redirect ?? request.headers.get('referer') ?? '/';
         logger.debug('login.start', 'starting gitlab login', { redirect });
 
         const state = this.authService.encodeState({
@@ -115,9 +116,15 @@ export class GitlabController {
           value: refreshToken,
         });
 
+        const loggedInCookie = createCookie({
+          ...this.authService.loggedInCookieOptions,
+          value: 'true',
+        });
+
         const responseHeaders = new Headers();
         responseHeaders.append('Set-Cookie', accessCookie);
         responseHeaders.append('Set-Cookie', refreshCookie);
+        responseHeaders.append('Set-Cookie', loggedInCookie);
         responseHeaders.append('Location', redirect);
 
         return {

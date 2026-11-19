@@ -102,6 +102,25 @@ describe('Route.Auth.Gitlab.Controller', () => {
       expect(await response.json()).toEqual(`Redirecting to ${authorizationUrl}`);
     });
 
+    test('should redirect back to the referer without a redirect query', async () => {
+      await router.handle(
+        new Request('http://localhost/', {
+          method: 'GET',
+          headers: new Headers({ referer: 'http://frontend.test/login' }),
+        })
+      );
+
+      expect(spyEncodeState).toHaveBeenCalledWith(
+        expect.objectContaining({ redirect: 'http://frontend.test/login' })
+      );
+    });
+
+    test('should redirect to the root without a redirect query and referer', async () => {
+      await router.handle(new Request('http://localhost/', { method: 'GET' }));
+
+      expect(spyEncodeState).toHaveBeenCalledWith(expect.objectContaining({ redirect: '/' }));
+    });
+
     test('should redirects without IP and User-Agent', async () => {
       await router.handle(
         new Request(
@@ -301,7 +320,7 @@ describe('Route.Auth.Gitlab.Controller', () => {
       expect(response.status).toEqual(307);
       expect(response.headers.get('location')).toEqual(mockState.redirect);
       expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
+        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}, logged_in=true; Path=/`
       );
       expect(await response.json()).toEqual(`Redirecting to ${mockState.redirect}`);
     });

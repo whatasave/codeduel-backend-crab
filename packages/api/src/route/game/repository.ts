@@ -5,236 +5,236 @@ import {
   type Database,
   type Select,
 } from '@codeduel-backend-crab/database';
-import type {
-  CreateGame,
-  Game,
-  ShareCode,
-  UpdateGameUser,
-  GameOfUser,
-  GameWithUserData,
+import {
+  DEFAULT_MODE,
+  type CreateGame,
+  type Game,
+  type GameRef,
+  type GameWithUserData,
+  type GameWithUsersData,
+  type UpdateSubmission,
+  type UserData,
 } from './data';
 import type { User } from '../user/data';
 import { UserRepository } from '../user/repository';
 import { ChallengeRepository } from '../challenge/repository';
 
+export type NewGame = Omit<CreateGame, 'allowedLanguages'> & { allowedLanguages: string[] };
+
+type SelectGame = Select<'game'> & {
+  challenge: Select<'challenge'> & {
+    owner: Select<'user'>;
+    test_case_count: number | string | null;
+  };
+  users: (Select<'game_user'> & { user: Select<'user'> })[];
+};
+
 export class GameRepository {
   constructor(private readonly db: Database) {}
 
-  async byId(id: Game['id']): Promise<GameWithUserData | undefined> {
-    const game = await this.db
-      .selectFrom('game')
-      .where('id', '=', id)
-      .selectAll()
-      .select((eb) =>
-        jsonArrayFrom(eb.selectFrom('game_user').whereRef('game_id', '=', 'id').selectAll()).as(
-          'users'
-        )
-      )
-      .select((eb) =>
-        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'host_id').selectAll())
-          .$notNull()
-          .as('host')
-      )
-      .select((eb) =>
-        jsonObjectFrom(
-          eb
-            .selectFrom('challenge')
-            .whereRef('id', '=', 'challenge_id')
-            .selectAll()
-            .select((eb) =>
-              jsonArrayFrom(
-                eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
-              ).as('test_cases')
-            )
-            .select((eb) =>
-              jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
-                .$notNull()
-                .as('owner')
-            )
-        )
-          .$notNull()
-          .as('challenge')
-      )
-      .executeTakeFirst();
-
-    return game && GameRepository.selectToGameWithUserData(game);
+  async all(): Promise<GameWithUsersData[]> {
+    const games = await this.findGames({});
+    return games.map((game) => GameRepository.selectToGameWithUsersData(game));
   }
 
-  async create(createGame: CreateGame): Promise<GameWithUserData> {
+  async byUniqueId(uniqueId: Game['uniqueId']): Promise<GameWithUsersData | undefined> {
+    const [game] = await this.findGames({ uniqueId });
+    return game && GameRepository.selectToGameWithUsersData(game);
+  }
+
+  async byUserId(userId: User['id']): Promise<GameWithUserData[]> {
+    const games = await this.findGames({ userId });
+
+    return games.map((row) => {
+      const { game, userData } = GameRepository.selectToGameWithUsersData(row);
+      const user = userData.find((data) => data.user.id === userId);
+      if (!user) throw new Error('User not found in game');
+      return { game, userData: user };
+    });
+  }
+
+  async create(newGame: NewGame): Promise<GameWithUsersData> {
     return await this.db.transaction().execute(async (tx) => {
       const created = await tx
         .insertInto('game')
         .values((eb) => ({
-          host_id: createGame.hostId,
+          unique_id: newGame.uniqueId,
+          host_id: newGame.ownerId,
           challenge_id:
-            createGame.challengeId ??
+            newGame.challengeId ??
             eb
               .selectFrom('challenge')
               .orderBy(sql`RANDOM()`)
               .limit(1)
               .select('id'),
-          max_players: createGame.maxPlayers,
-          allowed_languages: JSON.stringify(createGame.allowedLanguages),
-          duration: createGame.duration,
+          max_players: newGame.maxPlayers,
+          allowed_languages: JSON.stringify(newGame.allowedLanguages),
+          duration: newGame.gameDuration,
+          ended_at: newGame.ended ? new Date().toISOString() : null,
         }))
-        .returningAll()
+        .returning('id')
         .executeTakeFirstOrThrow();
 
       await tx
         .insertInto('game_user')
         .values(
-          createGame.userIds.map((userId) => ({
+          [...new Set(newGame.users)].map((userId) => ({
             game_id: created.id,
             user_id: userId,
           }))
         )
         .execute();
 
-      const game = await new GameRepository(tx).byId(created.id);
-
-      if (!game) {
-        throw new Error('Game not found after creation');
-      }
+      const game = await new GameRepository(tx).byUniqueId(newGame.uniqueId);
+      if (!game) throw new Error('Game not found after creation');
 
       return game;
     });
   }
 
-  async updateUser(updateGameUser: UpdateGameUser, submittedAt: string): Promise<void> {
-    await this.db
+  async updateSubmission(
+    uniqueId: Game['uniqueId'],
+    submission: UpdateSubmission,
+    submittedAt: string
+  ): Promise<boolean> {
+    const result = await this.db
       .updateTable('game_user')
-      .where('game_id', '=', updateGameUser.gameId)
-      .where('user_id', '=', updateGameUser.userId)
+      .where('user_id', '=', submission.userId)
+      .where('game_id', '=', (eb) =>
+        eb.selectFrom('game').where('unique_id', '=', uniqueId).select('id')
+      )
       .set({
-        code: updateGameUser.code,
-        language: updateGameUser.language,
-        tests_passed: updateGameUser.testsPassed,
+        code: submission.code,
+        language: submission.language,
+        tests_passed: submission.testsPassed,
         submitted_at: submittedAt,
       })
-      .execute();
+      .executeTakeFirst();
+    return result.numUpdatedRows > 0;
   }
 
-  async endGame(id: Game['id']): Promise<void> {
-    await this.db
+  async endGame(uniqueId: Game['uniqueId']): Promise<boolean> {
+    const result = await this.db
       .updateTable('game')
-      .where('id', '=', id)
-      .set({ ended_at: new Date().toISOString() })
-      .execute();
+      .where('unique_id', '=', uniqueId)
+      .set({ ended_at: sql`COALESCE(ended_at, CURRENT_TIMESTAMP)` })
+      .executeTakeFirst();
+    return result.numUpdatedRows > 0;
   }
 
-  async shareCode(shareCode: ShareCode): Promise<void> {
-    await this.db
+  async shareCode(game: GameRef, userId: User['id'], showCode: boolean): Promise<boolean> {
+    const result = await this.db
       .updateTable('game_user')
-      .where('game_id', '=', shareCode.gameId)
-      .where('user_id', '=', shareCode.userId)
-      .set({
-        show_code: shareCode.showCode,
-      })
-      .execute();
+      .where('user_id', '=', userId)
+      .where('game_id', '=', (eb) =>
+        eb
+          .selectFrom('game')
+          .where(typeof game === 'number' ? 'id' : 'unique_id', '=', game)
+          .select('id')
+      )
+      .set({ show_code: showCode })
+      .executeTakeFirst();
+    return result.numUpdatedRows > 0;
   }
 
-  async byUserId(userId: User['id']): Promise<GameOfUser[]> {
-    const games = await this.db
-      .selectFrom('game_user')
-      .where('user_id', '=', userId)
-      .selectAll()
+  /** Finds the games (newest first) with their challenge and players. */
+  private async findGames(filter: {
+    uniqueId?: Game['uniqueId'];
+    userId?: User['id'];
+  }): Promise<SelectGame[]> {
+    const { uniqueId, userId } = filter;
+    return await this.db
+      .selectFrom('game')
+      .$if(uniqueId !== undefined, (qb) => qb.where('game.unique_id', '=', uniqueId ?? ''))
+      .$if(userId !== undefined, (qb) =>
+        qb.where('game.id', 'in', (eb) =>
+          eb
+            .selectFrom('game_user')
+            .where('game_user.user_id', '=', userId ?? -1)
+            .select('game_user.game_id')
+        )
+      )
+      .orderBy('game.id', 'desc')
+      .selectAll('game')
       .select((eb) =>
         jsonObjectFrom(
           eb
-            .selectFrom('game')
-            .whereRef('id', '=', 'game_id')
-            .selectAll()
-            .select((eb) =>
-              jsonArrayFrom(
-                eb.selectFrom('game_user').whereRef('game_id', '=', 'id').selectAll()
-              ).as('users')
-            )
-            .select((eb) =>
-              jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'host_id').selectAll())
-                .$notNull()
-                .as('host')
-            )
+            .selectFrom('challenge')
+            .whereRef('challenge.id', '=', 'game.challenge_id')
+            .selectAll('challenge')
             .select((eb) =>
               jsonObjectFrom(
                 eb
-                  .selectFrom('challenge')
-                  .whereRef('id', '=', 'challenge_id')
-                  .selectAll()
-                  .select((eb) =>
-                    jsonArrayFrom(
-                      eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
-                    ).as('test_cases')
-                  )
-                  .select((eb) =>
-                    jsonObjectFrom(
-                      eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll()
-                    )
-                      .$notNull()
-                      .as('owner')
-                  )
+                  .selectFrom('user')
+                  .whereRef('user.id', '=', 'challenge.owner_id')
+                  .selectAll('user')
               )
                 .$notNull()
-                .as('challenge')
+                .as('owner')
+            )
+            .select((eb) =>
+              eb
+                .selectFrom('test_case')
+                .whereRef('test_case.challenge_id', '=', 'challenge.id')
+                .select(sql<number>`count(*)::int`.as('count'))
+                .as('test_case_count')
             )
         )
           .$notNull()
-          .as('game')
+          .as('challenge')
+      )
+      .select((eb) =>
+        jsonArrayFrom(
+          eb
+            .selectFrom('game_user')
+            .whereRef('game_user.game_id', '=', 'game.id')
+            .orderBy('game_user.user_id')
+            .selectAll('game_user')
+            .select((eb) =>
+              jsonObjectFrom(
+                eb
+                  .selectFrom('user')
+                  .whereRef('user.id', '=', 'game_user.user_id')
+                  .selectAll('user')
+              )
+                .$notNull()
+                .as('user')
+            )
+        ).as('users')
       )
       .execute();
-    return games.map((game) => GameRepository.selectToGameOfUser(game));
   }
 
-  static selectToGame(
-    game: Select<'game'> & { host: Select<'user'> } & {
-      challenge: Select<'challenge'> & { owner: Select<'user'>; test_cases: Select<'test_case'>[] };
-    }
-  ): Game {
+  static selectToGameWithUsersData(game: SelectGame): GameWithUsersData {
+    return {
+      game: GameRepository.selectToGame(game),
+      userData: game.users.map((user) => GameRepository.selectToUserData(user)),
+    };
+  }
+
+  static selectToGame(game: Omit<SelectGame, 'users'>): Game {
     return {
       id: game.id,
-      host: UserRepository.selectToUser(game.host),
-      challenge: ChallengeRepository.selectToGameChallenge(game.challenge),
+      uniqueId: game.unique_id,
+      challenge: ChallengeRepository.selectToChallengeSummary(game.challenge),
+      ownerId: game.host_id,
+      ended: game.ended_at !== null,
+      mode: DEFAULT_MODE,
       maxPlayers: game.max_players,
-      allowedLanguages: game.allowed_languages as string[],
       duration: game.duration,
-      endedAt: game.ended_at ?? undefined,
+      allowedLanguages: game.allowed_languages as string[],
+      createdAt: game.created_at,
     };
   }
 
-  static selectToGameOfUser(
-    gameUser: Select<'game_user'> & {
-      game: Select<'game'> & { host: Select<'user'> } & {
-        challenge: Select<'challenge'> & {
-          owner: Select<'user'>;
-          test_cases: Select<'test_case'>[];
-        };
-      };
-    }
-  ): GameOfUser {
+  static selectToUserData(gameUser: Select<'game_user'> & { user: Select<'user'> }): UserData {
     return {
-      user: this.selectToGameUser(gameUser),
-      game: this.selectToGame(gameUser.game),
-    };
-  }
-
-  static selectToGameWithUserData(
-    game: Select<'game'> & { host: Select<'user'> } & {
-      challenge: Select<'challenge'> & { owner: Select<'user'>; test_cases: Select<'test_case'>[] };
-    } & { users: Select<'game_user'>[] }
-  ): GameWithUserData {
-    return {
-      game: this.selectToGame(game),
-      users: game.users.map((user) => GameRepository.selectToGameUser(user)),
-    };
-  }
-
-  static selectToGameUser(gameUser: Select<'game_user'>): GameOfUser['user'] {
-    return {
-      userId: gameUser.user_id,
+      user: UserRepository.selectToUserListItem(gameUser.user),
       code: gameUser.code ?? undefined,
       language: gameUser.language ?? undefined,
       testsPassed: gameUser.tests_passed,
-      showCode: gameUser.show_code,
       submittedAt: gameUser.submitted_at ?? undefined,
+      showCode: gameUser.show_code,
     };
   }
 }

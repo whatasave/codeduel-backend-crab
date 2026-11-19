@@ -1,69 +1,66 @@
 import { afterEach, beforeAll, describe, expect, jest, spyOn, test } from 'bun:test';
 import { GameService } from './service';
 import { GameRepository } from './repository';
-import type { Game, GameOfUser, GameWithUserData, UpdateGameUser } from './data';
 import type { Database } from '@codeduel-backend-crab/database';
+import {
+  DEFAULT_MODE,
+  type CreateGame,
+  type GameWithUsersData,
+  type UpdateSubmission,
+} from './data';
 
 describe('Route.Game.Service', () => {
   let repository: GameRepository;
   let service: GameService;
 
-  const mockGame: Game = {
-    id: 1,
-    host: {
+  const mockUser = { id: 1, username: 'testuser', createdAt: new Date().toISOString() };
+
+  const mockGame: GameWithUsersData = {
+    game: {
       id: 1,
-      username: 'testuser',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    challenge: {
-      id: 1,
-      title: 'Test Challenge',
-      description: 'This is a test challenge',
-      content: 'print("Hello, World!")',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      owner: {
+      uniqueId: 'lobby-id',
+      challenge: {
         id: 1,
-        username: 'testuser',
+        owner: mockUser,
+        title: 'Test Challenge',
+        description: 'This is a test challenge',
+        content: 'print("Hello, World!")',
+        testCases: 2,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       },
-      testCases: [
-        {
-          input: 'input',
-          output: 'output',
-        },
-      ],
+      ownerId: 1,
+      ended: false,
+      mode: DEFAULT_MODE,
+      maxPlayers: 8,
+      duration: 900,
+      allowedLanguages: ['python', 'javascript'],
+      createdAt: new Date().toISOString(),
     },
-    duration: 60,
-    allowedLanguages: ['python', 'javascript'],
-    maxPlayers: 2,
+    userData: [{ user: mockUser, testsPassed: 0, showCode: false }],
   };
 
-  const mockGameWithUsers: GameWithUserData = {
-    game: mockGame,
-    users: [
-      {
-        userId: 1,
-        showCode: false,
-        testsPassed: 0,
-        code: 'print("Hello, World!")',
-      },
-    ],
+  const createGame: CreateGame = {
+    uniqueId: 'lobby-id',
+    challengeId: 1,
+    ownerId: 1,
+    ended: false,
+    modeId: 1,
+    maxPlayers: 8,
+    gameDuration: 900,
+    allowedLanguages: 'python,javascript',
+    users: [1],
   };
 
-  const mockGamesOfUser: GameOfUser = {
-    game: mockGame,
-    user: {
-      userId: 1,
-      showCode: false,
-      testsPassed: 0,
-      code: 'print("Hello, World!")',
-    },
+  const submission: UpdateSubmission = {
+    userId: 1,
+    gameId: 'lobby-id',
+    code: 'print(1)',
+    language: 'python',
+    testsPassed: 2,
+    submittedAt: '2025-11-19 10:00:00 +0000 UTC',
   };
 
-  beforeAll(async () => {
+  beforeAll(() => {
     repository = new GameRepository({} as Database);
     service = new GameService(repository);
   });
@@ -73,145 +70,120 @@ describe('Route.Game.Service', () => {
   });
 
   describe('create', () => {
-    const createGame = {
-      challengeId: 1,
-      hostId: 1,
-      duration: 60,
-      maxPlayers: 2,
-      allowedLanguages: ['python', 'javascript'],
-      userIds: [1],
-    };
-
-    test('should create a game', async () => {
-      const spyCreate = spyOn(repository, 'create').mockResolvedValue(mockGameWithUsers);
+    test('should create a game splitting the allowed languages', async () => {
+      spyOn(repository, 'byUniqueId').mockResolvedValue(undefined);
+      const spyCreate = spyOn(repository, 'create').mockResolvedValue(mockGame);
 
       const game = await service.create(createGame);
 
-      expect(game).toEqual(mockGameWithUsers);
-      expect(spyCreate).toHaveBeenCalledWith(createGame);
+      expect(spyCreate).toHaveBeenCalledWith({
+        ...createGame,
+        allowedLanguages: ['python', 'javascript'],
+      });
+      expect(game).toEqual(mockGame);
     });
 
-    test('should create a game with random challenge', async () => {
-      const spyCreate = spyOn(repository, 'create').mockResolvedValue(mockGameWithUsers);
+    test('should return undefined if the game already exists', async () => {
+      spyOn(repository, 'byUniqueId').mockResolvedValue(mockGame);
+      const spyCreate = spyOn(repository, 'create');
 
-      const game = await service.create({ ...createGame, challengeId: undefined });
-
-      expect(game).toEqual(mockGameWithUsers);
-      expect(spyCreate).toHaveBeenCalledWith({ ...createGame, challengeId: undefined });
+      expect(await service.create(createGame)).toBeUndefined();
+      expect(spyCreate).not.toHaveBeenCalled();
     });
   });
 
-  describe('byId', () => {
-    test('should get a game by id', async () => {
-      const spyById = spyOn(repository, 'byId').mockResolvedValue(mockGameWithUsers);
+  describe('parseAllowedLanguages', () => {
+    test('should accept comma separated languages', () => {
+      expect(GameService.parseAllowedLanguages('python, javascript,,c')).toEqual([
+        'python',
+        'javascript',
+        'c',
+      ]);
+    });
 
-      const game = await service.byId(1);
+    test('should accept a list of languages', () => {
+      expect(GameService.parseAllowedLanguages(['python', ' c '])).toEqual(['python', 'c']);
+    });
+  });
 
-      expect(spyById).toHaveBeenCalledWith(1);
-      expect(game).toEqual(mockGameWithUsers);
+  describe('byUniqueId', () => {
+    test('should get a game by unique id', async () => {
+      const spy = spyOn(repository, 'byUniqueId').mockResolvedValue(mockGame);
+
+      expect(await service.byUniqueId('lobby-id')).toEqual(mockGame);
+      expect(spy).toHaveBeenCalledWith('lobby-id');
     });
 
     test('should return undefined if game not found', async () => {
-      const spyById = spyOn(repository, 'byId').mockResolvedValue(undefined);
+      spyOn(repository, 'byUniqueId').mockResolvedValue(undefined);
 
-      const game = await service.byId(999);
+      expect(await service.byUniqueId('lobby-id')).toBeUndefined();
+    });
+  });
 
-      expect(spyById).toHaveBeenCalledWith(999);
-      expect(game).toBeUndefined();
+  describe('all', () => {
+    test('should get all the games', async () => {
+      spyOn(repository, 'all').mockResolvedValue([mockGame]);
+
+      expect(await service.all()).toEqual([mockGame]);
     });
   });
 
   describe('updateSubmission', () => {
-    const updateGameUser: UpdateGameUser = {
-      gameId: 1,
-      userId: 1,
-      testsPassed: 1,
-      code: 'print("Hello, World!")',
-      language: 'python',
-    };
+    test('should update the submission with the server time', async () => {
+      const spy = spyOn(repository, 'updateSubmission').mockResolvedValue(true);
 
-    test('should update game user submission', async () => {
-      const spyUpdate = spyOn(repository, 'updateUser').mockResolvedValue();
-
-      await service.updateSubmission(updateGameUser);
-
-      expect(spyUpdate).toHaveBeenCalledWith(updateGameUser, expect.any(String));
+      expect(await service.updateSubmission('lobby-id', submission)).toBe(true);
+      expect(spy).toHaveBeenCalledWith('lobby-id', submission, expect.any(String));
+      expect(spy.mock.calls[0]?.[2]).not.toBe(submission.submittedAt);
     });
 
-    test('should throw error if game user not found', async () => {
-      const spyUpdate = spyOn(repository, 'updateUser').mockRejectedValue(
-        new Error('Game user not found')
-      );
+    test('should return false if game or player not found', async () => {
+      spyOn(repository, 'updateSubmission').mockResolvedValue(false);
 
-      expect(service.updateSubmission(updateGameUser)).rejects.toThrow('Game user not found');
-
-      expect(spyUpdate).toHaveBeenCalledWith(updateGameUser, expect.any(String));
+      expect(await service.updateSubmission('lobby-id', submission)).toBe(false);
     });
   });
 
   describe('shareCode', () => {
-    const shareCode = {
-      gameId: 1,
-      userId: 1,
-      showCode: true,
-    };
-
     test('should share code', async () => {
-      const spyShareCode = spyOn(repository, 'shareCode').mockResolvedValue();
+      const spy = spyOn(repository, 'shareCode').mockResolvedValue(true);
 
-      await service.shareCode(shareCode);
-
-      expect(spyShareCode).toHaveBeenCalledWith(shareCode);
+      expect(await service.shareCode('lobby-id', 1, true)).toBe(true);
+      expect(spy).toHaveBeenCalledWith('lobby-id', 1, true);
     });
 
-    test('should throw error if game user not found', async () => {
-      const spyShareCode = spyOn(repository, 'shareCode').mockRejectedValue(
-        new Error('Game user not found')
-      );
+    test('should return false if game or player not found', async () => {
+      spyOn(repository, 'shareCode').mockResolvedValue(false);
 
-      expect(service.shareCode(shareCode)).rejects.toThrow('Game user not found');
-
-      expect(spyShareCode).toHaveBeenCalledWith(shareCode);
+      expect(await service.shareCode(1, 1, true)).toBe(false);
     });
   });
 
   describe('endGame', () => {
     test('should end a game', async () => {
-      const spyEndGame = spyOn(repository, 'endGame').mockResolvedValue();
+      const spy = spyOn(repository, 'endGame').mockResolvedValue(true);
 
-      await service.endGame(1);
-
-      expect(spyEndGame).toHaveBeenCalledWith(1);
+      expect(await service.endGame('lobby-id')).toBe(true);
+      expect(spy).toHaveBeenCalledWith('lobby-id');
     });
 
-    test('should throw error if game not found', async () => {
-      const spyEndGame = spyOn(repository, 'endGame').mockRejectedValue(
-        new Error('Game not found')
-      );
+    test('should return false if game not found', async () => {
+      spyOn(repository, 'endGame').mockResolvedValue(false);
 
-      expect(service.endGame(999)).rejects.toThrow('Game not found');
-
-      expect(spyEndGame).toHaveBeenCalledWith(999);
+      expect(await service.endGame('lobby-id')).toBe(false);
     });
   });
 
   describe('byUserId', () => {
     test('should get games by user id', async () => {
-      const spyByUserId = spyOn(repository, 'byUserId').mockResolvedValue([mockGamesOfUser]);
+      const [userData] = mockGame.userData;
+      if (!userData) throw new Error('Should never happen');
+      const games = [{ game: mockGame.game, userData }];
+      const spy = spyOn(repository, 'byUserId').mockResolvedValue(games);
 
-      const games = await service.byUserId(1);
-
-      expect(spyByUserId).toHaveBeenCalledWith(1);
-      expect(games).toEqual([mockGamesOfUser]);
-    });
-
-    test('should return empty array if no games found', async () => {
-      const spyByUserId = spyOn(repository, 'byUserId').mockResolvedValue([]);
-
-      const games = await service.byUserId(999);
-
-      expect(spyByUserId).toHaveBeenCalledWith(999);
-      expect(games).toEqual([]);
+      expect(await service.byUserId(1)).toEqual(games);
+      expect(spy).toHaveBeenCalledWith(1);
     });
   });
 });

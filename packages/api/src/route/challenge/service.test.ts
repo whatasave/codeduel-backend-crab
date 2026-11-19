@@ -2,8 +2,8 @@ import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:t
 import { ChallengeService } from './service';
 import { ChallengeRepository } from './repository';
 import type {
-  ChallengeWithUser,
-  ChallengeWithUserAndTestCases,
+  ChallengeDetailed,
+  ChallengeSummary,
   CreateChallenge,
   UpdateChallenge,
   Challenge,
@@ -24,28 +24,28 @@ describe('Route.Challenge.Service', () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const mockChallengeWithUser: ChallengeWithUser = {
+  const mockOwner = {
     id: 1,
-    owner: {
-      id: 1,
-      username: 'testuser',
-      name: 'Test User',
-      avatar: 'avatar.png',
-      backgroundImage: 'background.png',
-      biography: 'This is a test user',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
+    username: 'testuser',
+    name: 'Test User',
+    avatar: 'avatar.png',
+    createdAt: new Date().toISOString(),
+  };
+
+  const mockChallengeSummary: ChallengeSummary = {
+    id: 1,
+    owner: mockOwner,
     title: 'Test Challenge',
     description: 'This is a test challenge',
     content: 'print("Hello, World!")',
+    testCases: 2,
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   };
 
-  const mockChallengeWithUserAndTestCases: ChallengeWithUserAndTestCases = {
-    ...mockChallengeWithUser,
+  const mockChallengeDetailed: ChallengeDetailed = {
+    ...mockChallengeSummary,
     testCases: [{ input: 'input', output: 'output' }],
+    hiddenTestCases: [{ input: 'hidden', output: 'hidden' }],
   };
 
   beforeAll(async () => {
@@ -78,15 +78,13 @@ describe('Route.Challenge.Service', () => {
 
   describe('byId', () => {
     test('should get a challenge by id', async () => {
-      const spyById = spyOn(repository, 'byId').mockResolvedValue(
-        mockChallengeWithUserAndTestCases
-      );
+      const spyById = spyOn(repository, 'byId').mockResolvedValue(mockChallengeSummary);
 
       const challenge = await service.byId(1);
 
       expect(spyById).toHaveBeenCalledTimes(1);
       expect(spyById).toHaveBeenCalledWith(1);
-      expect(challenge).toEqual(mockChallengeWithUserAndTestCases);
+      expect(challenge).toEqual(mockChallengeSummary);
     });
 
     test('should return undefined if challenge not found', async () => {
@@ -102,12 +100,12 @@ describe('Route.Challenge.Service', () => {
 
   describe('all', () => {
     test('should get all challenges', async () => {
-      const spyAll = spyOn(repository, 'all').mockResolvedValue([mockChallengeWithUser]);
+      const spyAll = spyOn(repository, 'all').mockResolvedValue([mockChallengeSummary]);
 
       const allChallenges = await service.all();
 
       expect(spyAll).toHaveBeenCalledTimes(1);
-      expect(allChallenges).toEqual([mockChallengeWithUser]);
+      expect(allChallenges).toEqual([mockChallengeSummary]);
     });
   });
 
@@ -154,14 +152,12 @@ describe('Route.Challenge.Service', () => {
 
   describe('random', () => {
     test('should get a random challenge', async () => {
-      const spyRandom = spyOn(repository, 'random').mockResolvedValue(
-        mockChallengeWithUserAndTestCases
-      );
+      const spyRandom = spyOn(repository, 'random').mockResolvedValue(mockChallengeDetailed);
 
       const randomChallenge = await service.random();
 
       expect(spyRandom).toHaveBeenCalledTimes(1);
-      expect(randomChallenge).toEqual(mockChallengeWithUserAndTestCases);
+      expect(randomChallenge).toEqual(mockChallengeDetailed);
     });
 
     test('should return undefined if no challenges exist', async () => {

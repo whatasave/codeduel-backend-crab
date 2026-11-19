@@ -1,32 +1,29 @@
 import type { Logger } from '@codeduel-backend-crab/logger';
 import type {
-  ChallengeWithUser,
-  ChallengeWithUserAndTestCases,
+  Challenge,
+  ChallengeDetailed,
+  ChallengeSummary,
   CreateChallenge,
   UpdateChallenge,
-  Challenge,
 } from './data';
 import type { ChallengeRepository } from './repository';
 
 export class ChallengeService {
   constructor(private readonly challengeRepository: ChallengeRepository) {}
 
-  async byId(
-    id: ChallengeWithUser['id'],
-    logger?: Logger
-  ): Promise<ChallengeWithUserAndTestCases | undefined> {
+  async byId(id: Challenge['id'], logger?: Logger): Promise<ChallengeSummary | undefined> {
     const challenge = await this.challengeRepository.byId(id);
     if (!challenge) logger?.debug('byId.notFound', 'challenge not found', { challengeId: id });
     return challenge;
   }
 
-  async all(logger?: Logger): Promise<ChallengeWithUser[]> {
+  async all(logger?: Logger): Promise<ChallengeSummary[]> {
     const challenges = await this.challengeRepository.all();
     logger?.debug('all.success', 'fetched challenges', { count: challenges.length });
     return challenges;
   }
 
-  async create(challenge: CreateChallenge, logger?: Logger): Promise<Challenge | undefined> {
+  async create(challenge: CreateChallenge, logger?: Logger): Promise<Challenge> {
     const created = await this.challengeRepository.create(challenge);
     logger?.info('create.success', 'challenge created', {
       challengeId: created.id,
@@ -47,14 +44,14 @@ export class ChallengeService {
     return updated;
   }
 
-  async delete(id: ChallengeWithUser['id'], logger?: Logger): Promise<boolean> {
+  async delete(id: Challenge['id'], logger?: Logger): Promise<boolean> {
     const deleted = await this.challengeRepository.delete(id);
     if (deleted) logger?.info('delete.success', 'challenge deleted', { challengeId: id });
     else logger?.debug('delete.notFound', 'challenge to delete not found', { challengeId: id });
     return deleted;
   }
 
-  async random(logger?: Logger): Promise<ChallengeWithUserAndTestCases | undefined> {
+  async random(logger?: Logger): Promise<ChallengeDetailed | undefined> {
     const challenge = await this.challengeRepository.random();
     if (!challenge) logger?.warn('random.empty', 'no challenge available to pick from');
     else logger?.debug('random.success', 'picked random challenge', { challengeId: challenge.id });

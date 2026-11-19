@@ -5,6 +5,11 @@ import {
   type Database,
   type Select,
 } from '@codeduel-backend-crab/database';
+
+import { ChallengeRepository } from '@/route/challenge/repository';
+import type { User } from '@/route/user/data';
+import { UserRepository } from '@/route/user/repository';
+
 import {
   DEFAULT_MODE,
   type CreateGame,
@@ -15,9 +20,6 @@ import {
   type UpdateSubmission,
   type UserData,
 } from './data';
-import type { User } from '../user/data';
-import { UserRepository } from '../user/repository';
-import { ChallengeRepository } from '../challenge/repository';
 
 export type NewGame = Omit<CreateGame, 'allowedLanguages'> & { allowedLanguages: string[] };
 

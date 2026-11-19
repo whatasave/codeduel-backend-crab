@@ -1,4 +1,5 @@
 import pino from 'pino';
+
 import type { Config, LogLevel } from './config';
 
 export interface Log {

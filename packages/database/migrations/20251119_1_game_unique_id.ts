@@ -1,4 +1,5 @@
 import { sql, type Kysely } from 'kysely';
+
 import { GAME_TABLE_NAME } from './20250421_6_game';
 
 export async function up(db: Kysely<unknown>): Promise<void> {

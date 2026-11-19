@@ -1,8 +1,9 @@
-import type { HealthService } from './service';
-import { Type } from '@sinclair/typebox';
-import { LivenessStatus, ReadinessStatus } from './data';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated } from '@glass-cannon/typebox';
+import { Type } from '@sinclair/typebox';
+
+import { LivenessStatus, ReadinessStatus } from './data';
+import type { HealthService } from './service';
 
 export class HealthController {
   constructor(private readonly HealthService: HealthService) {}

@@ -1,19 +1,21 @@
-import type { AuthService } from './service';
-import { GithubController } from './github/controller';
-import { GitlabController } from './gitlab/controller';
-import { GithubService } from './github/service';
-import { GitlabService } from './gitlab/service';
-import type { Config } from './config';
-import { createCookie, parseCookies, removeCookie } from '../../utils/cookie';
-import { Type } from '@sinclair/typebox';
-import type { UserService } from '../user/service';
-import { randomUUIDv7 } from 'bun';
+import type { Logger } from '@codeduel-backend-crab/logger';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated, type Response } from '@glass-cannon/typebox';
-import type { PermissionService } from '../permission/service';
-import type { Logger } from '@codeduel-backend-crab/logger';
-import { loggerDecorator } from '../../middleware/logger';
+import { Type } from '@sinclair/typebox';
+import { randomUUIDv7 } from 'bun';
+
+import { loggerDecorator } from '@/middleware/logger';
+import type { PermissionService } from '@/route/permission/service';
+import type { UserService } from '@/route/user/service';
+import { createCookie, parseCookies, removeCookie } from '@/utils/cookie';
+
+import type { Config } from './config';
 import { LobbyUser, VerifyTokenPayload } from './data';
+import { GithubController } from './github/controller';
+import { GithubService } from './github/service';
+import { GitlabController } from './gitlab/controller';
+import { GitlabService } from './gitlab/service';
+import type { AuthService } from './service';
 
 export class AuthController {
   private readonly githubController: GithubController;
@@ -39,12 +41,15 @@ export class AuthController {
   }
 
   setup(): NodeBuilder {
-    return routes({ middleware: loggerDecorator(this.logger) })
+    const ownRoutes = routes({ middleware: loggerDecorator(this.logger) })
       .use(this.validateToken)
       .use(this.refresh('GET'))
       .use(this.refresh('POST'))
       .use(this.logout('GET'))
-      .use(this.logout('POST'))
+      .use(this.logout('POST'));
+
+    return routes()
+      .use(ownRoutes)
       .group({ prefix: '/github' }, this.githubController.setup())
       .group({ prefix: '/gitlab' }, this.gitlabController.setup());
   }

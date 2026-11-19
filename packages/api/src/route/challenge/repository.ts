@@ -5,6 +5,9 @@ import {
   type Database,
   type Select,
 } from '@codeduel-backend-crab/database';
+
+import { UserRepository } from '@/route/user/repository';
+
 import type {
   Challenge,
   ChallengeDetailed,
@@ -13,7 +16,6 @@ import type {
   TestCase,
   UpdateChallenge,
 } from './data';
-import { UserRepository } from '../user/repository';
 
 type SelectChallengeSummary = Select<'challenge'> & {
   owner: Select<'user'>;

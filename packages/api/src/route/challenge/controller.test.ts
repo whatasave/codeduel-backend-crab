@@ -1,17 +1,20 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
-import { ChallengeService } from './service';
-import type { ChallengeDetailed, ChallengeSummary, Challenge } from './data';
-import { ChallengeController } from './controller';
+
 import { Logger } from '@codeduel-backend-crab/logger';
-import type { ChallengeRepository } from './repository';
 import { Router } from '@glass-cannon/router';
-import { AuthMiddleware } from '../auth/middleware';
-import { AuthService } from '../auth/service';
-import type { AuthRepository } from '../auth/repository';
-import { PermissionService } from '../permission/service';
-import type { PermissionRepository } from '../permission/repository';
-import type { Config as AuthConfig } from '../auth/config';
-import type { Permission } from '../permission/data';
+
+import type { Config as AuthConfig } from '@/route/auth/config';
+import { AuthMiddleware } from '@/route/auth/middleware';
+import type { AuthRepository } from '@/route/auth/repository';
+import { AuthService } from '@/route/auth/service';
+import type { Permission } from '@/route/permission/data';
+import type { PermissionRepository } from '@/route/permission/repository';
+import { PermissionService } from '@/route/permission/service';
+
+import { ChallengeController } from './controller';
+import type { ChallengeDetailed, ChallengeSummary, Challenge } from './data';
+import type { ChallengeRepository } from './repository';
+import { ChallengeService } from './service';
 
 describe('Route.Challenge.Controller', () => {
   let service: ChallengeService;
@@ -72,13 +75,13 @@ describe('Route.Challenge.Controller', () => {
       permissions: permissions.map(permission),
     });
 
-  const authHeaders = { 'Content-Type': 'application/json', authorization: 'Bearer token' };
+  const authHeaders = { 'Content-Type': 'application/json', cookie: 'access-token=token' };
 
   beforeAll(async () => {
     authService = new AuthService(
       {} as AuthRepository,
       new PermissionService({} as PermissionRepository),
-      {} as AuthConfig
+      { accessToken: { cookie: { name: 'access-token' } } } as AuthConfig
     );
     service = new ChallengeService({} as ChallengeRepository);
     controller = new ChallengeController(

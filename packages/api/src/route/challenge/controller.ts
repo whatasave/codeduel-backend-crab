@@ -1,13 +1,15 @@
+import type { Logger } from '@codeduel-backend-crab/logger';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated } from '@glass-cannon/typebox';
+import { Type } from '@sinclair/typebox';
+
+import { loggerDecorator } from '@/middleware/logger';
+import type { SessionUser } from '@/route/auth/data';
+import type { AuthMiddleware } from '@/route/auth/middleware';
+import type { Permissions } from '@/route/permission/permissions';
+
 import { ChallengeBody, ChallengeDetailed, ChallengeSummary, Challenge } from './data';
 import type { ChallengeService } from './service';
-import { Type } from '@sinclair/typebox';
-import type { Logger } from '@codeduel-backend-crab/logger';
-import { loggerDecorator } from '../../middleware/logger';
-import type { AuthMiddleware } from '../auth/middleware';
-import type { SessionUser } from '../auth/data';
-import type { Permissions } from '../permission/permissions';
 
 export class ChallengeController {
   constructor(

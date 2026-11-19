@@ -1,6 +1,7 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { Challenge, ChallengeSummary } from '../challenge/data';
-import { User, UserListItem } from '../user/data';
+
+import { Challenge, ChallengeSummary } from '@/route/challenge/data';
+import { User, UserListItem } from '@/route/user/data';
 
 export type Mode = Static<typeof Mode>;
 export const Mode = Type.Object({

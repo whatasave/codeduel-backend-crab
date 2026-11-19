@@ -1,16 +1,19 @@
 import { afterEach, beforeAll, describe, expect, spyOn, test, jest, beforeEach } from 'bun:test';
-import { GithubService } from './service';
-import { AuthService } from '../service';
-import type { AuthRepository } from '../repository';
-import type { Config as AuthConfig } from '../config';
-import type { Auth } from '../data';
-import type { User } from '../../user/data';
-import type { GithubAccessToken, GithubUserData } from './data';
-import { GithubController } from './controller';
-import { Router } from '@glass-cannon/router';
-import type { PermissionRepository } from '../../permission/repository';
-import { PermissionService } from '../../permission/service';
+
 import { Logger } from '@codeduel-backend-crab/logger';
+import { Router } from '@glass-cannon/router';
+
+import type { Config as AuthConfig } from '@/route/auth/config';
+import type { Auth } from '@/route/auth/data';
+import type { AuthRepository } from '@/route/auth/repository';
+import { AuthService } from '@/route/auth/service';
+import type { PermissionRepository } from '@/route/permission/repository';
+import { PermissionService } from '@/route/permission/service';
+import type { User } from '@/route/user/data';
+
+import { GithubController } from './controller';
+import type { GithubAccessToken, GithubUserData } from './data';
+import { GithubService } from './service';
 
 describe('Route.Auth.Github.Controller', () => {
   let service: GithubService;

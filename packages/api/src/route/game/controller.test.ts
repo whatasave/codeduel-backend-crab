@@ -1,16 +1,19 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
-import { GameController } from './controller';
+
 import { Logger } from '@codeduel-backend-crab/logger';
-import { GameService } from './service';
+import { Router } from '@glass-cannon/router';
+
+import type { Config as AuthConfig } from '@/route/auth/config';
+import { AuthMiddleware } from '@/route/auth/middleware';
+import type { AuthRepository } from '@/route/auth/repository';
+import { AuthService } from '@/route/auth/service';
+import type { PermissionRepository } from '@/route/permission/repository';
+import { PermissionService } from '@/route/permission/service';
+
+import { GameController } from './controller';
 import { DEFAULT_MODE, type GameWithUserData, type GameWithUsersData } from './data';
 import type { GameRepository } from './repository';
-import { Router } from '@glass-cannon/router';
-import { AuthMiddleware } from '../auth/middleware';
-import { AuthService } from '../auth/service';
-import type { AuthRepository } from '../auth/repository';
-import { PermissionService } from '../permission/service';
-import type { PermissionRepository } from '../permission/repository';
-import type { Config as AuthConfig } from '../auth/config';
+import { GameService } from './service';
 
 describe('Route.Game.Controller', () => {
   let service: GameService;
@@ -63,7 +66,7 @@ describe('Route.Game.Controller', () => {
     authService = new AuthService(
       {} as AuthRepository,
       new PermissionService({} as PermissionRepository),
-      {} as AuthConfig
+      { accessToken: { cookie: { name: 'access-token' } } } as AuthConfig
     );
     service = new GameService({} as GameRepository);
     const controller = new GameController(
@@ -224,7 +227,7 @@ describe('Route.Game.Controller', () => {
       const response = await router.handle(
         new Request(
           'http://localhost/sharecode',
-          json('PATCH', { lobbyId: 1, showCode: true }, { authorization: 'Bearer token' })
+          json('PATCH', { lobbyId: 1, showCode: true }, { cookie: 'access-token=token' })
         )
       );
 
@@ -243,7 +246,7 @@ describe('Route.Game.Controller', () => {
       const response = await router.handle(
         new Request(
           'http://localhost/sharecode',
-          json('PATCH', { lobbyId: uniqueId, showCode: true }, { authorization: 'Bearer token' })
+          json('PATCH', { lobbyId: uniqueId, showCode: true }, { cookie: 'access-token=token' })
         )
       );
 

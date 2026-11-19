@@ -1,5 +1,7 @@
 import { type Database, type Select } from '@codeduel-backend-crab/database';
-import type { User } from '../user/data';
+
+import type { User } from '@/route/user/data';
+
 import type { Permission, Role } from './data';
 
 export class PermissionRepository {

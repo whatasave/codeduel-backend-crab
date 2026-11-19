@@ -117,6 +117,24 @@ describe('Route.User.Controller', () => {
     expect(await response.json()).toEqual(mockUser);
   });
 
+  test('should return the list of users', async () => {
+    const allSpy = spyOn(service, 'all').mockResolvedValue([mockUser]);
+
+    const response = await router.handle(new Request('http://localhost/list', { method: 'GET' }));
+
+    expect(allSpy).toHaveBeenCalledTimes(1);
+    expect(response.status).toEqual(200);
+    expect(await response.json()).toEqual([
+      {
+        id: mockUser.id,
+        username: mockUser.username,
+        name: mockUser.name,
+        avatar: mockUser.avatar,
+        createdAt: mockUser.createdAt,
+      },
+    ]);
+  });
+
   test('should return a user profile', async () => {
     const byIdSpy = spyOn(service, 'byId').mockResolvedValue(mockUser);
     const spyVerifySession = spyOn(authService, 'verifySession').mockResolvedValue({

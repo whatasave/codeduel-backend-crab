@@ -14,6 +14,15 @@ export const User = Type.Object({
   updatedAt: Type.String({ format: 'date-time' }),
 });
 
+export type UserListItem = Static<typeof UserListItem>;
+export const UserListItem = Type.Object({
+  id: User.properties.id,
+  username: User.properties.username,
+  name: User.properties.name,
+  avatar: User.properties.avatar,
+  createdAt: User.properties.createdAt,
+});
+
 export type CreateUser = Static<typeof CreateUser>;
 export const CreateUser = Type.Object({
   username: User.properties.username,

@@ -13,7 +13,7 @@ import type { Config } from './config';
 import { AuthController } from './controller';
 import type { AuthSession, JwtRefreshToken } from './data';
 import type { AuthRepository } from './repository';
-import { AuthService } from './service';
+import { AuthService, LOGGED_IN_COOKIE_NAME } from './service';
 
 describe('Route.Auth.Controller', () => {
   let service: AuthService;
@@ -29,6 +29,8 @@ describe('Route.Auth.Controller', () => {
       cookie: { name: 'refresh-token' },
     },
   } as Config;
+  const loggedInCookie = LOGGED_IN_COOKIE_NAME;
+  const clearedCookies = `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1, ${loggedInCookie}=; Max-Age=-1; Path=/`;
 
   beforeAll(() => {
     const repository = {} as AuthRepository;
@@ -46,19 +48,73 @@ describe('Route.Auth.Controller', () => {
     jest.clearAllMocks();
   });
 
-  test('should verify token', async () => {
-    // const response = await router.handle({
-    //   method: 'GET',
-    //   url: new URL('http://localhost/validate'),
-    //   stream: new ReadableStream(),
-    //   headers: new Headers(),
-    // });
-    //
-    // expect(response.status).toEqual(500);
-    // expect(await responseBodyToJson(response.body)).toEqual({ error: 'Path not implemented' });
+  describe('POST /validate_token', () => {
+    const validate = (body: unknown): Response | Promise<Response> =>
+      router.handle(
+        new Request('http://localhost/validate_token', {
+          method: 'POST',
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(body),
+        })
+      );
+
+    test('should return the user of a valid access token', async () => {
+      const spyVerify = spyOn(service, 'verifyAccessToken').mockResolvedValue({
+        iss: 'codeduel.it',
+        aud: 'codeduel.it',
+        exp: 1234567890,
+        sub: 1,
+        username: 'username',
+        permissions: [],
+      });
+      spyOn(userService, 'byId').mockResolvedValue({
+        id: 1,
+        username: 'username',
+        name: 'Name',
+        avatar: 'avatar.png',
+        biography: 'bio',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      const response = await validate({ token: 'access-token' });
+
+      expect(spyVerify).toHaveBeenCalledWith('access-token', expect.any(Object));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        id: 1,
+        username: 'username',
+        name: 'Name',
+        avatar: 'avatar.png',
+      });
+    });
+
+    test('should return 401 for an invalid access token', async () => {
+      spyOn(service, 'verifyAccessToken').mockRejectedValue(new Error('invalid token'));
+
+      const response = await validate({ token: 'invalid' });
+
+      expect(response.status).toBe(401);
+    });
+
+    test('should return 401 if the user does not exist', async () => {
+      spyOn(service, 'verifyAccessToken').mockResolvedValue({
+        iss: 'codeduel.it',
+        aud: 'codeduel.it',
+        exp: 1234567890,
+        sub: 1,
+        username: 'username',
+        permissions: [],
+      });
+      spyOn(userService, 'byId').mockResolvedValue(undefined);
+
+      const response = await validate({ token: 'access-token' });
+
+      expect(response.status).toBe(401);
+    });
   });
 
-  describe('POST /refresh', () => {
+  describe('/refresh', () => {
     const mockDate = new Date('2023-10-01T12:00:00Z').toISOString();
     const mockAccessToken = 'access-token';
     const mockRefreshToken = 'refresh-token';
@@ -108,10 +164,10 @@ describe('Route.Auth.Controller', () => {
       spyByUserId = spyOn(permissionService, 'byUserId').mockResolvedValue([]);
     });
 
-    test('should refresh access and refresh token', async () => {
+    test.each(['GET', 'POST'])('%s should refresh access and refresh token', async (method) => {
       const response = await router.handle(
         new Request('http://localhost/refresh', {
-          method: 'POST',
+          method,
           headers: new Headers(mockHeaders),
         })
       );
@@ -153,27 +209,40 @@ describe('Route.Auth.Controller', () => {
 
       expect(response.status).toEqual(204);
       expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
+        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}, ${loggedInCookie}=true; Path=/`
       );
     });
 
-    test('should logout user due to a failed refresh token', async () => {
+    test('should logout user due to a missing refresh token', async () => {
       const response = await router.handle(
         new Request('http://localhost/refresh', {
-          method: 'POST',
+          method: 'GET',
           headers: new Headers({}),
         })
       );
 
-      expect(response.status).toEqual(204);
+      expect(response.status).toEqual(401);
 
-      expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
+    });
+
+    test('should logout user due to an invalid refresh token', async () => {
+      spyOn(service, 'verifyRefreshToken').mockRejectedValue(new Error('invalid token'));
+
+      const response = await router.handle(
+        new Request('http://localhost/refresh', {
+          method: 'GET',
+          headers: new Headers(mockHeaders),
+        })
       );
+
+      expect(response.status).toEqual(401);
+      expect(spyUpdateSession).not.toHaveBeenCalled();
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
     });
   });
 
-  describe('POST /logout', () => {
+  describe('/logout', () => {
     const mockJwtRefreshToken: JwtRefreshToken = {
       iss: 'codeduel.it',
       aud: 'codeduel.it',
@@ -192,7 +261,7 @@ describe('Route.Auth.Controller', () => {
       spyDeleteSessionTokenId = spyOn(service, 'deleteSessionTokenId').mockResolvedValue();
     });
 
-    test('should log the user out', async () => {
+    test.each(['GET', 'POST'])('%s should log the user out', async (method) => {
       const mockAccessToken = 'access-token';
       const mockRefreshToken = 'refresh-token';
       const mockHeaders = {
@@ -200,15 +269,13 @@ describe('Route.Auth.Controller', () => {
       };
       const response = await router.handle(
         new Request('http://localhost/logout', {
-          method: 'POST',
+          method,
           headers: new Headers(mockHeaders),
         })
       );
 
       expect(response.status).toEqual(204);
-      expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
-      );
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
     });
 
     test('should remove the refresh token from session', async () => {
@@ -236,9 +303,7 @@ describe('Route.Auth.Controller', () => {
 
       expect(response.status).toEqual(204);
 
-      expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
-      );
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
     });
   });
 });

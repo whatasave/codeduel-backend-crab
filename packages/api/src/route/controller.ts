@@ -82,6 +82,7 @@ export class RootController {
     );
     this.challengeController = new ChallengeController(
       this.challengeService,
+      this.authMiddleware,
       logger.group({ type: 'challenge' })
     );
     this.authController = new AuthController(
@@ -91,7 +92,11 @@ export class RootController {
       authLogger,
       config.auth
     );
-    this.gameController = new GameController(this.gameService, logger.group({ type: 'game' }));
+    this.gameController = new GameController(
+      this.gameService,
+      this.authMiddleware,
+      logger.group({ type: 'game' })
+    );
   }
 
   setup(): NodeBuilder {

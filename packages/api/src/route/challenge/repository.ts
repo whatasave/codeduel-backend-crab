@@ -1,60 +1,43 @@
 import {
   jsonArrayFrom,
   jsonObjectFrom,
+  sql,
   type Database,
   type Select,
 } from '@codeduel-backend-crab/database';
-import { sql } from 'kysely';
 
 import { UserRepository } from '@/route/user/repository';
 
 import type {
-  ChallengeWithUser,
-  ChallengeWithUserAndTestCases,
+  Challenge,
+  ChallengeDetailed,
+  ChallengeSummary,
   CreateChallenge,
   TestCase,
   UpdateChallenge,
-  Challenge,
 } from './data';
+
+type SelectChallengeSummary = Select<'challenge'> & {
+  owner: Select<'user'>;
+  test_case_count: number | string | null;
+};
+
+type SelectChallengeDetailed = Select<'challenge'> & {
+  owner: Select<'user'>;
+  test_cases: Select<'test_case'>[];
+};
 
 export class ChallengeRepository {
   constructor(private readonly database: Database) {}
 
-  async byId(id: ChallengeWithUser['id']): Promise<ChallengeWithUserAndTestCases | undefined> {
-    const challenge = await this.database
-      .selectFrom('challenge')
-      .where('id', '=', id)
-      .selectAll()
-      .select((eb) =>
-        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
-          .$notNull()
-          .as('owner')
-      )
-      .select((eb) =>
-        jsonArrayFrom(
-          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
-        ).as('test_cases')
-      )
-      .executeTakeFirst();
-    return challenge && ChallengeRepository.selectToGameChallenge(challenge);
+  async byId(id: Challenge['id']): Promise<ChallengeSummary | undefined> {
+    const [challenge] = await this.findSummaries(id);
+    return challenge && ChallengeRepository.selectToChallengeSummary(challenge);
   }
 
-  async all(): Promise<ChallengeWithUser[]> {
-    const challenges = await this.database
-      .selectFrom('challenge')
-      .selectAll()
-      .select((eb) =>
-        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
-          .$notNull()
-          .as('owner')
-      )
-      .select((eb) =>
-        jsonArrayFrom(
-          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
-        ).as('test_cases')
-      )
-      .execute();
-    return challenges.map((challenge) => ChallengeRepository.selectToChallengeDetailed(challenge));
+  async all(): Promise<ChallengeSummary[]> {
+    const challenges = await this.findSummaries();
+    return challenges.map((challenge) => ChallengeRepository.selectToChallengeSummary(challenge));
   }
 
   async create(challenge: CreateChallenge): Promise<Challenge> {
@@ -85,7 +68,7 @@ export class ChallengeRepository {
     return updated && ChallengeRepository.selectToChallenge(updated);
   }
 
-  async delete(id: ChallengeWithUser['id']): Promise<boolean> {
+  async delete(id: Challenge['id']): Promise<boolean> {
     const result = await this.database
       .deleteFrom('challenge')
       .where('id', '=', id)
@@ -93,52 +76,79 @@ export class ChallengeRepository {
     return result.numDeletedRows > 0;
   }
 
-  async random(): Promise<ChallengeWithUserAndTestCases | undefined> {
+  async random(): Promise<ChallengeDetailed | undefined> {
     const challenge = await this.database
       .selectFrom('challenge')
       .orderBy(sql`RANDOM()`)
       .limit(1)
-      .selectAll()
+      .selectAll('challenge')
       .select((eb) =>
-        jsonObjectFrom(eb.selectFrom('user').whereRef('id', '=', 'owner_id').selectAll())
+        jsonObjectFrom(
+          eb.selectFrom('user').whereRef('user.id', '=', 'challenge.owner_id').selectAll('user')
+        )
           .$notNull()
           .as('owner')
       )
       .select((eb) =>
         jsonArrayFrom(
-          eb.selectFrom('test_case').whereRef('challenge_id', '=', 'id').selectAll()
+          eb
+            .selectFrom('test_case')
+            .whereRef('test_case.challenge_id', '=', 'challenge.id')
+            .orderBy('test_case.id')
+            .selectAll('test_case')
         ).as('test_cases')
       )
       .executeTakeFirst();
-    return challenge && ChallengeRepository.selectToGameChallenge(challenge);
+    return challenge && ChallengeRepository.selectToChallengeDetailed(challenge);
   }
 
-  static selectToGameChallenge(
-    challenge: Select<'challenge'> & { owner: Select<'user'> } & { test_cases: TestCase[] }
-  ): ChallengeWithUserAndTestCases {
+  /** Finds the challenges with their owner and number of test cases. */
+  private async findSummaries(id?: Challenge['id']): Promise<SelectChallengeSummary[]> {
+    return await this.database
+      .selectFrom('challenge')
+      .$if(id !== undefined, (qb) => qb.where('challenge.id', '=', id ?? -1))
+      .orderBy('challenge.id')
+      .selectAll('challenge')
+      .select((eb) =>
+        jsonObjectFrom(
+          eb.selectFrom('user').whereRef('user.id', '=', 'challenge.owner_id').selectAll('user')
+        )
+          .$notNull()
+          .as('owner')
+      )
+      .select((eb) =>
+        eb
+          .selectFrom('test_case')
+          .whereRef('test_case.challenge_id', '=', 'challenge.id')
+          .select(sql<number>`count(*)::int`.as('count'))
+          .as('test_case_count')
+      )
+      .execute();
+  }
+
+  static selectToChallengeSummary(challenge: SelectChallengeSummary): ChallengeSummary {
     return {
       id: challenge.id,
-      owner: UserRepository.selectToUser(challenge.owner),
+      owner: UserRepository.selectToUserListItem(challenge.owner),
       title: challenge.title,
       description: challenge.description,
       content: challenge.content,
+      testCases: Number(challenge.test_case_count ?? 0),
       createdAt: challenge.created_at,
-      updatedAt: challenge.updated_at,
-      testCases: challenge.test_cases,
     };
   }
 
-  static selectToChallengeDetailed(
-    challenge: Select<'challenge'> & { owner: Select<'user'> }
-  ): ChallengeWithUser {
+  static selectToChallengeDetailed(challenge: SelectChallengeDetailed): ChallengeDetailed {
+    const toTestCase = ({ input, output }: Select<'test_case'>): TestCase => ({ input, output });
     return {
       id: challenge.id,
-      owner: UserRepository.selectToUser(challenge.owner),
+      owner: UserRepository.selectToUserListItem(challenge.owner),
       title: challenge.title,
       description: challenge.description,
       content: challenge.content,
+      testCases: challenge.test_cases.filter((tc) => !tc.hidden).map(toTestCase),
+      hiddenTestCases: challenge.test_cases.filter((tc) => tc.hidden).map(toTestCase),
       createdAt: challenge.created_at,
-      updatedAt: challenge.updated_at,
     };
   }
 

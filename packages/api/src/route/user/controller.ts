@@ -6,7 +6,7 @@ import { Type } from '@sinclair/typebox';
 import { loggerDecorator } from '@/middleware/logger';
 import type { AuthMiddleware } from '@/route/auth/middleware';
 
-import { User } from './data';
+import { User, UserListItem } from './data';
 import type { UserService } from './service';
 
 export class UserController {
@@ -19,6 +19,7 @@ export class UserController {
   setup(): NodeBuilder {
     return routes({ middleware: loggerDecorator(this.logger) })
       .use(this.users)
+      .use(this.list)
       .use(this.byId)
       .use(this.profile());
   }
@@ -41,6 +42,21 @@ export class UserController {
         const user = await this.userService.byUsername(username, logger);
         if (!user) return { status: 404 };
         return { status: 200, body: user };
+      },
+    })
+  );
+
+  list = route<{ logger: Logger }>(
+    validated({
+      method: 'GET',
+      path: '/list',
+      schema: {
+        response: {
+          200: Type.Array(UserListItem),
+        },
+      },
+      handler: async ({ logger }) => {
+        return { status: 200, body: await this.userService.list(logger) };
       },
     })
   );

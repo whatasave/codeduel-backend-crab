@@ -108,11 +108,39 @@ describe('Route.Challenge.Repository', () => {
       const all = await repository.all();
 
       expect(all).toEqual(
-        created.map((c) => {
-          const { ownerId: _, ...created } = c;
-          return { ...created, owner: user };
-        })
+        created
+          .toSorted((a, b) => a.id - b.id)
+          .map(({ ownerId: _, updatedAt: __, ...created }) => ({
+            ...created,
+            owner: {
+              id: user.id,
+              username: user.username,
+              createdAt: user.createdAt,
+            },
+            testCases: 0,
+          }))
       );
+    });
+
+    test('should count the test cases of each challenge', async () => {
+      const user = await users.create({ username: 'test' });
+      const challenge = await repository.create({
+        ownerId: user.id,
+        title: 'Test Challenge',
+        description: 'This is a test challenge',
+        content: 'print("Hello, World!")',
+      });
+      await db
+        .insertInto('test_case')
+        .values([
+          { challenge_id: challenge.id, input: '1', output: '1', hidden: false },
+          { challenge_id: challenge.id, input: '2', output: '2', hidden: true },
+        ])
+        .execute();
+
+      const [found] = await repository.all();
+      expect(found?.testCases).toBe(2);
+      expect((await repository.byId(challenge.id))?.testCases).toBe(2);
     });
   });
 
@@ -212,11 +240,44 @@ describe('Route.Challenge.Repository', () => {
           content: 'print("Hello, World!")',
         }),
       ]);
-      const all = await Promise.all(created.map((c) => repository.byId(c.id)));
-
       const randomChallenge = await repository.random();
       expect(randomChallenge).toBeDefined();
-      expect(all).toContainEqual(randomChallenge);
+      expect(created.map((c) => c.id)).toContain(randomChallenge?.id ?? -1);
+      expect(randomChallenge).toMatchObject({ testCases: [], hiddenTestCases: [] });
+    });
+
+    test('should split visible and hidden test cases', async () => {
+      const user = await users.create({ username: 'test' });
+      const challenge = await repository.create({
+        ownerId: user.id,
+        title: 'Test Challenge',
+        description: 'This is a test challenge',
+        content: 'print("Hello, World!")',
+      });
+      await db
+        .insertInto('test_case')
+        .values([
+          { challenge_id: challenge.id, input: '1', output: 'one', hidden: false },
+          { challenge_id: challenge.id, input: '2', output: 'two', hidden: true },
+          { challenge_id: challenge.id, input: '3', output: 'three', hidden: true },
+        ])
+        .execute();
+
+      const randomChallenge = await repository.random();
+
+      expect(randomChallenge).toEqual({
+        id: challenge.id,
+        owner: { id: user.id, username: user.username, createdAt: user.createdAt },
+        title: challenge.title,
+        description: challenge.description,
+        content: challenge.content,
+        testCases: [{ input: '1', output: 'one' }],
+        hiddenTestCases: [
+          { input: '2', output: 'two' },
+          { input: '3', output: 'three' },
+        ],
+        createdAt: challenge.createdAt,
+      });
     });
 
     test('should return undefined if no challenges exist', async () => {

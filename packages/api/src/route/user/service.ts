@@ -1,6 +1,6 @@
 import type { Logger } from '@codeduel-backend-crab/logger';
 
-import type { CreateUser, User } from './data';
+import type { CreateUser, User, UserListItem } from './data';
 import type { UserRepository } from './repository';
 
 export class UserService {
@@ -10,6 +10,21 @@ export class UserService {
     const users = await this.userRepository.all();
     logger?.debug('all.success', 'fetched users', { count: users.length });
     return users;
+  }
+
+  async list(logger?: Logger): Promise<UserListItem[]> {
+    const users = await this.all(logger);
+    return users.map((user) => UserService.toListItem(user));
+  }
+
+  static toListItem(user: User): UserListItem {
+    return {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      avatar: user.avatar,
+      createdAt: user.createdAt,
+    };
   }
 
   async byUsername(username: User['username'], logger?: Logger): Promise<User | undefined> {

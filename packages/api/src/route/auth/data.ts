@@ -91,3 +91,18 @@ export const CreateContext = Type.Object({
   user: User,
   permissions: Type.Array(Permission),
 });
+
+export type VerifyTokenPayload = Static<typeof VerifyTokenPayload>;
+export const VerifyTokenPayload = Type.Object({
+  token: Type.String(),
+});
+
+/** User data returned to the lobby when it validates an access token. */
+export type LobbyUser = Static<typeof LobbyUser>;
+export const LobbyUser = Type.Object({
+  id: User.properties.id,
+  username: User.properties.username,
+  name: User.properties.name,
+  avatar: User.properties.avatar,
+  backgroundImage: User.properties.backgroundImage,
+});

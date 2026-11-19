@@ -9,8 +9,27 @@ export class HealthController {
   constructor(private readonly HealthService: HealthService) {}
 
   setup(): NodeBuilder {
-    return routes().use(this.livenessCheck).use(this.readinessCheck);
+    return routes().use(this.health).use(this.livenessCheck).use(this.readinessCheck);
   }
+
+  health = route(
+    validated({
+      method: 'GET',
+      path: '/',
+      schema: {
+        response: {
+          200: Type.Object({
+            status: LivenessStatus,
+          }),
+        },
+      },
+      handler: async () => {
+        const status = this.HealthService.livenessCheck();
+
+        return { status: 200, body: { status } };
+      },
+    })
+  );
 
   livenessCheck = route(
     validated({

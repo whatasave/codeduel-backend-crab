@@ -1,6 +1,6 @@
 import { type Database, type Select } from '@codeduel-backend-crab/database';
 
-import { type CreateUser, type User } from './data';
+import { type CreateUser, type User, type UserListItem } from './data';
 
 export class UserRepository {
   constructor(private readonly database: Database) {}
@@ -49,6 +49,16 @@ export class UserRepository {
       .executeTakeFirstOrThrow();
 
     return UserRepository.selectToUser(newUser);
+  }
+
+  static selectToUserListItem(user: Select<'user'>): UserListItem {
+    return {
+      id: user.id,
+      username: user.username,
+      name: user.name ?? undefined,
+      avatar: user.avatar ?? undefined,
+      createdAt: user.created_at,
+    };
   }
 
   static selectToUser(user: Select<'user'>): User {

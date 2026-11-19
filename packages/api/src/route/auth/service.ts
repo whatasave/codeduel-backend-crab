@@ -20,6 +20,8 @@ import {
 } from './data';
 import type { AuthRepository } from './repository';
 
+export const LOGGED_IN_COOKIE_NAME = 'logged_in';
+
 export class AuthService {
   private userDefaultRoleId: Role['id'] | undefined;
 
@@ -35,6 +37,23 @@ export class AuthService {
 
   get refreshTokenCookieOptions(): CookieOptions {
     return this.config.refreshToken.cookie;
+  }
+
+  /**
+   * Non HTTP-only cookie the frontend reads to know whether the user is logged in
+   * (and so whether it should try to refresh the access token).
+   */
+  get loggedInCookieOptions(): CookieOptions {
+    const { domain, secure, sameSite, maxAge } = this.config.refreshToken.cookie;
+    return {
+      name: LOGGED_IN_COOKIE_NAME,
+      domain,
+      secure,
+      sameSite,
+      maxAge,
+      path: '/',
+      httpOnly: false,
+    };
   }
 
   async createIfNotExists(

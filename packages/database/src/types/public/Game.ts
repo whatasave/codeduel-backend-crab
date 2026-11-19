@@ -8,6 +8,8 @@ export type GameId = number;
 export default interface GameTable {
   id: ColumnType<GameId, GameId | undefined, GameId>;
 
+  unique_id: ColumnType<string, string | undefined, string>;
+
   challenge_id: ColumnType<ChallengeId, ChallengeId, ChallengeId>;
 
   host_id: ColumnType<UserId, UserId, UserId>;

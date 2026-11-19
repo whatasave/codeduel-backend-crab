@@ -5,6 +5,7 @@ import type { SessionUser } from './data';
 import type { RouteContext } from '@glass-cannon/router';
 import { Permissions } from '@/route/permission/permissions';
 import type { Logger } from '@codeduel-backend-crab/logger';
+import { parseCookies } from '../../utils/cookie';
 
 export class AuthMiddleware {
   constructor(private readonly service: AuthService) {}
@@ -72,10 +73,8 @@ export class AuthMiddleware {
   ): Promise<SessionUser | null> {
     const { logger } = context;
     try {
-      const authHeader = context.request.headers.get('Authorization');
-      if (!authHeader) return null;
-
-      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+      const cookies = parseCookies(context.request.headers.get('cookie'));
+      const token = cookies[this.service.accessTokenCookieOptions.name];
       if (!token) return null;
 
       return await this.service.verifySession(token, logger);

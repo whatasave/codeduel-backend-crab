@@ -125,7 +125,7 @@ describe('Route.User.Controller', () => {
     const response = await router.handle(
       new Request('http://localhost/profile', {
         method: 'GET',
-        headers: new Headers({ authorization: 'Bearer token_value' }),
+        headers: new Headers({ cookie: 'access-token=token_value' }),
       })
     );
 

@@ -1,5 +1,5 @@
 import type { Logger } from '@codeduel-backend-crab/logger';
-import type { User } from '../user/data';
+import type { User } from '@/route/user/data';
 import type { Permission, Role } from './data';
 import type { PermissionRepository } from './repository';
 

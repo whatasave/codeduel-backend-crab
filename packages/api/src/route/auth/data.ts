@@ -1,7 +1,7 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { User } from '../user/data';
+import { User } from '@/route/user/data';
 import { TypeCompiler } from '@sinclair/typebox/compiler';
-import { Permission } from '../permission/data';
+import { Permission } from '@/route/permission/data';
 
 export type Auth = Static<typeof Auth>;
 export const Auth = Type.Object({

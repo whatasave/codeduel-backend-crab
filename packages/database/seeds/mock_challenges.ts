@@ -1,5 +1,5 @@
 import type { Kysely } from 'kysely';
-import type DB from '../src/types/Database';
+import type DB from '@/types/Database';
 
 export async function seed(db: Kysely<DB>): Promise<void> {
   const { id: owner_id } = await db

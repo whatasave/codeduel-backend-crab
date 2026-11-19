@@ -13,7 +13,7 @@ import type {
   Challenge,
 } from './data';
 import { sql } from 'kysely';
-import { UserRepository } from '../user/repository';
+import { UserRepository } from '@/route/user/repository';
 
 export class ChallengeRepository {
   constructor(private readonly database: Database) {}

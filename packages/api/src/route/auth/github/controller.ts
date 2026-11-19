@@ -1,13 +1,13 @@
 import type { GithubService } from './service';
 import { Type } from '@sinclair/typebox';
-import { createCookie, parseCookies } from '../../../utils/cookie';
-import type { AuthService } from '../service';
+import { createCookie, parseCookies } from '@/utils/cookie';
+import type { AuthService } from '@/route/auth/service';
 import { randomUUIDv7 } from 'bun';
-import { getIp } from '../../../utils/ip';
+import { getIp } from '@/utils/ip';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated } from '@glass-cannon/typebox';
 import type { Logger } from '@codeduel-backend-crab/logger';
-import { loggerDecorator } from '../../../middleware/logger';
+import { loggerDecorator } from '@/middleware/logger';
 
 export class GithubController {
   constructor(

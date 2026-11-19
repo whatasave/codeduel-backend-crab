@@ -13,9 +13,9 @@ import type {
   GameOfUser,
   GameWithUserData,
 } from './data';
-import type { User } from '../user/data';
-import { UserRepository } from '../user/repository';
-import { ChallengeRepository } from '../challenge/repository';
+import type { User } from '@/route/user/data';
+import { UserRepository } from '@/route/user/repository';
+import { ChallengeRepository } from '@/route/challenge/repository';
 
 export class GameRepository {
   constructor(private readonly db: Database) {}

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { Database } from '@codeduel-backend-crab/database';
-import { setupTestDatabase } from '../../utils/test';
+import { setupTestDatabase } from '@/utils/test';
 import { PermissionRepository } from './repository';
 import type { Permission } from './data';
 

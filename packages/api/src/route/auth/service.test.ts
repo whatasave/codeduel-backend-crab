@@ -3,10 +3,10 @@ import type { Database } from '@codeduel-backend-crab/database';
 import { AuthRepository } from './repository';
 import { AuthService } from './service';
 import type { Config } from './config';
-import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
+import { UserNameAlreadyExistsError, type CreateUser, type User } from '@/route/user/data';
 import type { Auth, AuthSession, CreateAuthSession, Provider, State } from './data';
-import type { PermissionRepository } from '../permission/repository';
-import { PermissionService } from '../permission/service';
+import type { PermissionRepository } from '@/route/permission/repository';
+import { PermissionService } from '@/route/permission/service';
 
 describe('Route.Auth.Service', () => {
   let db: Database;

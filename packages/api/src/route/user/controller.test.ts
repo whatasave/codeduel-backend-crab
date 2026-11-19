@@ -4,12 +4,12 @@ import { UserService } from './service';
 import { UserController } from './controller';
 import type { UserRepository } from './repository';
 import { Router } from '@glass-cannon/router';
-import { AuthMiddleware } from '../auth/middleware';
-import { AuthService } from '../auth/service';
-import type { AuthRepository } from '../auth/repository';
-import type { PermissionRepository } from '../permission/repository';
-import { PermissionService } from '../permission/service';
-import type { Config as AuthConfig } from '../auth/config';
+import { AuthMiddleware } from '@/route/auth/middleware';
+import { AuthService } from '@/route/auth/service';
+import type { AuthRepository } from '@/route/auth/repository';
+import type { PermissionRepository } from '@/route/permission/repository';
+import { PermissionService } from '@/route/permission/service';
+import type { Config as AuthConfig } from '@/route/auth/config';
 import { Logger } from '@codeduel-backend-crab/logger';
 
 describe('Route.User.Controller', () => {

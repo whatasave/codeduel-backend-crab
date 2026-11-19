@@ -1,10 +1,10 @@
 import type { Database, Select } from '@codeduel-backend-crab/database';
 import type { Auth, AuthSession, CreateAuthSession, CreateContext, Provider } from './data';
-import { UserNameAlreadyExistsError, type CreateUser } from '../user/data';
-import { UserRepository } from '../user/repository';
-import { PermissionRepository } from '../permission/repository';
+import { UserNameAlreadyExistsError, type CreateUser } from '@/route/user/data';
+import { UserRepository } from '@/route/user/repository';
+import { PermissionRepository } from '@/route/permission/repository';
 import type { Logger } from '@codeduel-backend-crab/logger';
-import type { Role } from '../permission/data';
+import type { Role } from '@/route/permission/data';
 
 export class AuthRepository {
   constructor(private readonly database: Database) {}

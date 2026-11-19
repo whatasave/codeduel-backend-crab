@@ -10,7 +10,7 @@ import {
 import type { ChallengeService } from './service';
 import { Type } from '@sinclair/typebox';
 import type { Logger } from '@codeduel-backend-crab/logger';
-import { loggerDecorator } from '../../middleware/logger';
+import { loggerDecorator } from '@/middleware/logger';
 
 export class ChallengeController {
   constructor(

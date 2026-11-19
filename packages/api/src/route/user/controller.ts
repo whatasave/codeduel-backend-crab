@@ -1,11 +1,11 @@
 import { Type } from '@sinclair/typebox';
 import type { UserService } from './service';
 import { User } from './data';
-import type { AuthMiddleware } from '../auth/middleware';
+import type { AuthMiddleware } from '@/route/auth/middleware';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated } from '@glass-cannon/typebox';
 import type { Logger } from '@codeduel-backend-crab/logger';
-import { loggerDecorator } from '../../middleware/logger';
+import { loggerDecorator } from '@/middleware/logger';
 
 export class UserController {
   constructor(

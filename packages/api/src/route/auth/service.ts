@@ -1,5 +1,5 @@
 import { randomUUIDv7 } from 'bun';
-import { UserNameAlreadyExistsError, type CreateUser, type User } from '../user/data';
+import { UserNameAlreadyExistsError, type CreateUser, type User } from '@/route/user/data';
 import type { CreateContext, SessionUser } from './data';
 import {
   type AuthSession,
@@ -13,10 +13,10 @@ import {
 import type { AuthRepository } from './repository';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import type { Config } from './config';
-import type { CookieOptions } from '../../utils/cookie';
-import type { PermissionService } from '../permission/service';
+import type { CookieOptions } from '@/utils/cookie';
+import type { PermissionService } from '@/route/permission/service';
 import type { Logger } from '@codeduel-backend-crab/logger';
-import type { Role } from '../permission/data';
+import type { Role } from '@/route/permission/data';
 
 export class AuthService {
   private userDefaultRoleId: Role['id'] | undefined;

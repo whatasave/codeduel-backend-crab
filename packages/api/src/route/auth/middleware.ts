@@ -3,7 +3,7 @@ import type { AuthService } from './service';
 import { json } from '@glass-cannon/server-bun';
 import type { SessionUser } from './data';
 import type { RouteContext } from '@glass-cannon/router';
-import { Permissions } from '../permission/permissions';
+import { Permissions } from '@/route/permission/permissions';
 import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class AuthMiddleware {

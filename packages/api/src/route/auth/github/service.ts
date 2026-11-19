@@ -1,9 +1,9 @@
-import type { CreateAuthSession, CreateContext } from '../data';
-import type { AuthService } from '../service';
+import type { CreateAuthSession, CreateContext } from '@/route/auth/data';
+import type { AuthService } from '@/route/auth/service';
 import type { GithubAccessToken, GithubUserData } from './data';
-import type { User } from '../../user/data';
+import type { User } from '@/route/user/data';
 import type { Config } from './config';
-import type { CookieOptions } from '../../../utils/cookie';
+import type { CookieOptions } from '@/utils/cookie';
 import type { Logger } from '@codeduel-backend-crab/logger';
 
 export class GithubService {

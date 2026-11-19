@@ -1,13 +1,13 @@
 import { afterEach, beforeAll, describe, expect, spyOn, test, jest } from 'bun:test';
 import { GitlabService } from './service';
-import { AuthService } from '../service';
-import type { AuthRepository } from '../repository';
-import type { Config as AuthConfig } from '../config';
-import type { Auth, AuthSession, CreateAuthSession } from '../data';
-import type { User } from '../../user/data';
+import { AuthService } from '@/route/auth/service';
+import type { AuthRepository } from '@/route/auth/repository';
+import type { Config as AuthConfig } from '@/route/auth/config';
+import type { Auth, AuthSession, CreateAuthSession } from '@/route/auth/data';
+import type { User } from '@/route/user/data';
 import type { GitlabAccessToken, GitlabUserData } from './data';
-import { PermissionService } from '../../permission/service';
-import type { PermissionRepository } from '../../permission/repository';
+import { PermissionService } from '@/route/permission/service';
+import type { PermissionRepository } from '@/route/permission/repository';
 
 describe('Route.Auth.Gitlab.Service', () => {
   let authService: AuthService;

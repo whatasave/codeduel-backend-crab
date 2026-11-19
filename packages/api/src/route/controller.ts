@@ -1,5 +1,5 @@
 import type { Database } from '@codeduel-backend-crab/database';
-import type { Config } from '../config';
+import type { Config } from '@/config';
 import { HealthController } from './health/controller';
 import { HealthService } from './health/service';
 import { ScalarController } from './scalar/controller';
@@ -20,9 +20,9 @@ import { AuthMiddleware } from './auth/middleware';
 import { PermissionRepository } from './permission/repository';
 import { PermissionService } from './permission/service';
 import type { Logger } from '@codeduel-backend-crab/logger';
-import { traceRequests } from '../middleware/trace';
-import { loggerDecorator, logRequests } from '../middleware/logger';
-import { errorHandler } from '../middleware/errors';
+import { traceRequests } from '@/middleware/trace';
+import { loggerDecorator, logRequests } from '@/middleware/logger';
+import { errorHandler } from '@/middleware/errors';
 import { openapi } from '@glass-cannon/typebox';
 import { json, text } from '@glass-cannon/server-bun';
 

@@ -1,5 +1,5 @@
 import type { Kysely } from 'kysely';
-import type DB from '../src/types/Database';
+import type DB from '@/types/Database';
 
 const ROLES = [{ name: 'admin' }, { name: 'moderator' }, { name: 'contributor' }, { name: 'user' }];
 

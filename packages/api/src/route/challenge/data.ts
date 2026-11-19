@@ -1,5 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { User } from '../user/data';
+import { User } from '@/route/user/data';
 
 export type TestCase = Static<typeof TestCase>;
 export const TestCase = Type.Object({

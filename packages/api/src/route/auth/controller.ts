@@ -38,7 +38,6 @@ export class AuthController {
   }
 
   setup(): NodeBuilder {
-    // github and gitlab decorate their own logger, keep the auth one off their routes
     const ownRoutes = routes({ middleware: loggerDecorator(this.logger) })
       .use(this.validate)
       .use(this.refresh)

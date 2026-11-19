@@ -1,10 +1,13 @@
-import type { Database } from '@codeduel-backend-crab/database';
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { setupTestDatabase } from '../../utils/test';
-import { GameRepository } from './repository';
-import { UserRepository } from '../user/repository';
+
+import type { Database } from '@codeduel-backend-crab/database';
+
+import { ChallengeRepository } from '@/route/challenge/repository';
+import { UserRepository } from '@/route/user/repository';
+import { setupTestDatabase } from '@/utils/test';
+
 import type { CreateGame } from './data';
-import { ChallengeRepository } from '../challenge/repository';
+import { GameRepository } from './repository';
 
 describe('Route.Game.Repository', () => {
   let db: Database;

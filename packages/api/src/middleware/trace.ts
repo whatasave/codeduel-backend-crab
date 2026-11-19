@@ -1,6 +1,7 @@
-import { middleware, type MiddlewareWrapper } from '@glass-cannon/router/middleware';
-import { createTrace, parseTrace, type TraceContext } from '../utils/trace';
 import type { Logger } from '@codeduel-backend-crab/logger';
+import { middleware, type MiddlewareWrapper } from '@glass-cannon/router/middleware';
+
+import { createTrace, parseTrace, type TraceContext } from '@/utils/trace';
 
 export function traceRequests(logger: Logger): MiddlewareWrapper<{ trace: string }> {
   return middleware<{ trace: string }>(async (next, context) => {

@@ -1,10 +1,12 @@
-import { RootController } from './route/controller';
-import { safeLoadConfig } from './config';
+import { Logger } from '@codeduel-backend-crab/logger';
 import { Router, routes } from '@glass-cannon/router';
 import { BunServer, text } from '@glass-cannon/server-bun';
-import { Logger } from '@codeduel-backend-crab/logger';
-import { setupDatabase } from './database';
+
+import { safeLoadConfig } from './config';
 import { setupCors } from './cors';
+import { setupDatabase } from './database';
+import { RootController } from './route/controller';
+import { setupSignals } from './signal';
 import { setupTypebox } from './typebox';
 
 const { config, error } = safeLoadConfig();
@@ -59,21 +61,10 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-const { database, closeDatabase } = setupDatabase(
-  config.database,
-  logger.group({ type: 'database' })
-);
+const database = setupDatabase(config.database, logger.group({ type: 'database' }));
 
 const controller = new RootController(database, logger, config);
 const stopTokenCleanup = controller.startTokenCleanup();
-
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.once(signal, () => {
-    logger.info('process.shutdown', `received ${signal}, shutting down`, { signal });
-    stopTokenCleanup();
-    void closeDatabase().finally(() => process.exit(0));
-  });
-}
 
 const appRoutes = routes()
   .apply(setupCors(config.cors))
@@ -97,3 +88,5 @@ const server = new BunServer(router.handle);
 const running = await server.listen({ host: config.host, port: config.port });
 
 logger.info('listening', `Server is running on ${running.url}`, { url: running.url });
+
+setupSignals(running, database, logger, stopTokenCleanup);

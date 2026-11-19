@@ -1,8 +1,10 @@
 import { afterEach, beforeAll, describe, expect, spyOn, test, jest } from 'bun:test';
-import { UserRepository } from './repository';
-import type { CreateUser, User } from './data';
-import { UserService } from './service';
+
 import type { Database } from '@codeduel-backend-crab/database';
+
+import type { CreateUser, User } from './data';
+import { UserRepository } from './repository';
+import { UserService } from './service';
 
 describe('Route.User.Service', () => {
   let db: Database;

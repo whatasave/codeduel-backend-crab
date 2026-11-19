@@ -1,10 +1,12 @@
-import type { CreateAuthSession, CreateContext } from '../data';
-import type { AuthService } from '../service';
-import type { GitlabAccessToken, GitlabUserData } from './data';
-import type { User } from '../../user/data';
-import type { CookieOptions } from '../../../utils/cookie';
-import type { Config } from './config';
 import type { Logger } from '@codeduel-backend-crab/logger';
+
+import type { CreateAuthSession, CreateContext } from '@/route/auth/data';
+import type { AuthService } from '@/route/auth/service';
+import type { User } from '@/route/user/data';
+import type { CookieOptions } from '@/utils/cookie';
+
+import type { Config } from './config';
+import type { GitlabAccessToken, GitlabUserData } from './data';
 
 export class GitlabService {
   private static readonly PROVIDER: string = 'gitlab';

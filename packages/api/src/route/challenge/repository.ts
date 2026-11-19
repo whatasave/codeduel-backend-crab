@@ -4,6 +4,10 @@ import {
   type Database,
   type Select,
 } from '@codeduel-backend-crab/database';
+import { sql } from 'kysely';
+
+import { UserRepository } from '@/route/user/repository';
+
 import type {
   ChallengeWithUser,
   ChallengeWithUserAndTestCases,
@@ -12,8 +16,6 @@ import type {
   UpdateChallenge,
   Challenge,
 } from './data';
-import { sql } from 'kysely';
-import { UserRepository } from '../user/repository';
 
 export class ChallengeRepository {
   constructor(private readonly database: Database) {}

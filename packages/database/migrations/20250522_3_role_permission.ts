@@ -1,7 +1,8 @@
 import { sql, type Kysely } from 'kysely';
+
 import { updateTimestampTrigger } from './20250421_0_update_timestamp';
-import { ROLE_TABLE_NAME } from './20250522_2_role';
 import { PERMISSION_TABLE_NAME } from './20250522_1_permission';
+import { ROLE_TABLE_NAME } from './20250522_2_role';
 
 export const ROLE_PERMISSION_TABLE_NAME = 'role_permission';
 

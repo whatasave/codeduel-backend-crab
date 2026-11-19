@@ -1,8 +1,10 @@
 import { afterEach, beforeAll, describe, expect, jest, spyOn, test } from 'bun:test';
-import { PermissionService } from './service';
-import { PermissionRepository } from './repository';
-import type { Permission } from './data';
+
 import type { Database } from '@codeduel-backend-crab/database';
+
+import type { Permission } from './data';
+import { PermissionRepository } from './repository';
+import { PermissionService } from './service';
 
 describe('Route.Permission.Service', () => {
   let repository: PermissionRepository;

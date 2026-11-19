@@ -1,4 +1,5 @@
 import { sql, type Kysely } from 'kysely';
+
 import { AUTH_SESSION_TABLE_NAME } from './20250421_3_auth_session';
 
 export const AUTH_USED_REFRESH_TOKEN_TABLE_NAME = 'auth_used_refresh_token';

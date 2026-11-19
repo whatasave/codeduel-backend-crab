@@ -1,4 +1,5 @@
 import { type Database, type Select } from '@codeduel-backend-crab/database';
+
 import { type CreateUser, type User } from './data';
 
 export class UserRepository {

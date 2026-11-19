@@ -1,4 +1,5 @@
 import type { Kysely } from 'kysely';
+
 import { USER_TABLE_NAME } from './20250421_1_user';
 import { GAME_TABLE_NAME } from './20250421_6_game';
 

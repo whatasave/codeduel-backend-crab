@@ -1,10 +1,12 @@
+import type { Logger } from '@codeduel-backend-crab/logger';
+
+import type { User } from '@/route/user/data';
+import type { CookieOptions } from '@/utils/cookie';
+
 import type { CreateAuthSession, CreateContext } from '../data';
 import type { AuthService } from '../service';
-import type { GithubAccessToken, GithubUserData } from './data';
-import type { User } from '../../user/data';
 import type { Config } from './config';
-import type { CookieOptions } from '../../../utils/cookie';
-import type { Logger } from '@codeduel-backend-crab/logger';
+import type { GithubAccessToken, GithubUserData } from './data';
 
 export class GithubService {
   private static readonly PROVIDER: string = 'github';

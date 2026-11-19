@@ -1,3 +1,8 @@
+import fs from 'fs/promises';
+import path from 'path';
+
+import { Type, type Static } from '@sinclair/typebox';
+import { AssertError, Value } from '@sinclair/typebox/value';
 import {
   Kysely,
   PostgresDialect,
@@ -7,13 +12,10 @@ import {
   FileMigrationProvider,
   Migrator,
 } from 'kysely';
-import { Pool, types } from 'pg';
-import type DB from './types/Database';
-import { Type, type Static } from '@sinclair/typebox';
-import { AssertError, Value } from '@sinclair/typebox/value';
 import { NO_MIGRATIONS } from 'kysely';
-import fs from 'fs/promises';
-import path from 'path';
+import { Pool, types } from 'pg';
+
+import type DB from './types/Database';
 
 types.setTypeParser(
   types.builtins.TIMESTAMP,

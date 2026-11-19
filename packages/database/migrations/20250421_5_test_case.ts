@@ -1,4 +1,5 @@
 import type { Kysely } from 'kysely';
+
 import { CHALLENGE_TABLE_NAME } from './20250421_4_challenge';
 
 const TEST_CASE_TABLE_NAME = 'test_case';

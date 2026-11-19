@@ -1,6 +1,7 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { Challenge, ChallengeWithUserAndTestCases } from '../challenge/data';
-import { User } from '../user/data';
+
+import { Challenge, ChallengeWithUserAndTestCases } from '@/route/challenge/data';
+import { User } from '@/route/user/data';
 
 export type Game = Static<typeof Game>;
 export const Game = Type.Object({

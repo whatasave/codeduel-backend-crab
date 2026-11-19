@@ -1,15 +1,17 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
-import { ChallengeService } from './service';
+
+import { Logger } from '@codeduel-backend-crab/logger';
+import { Router } from '@glass-cannon/router';
+
+import { ChallengeController } from './controller';
 import type {
   ChallengeWithUser,
   ChallengeWithUserAndTestCases,
   CreateChallenge,
   Challenge,
 } from './data';
-import { ChallengeController } from './controller';
-import { Logger } from '@codeduel-backend-crab/logger';
 import type { ChallengeRepository } from './repository';
-import { Router } from '@glass-cannon/router';
+import { ChallengeService } from './service';
 
 describe('Route.Challenge.Controller', () => {
   let service: ChallengeService;

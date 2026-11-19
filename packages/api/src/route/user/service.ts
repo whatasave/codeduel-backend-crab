@@ -1,4 +1,5 @@
 import type { Logger } from '@codeduel-backend-crab/logger';
+
 import type { CreateUser, User } from './data';
 import type { UserRepository } from './repository';
 

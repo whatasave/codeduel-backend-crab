@@ -1,6 +1,6 @@
+import type { Logger } from '@codeduel-backend-crab/logger';
 import { middleware, type MiddlewareWrapper } from '@glass-cannon/router/middleware';
 import { text } from '@glass-cannon/server-bun';
-import type { Logger } from '@codeduel-backend-crab/logger';
 
 export function errorHandler(
   descriptiveErrors: boolean

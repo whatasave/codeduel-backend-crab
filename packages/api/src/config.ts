@@ -1,9 +1,10 @@
+import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
+import { Config as LoggerConfig } from '@codeduel-backend-crab/logger';
 import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
-import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
-import { Config as AuthConfig } from './route/auth/config';
-import { Config as LoggerConfig } from '@codeduel-backend-crab/logger';
+
 import { CorsOptions } from './cors';
+import { Config as AuthConfig } from './route/auth/config';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({

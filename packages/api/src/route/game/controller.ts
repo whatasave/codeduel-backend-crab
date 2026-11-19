@@ -1,11 +1,13 @@
-import type { GameService } from './service';
-import { CreateGame, Game, GameOfUser, GameWithUserData, ShareCode, UpdateGameUser } from './data';
-import { Type } from '@sinclair/typebox';
-import { User } from '../user/data';
+import type { Logger } from '@codeduel-backend-crab/logger';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated } from '@glass-cannon/typebox';
-import type { Logger } from '@codeduel-backend-crab/logger';
-import { loggerDecorator } from '../../middleware/logger';
+import { Type } from '@sinclair/typebox';
+
+import { loggerDecorator } from '@/middleware/logger';
+import { User } from '@/route/user/data';
+
+import { CreateGame, Game, GameOfUser, GameWithUserData, ShareCode, UpdateGameUser } from './data';
+import type { GameService } from './service';
 
 export class GameController {
   constructor(

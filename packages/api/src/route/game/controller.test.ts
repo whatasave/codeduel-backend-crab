@@ -1,10 +1,12 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
-import { GameController } from './controller';
+
 import { Logger } from '@codeduel-backend-crab/logger';
-import { GameService } from './service';
+import { Router } from '@glass-cannon/router';
+
+import { GameController } from './controller';
 import type { CreateGame, Game, GameOfUser, GameWithUserData, UpdateGameUser } from './data';
 import type { GameRepository } from './repository';
-import { Router } from '@glass-cannon/router';
+import { GameService } from './service';
 
 describe('Route.Game.Controller', () => {
   let service: GameService;

@@ -6,10 +6,7 @@ import {
 } from '@codeduel-backend-crab/database';
 import type { Logger } from '@codeduel-backend-crab/logger';
 
-export function setupDatabase(
-  config: DatabaseConfig,
-  logger: Logger
-): { database: Database; closeDatabase: () => Promise<void> } {
+export function setupDatabase(config: DatabaseConfig, logger: Logger): Database {
   const database = createDatabase(config, {
     onQuery: logger.isLevelEnabled('debug')
       ? ({ sql, durationMs }): void => {
@@ -38,16 +35,5 @@ export function setupDatabase(
     if (success) logger.info('connected', 'database connection established');
   });
 
-  const closeDatabase = async (): Promise<void> => {
-    try {
-      await database.destroy();
-      logger.info('closed', 'database connection closed');
-    } catch (error) {
-      logger.error('closeFailed', 'failed to close database connection', {
-        error: logger.errorData(error),
-      });
-    }
-  };
-
-  return { database, closeDatabase };
+  return database;
 }

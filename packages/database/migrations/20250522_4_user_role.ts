@@ -1,4 +1,5 @@
 import { sql, type Kysely } from 'kysely';
+
 import { updateTimestampTrigger } from './20250421_0_update_timestamp';
 import { USER_TABLE_NAME } from './20250421_1_user';
 import { ROLE_TABLE_NAME } from './20250522_2_role';

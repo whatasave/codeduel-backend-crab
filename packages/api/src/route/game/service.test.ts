@@ -1,8 +1,10 @@
 import { afterEach, beforeAll, describe, expect, jest, spyOn, test } from 'bun:test';
-import { GameService } from './service';
-import { GameRepository } from './repository';
-import type { Game, GameOfUser, GameWithUserData, UpdateGameUser } from './data';
+
 import type { Database } from '@codeduel-backend-crab/database';
+
+import type { Game, GameOfUser, GameWithUserData, UpdateGameUser } from './data';
+import { GameRepository } from './repository';
+import { GameService } from './service';
 
 describe('Route.Game.Service', () => {
   let repository: GameRepository;

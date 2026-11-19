@@ -1,12 +1,15 @@
 import { afterEach, beforeAll, describe, expect, spyOn, test, jest } from 'bun:test';
+
 import type { Database } from '@codeduel-backend-crab/database';
-import { AuthRepository } from './repository';
-import { AuthService } from './service';
-import type { Config } from './config';
-import { UserNameAlreadyExistsError, type CreateUser, type User } from '@/route/user/data';
-import type { Auth, AuthSession, CreateAuthSession, Provider, State } from './data';
+
 import type { PermissionRepository } from '@/route/permission/repository';
 import { PermissionService } from '@/route/permission/service';
+import { UserNameAlreadyExistsError, type CreateUser, type User } from '@/route/user/data';
+
+import type { Config } from './config';
+import type { Auth, AuthSession, CreateAuthSession, Provider, State } from './data';
+import { AuthRepository } from './repository';
+import { AuthService } from './service';
 
 describe('Route.Auth.Service', () => {
   let db: Database;

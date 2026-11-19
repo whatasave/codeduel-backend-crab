@@ -1,4 +1,5 @@
 import type { Kysely } from 'kysely';
+
 import type DB from '@/types/Database';
 
 export async function seed(db: Kysely<DB>): Promise<void> {

@@ -1,5 +1,7 @@
 import { Type, type Static } from '@sinclair/typebox';
+
 import { CookieOptions } from '@/utils/cookie';
+
 import { Config as GithubConfig } from './github/config';
 import { Config as GitlabConfig } from './gitlab/config';
 

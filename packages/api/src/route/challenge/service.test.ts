@@ -1,6 +1,7 @@
 import { describe, test, jest, expect, afterEach, spyOn, beforeAll } from 'bun:test';
-import { ChallengeService } from './service';
-import { ChallengeRepository } from './repository';
+
+import type { Database } from '@codeduel-backend-crab/database';
+
 import type {
   ChallengeWithUser,
   ChallengeWithUserAndTestCases,
@@ -8,7 +9,8 @@ import type {
   UpdateChallenge,
   Challenge,
 } from './data';
-import type { Database } from '@codeduel-backend-crab/database';
+import { ChallengeRepository } from './repository';
+import { ChallengeService } from './service';
 
 describe('Route.Challenge.Service', () => {
   let repository: ChallengeRepository;

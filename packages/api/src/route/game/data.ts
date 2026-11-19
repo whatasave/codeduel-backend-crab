@@ -1,4 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
+
 import { Challenge, ChallengeWithUserAndTestCases } from '@/route/challenge/data';
 import { User } from '@/route/user/data';
 

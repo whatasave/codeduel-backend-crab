@@ -1,13 +1,15 @@
-import { Type } from '@sinclair/typebox';
-import { createCookie, parseCookies } from '@/utils/cookie';
-import type { AuthService } from '@/route/auth/service';
-import { randomUUIDv7 } from 'bun';
-import type { GitlabService } from './service';
-import { getIp } from '@/utils/ip';
+import type { Logger } from '@codeduel-backend-crab/logger';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated } from '@glass-cannon/typebox';
-import type { Logger } from '@codeduel-backend-crab/logger';
+import { Type } from '@sinclair/typebox';
+import { randomUUIDv7 } from 'bun';
+
 import { loggerDecorator } from '@/middleware/logger';
+import type { AuthService } from '@/route/auth/service';
+import { createCookie, parseCookies } from '@/utils/cookie';
+import { getIp } from '@/utils/ip';
+
+import type { GitlabService } from './service';
 
 export class GitlabController {
   constructor(

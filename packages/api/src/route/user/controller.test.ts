@@ -1,16 +1,19 @@
 import { afterEach, beforeAll, describe, expect, jest, spyOn, test } from 'bun:test';
-import type { User } from './data';
-import { UserService } from './service';
-import { UserController } from './controller';
-import type { UserRepository } from './repository';
+
+import { Logger } from '@codeduel-backend-crab/logger';
 import { Router } from '@glass-cannon/router';
+
+import type { Config as AuthConfig } from '@/route/auth/config';
 import { AuthMiddleware } from '@/route/auth/middleware';
-import { AuthService } from '@/route/auth/service';
 import type { AuthRepository } from '@/route/auth/repository';
+import { AuthService } from '@/route/auth/service';
 import type { PermissionRepository } from '@/route/permission/repository';
 import { PermissionService } from '@/route/permission/service';
-import type { Config as AuthConfig } from '@/route/auth/config';
-import { Logger } from '@codeduel-backend-crab/logger';
+
+import { UserController } from './controller';
+import type { User } from './data';
+import type { UserRepository } from './repository';
+import { UserService } from './service';
 
 describe('Route.User.Controller', () => {
   let service: UserService;

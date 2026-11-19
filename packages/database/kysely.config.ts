@@ -1,4 +1,5 @@
 import { defineConfig } from 'kysely-ctl';
+
 import { createDatabase, loadConfig } from './src';
 
 export default defineConfig({

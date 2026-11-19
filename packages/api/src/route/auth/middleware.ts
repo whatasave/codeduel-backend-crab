@@ -1,11 +1,13 @@
-import { middleware, type MiddlewareWrapper } from '@glass-cannon/router/middleware';
-import type { AuthService } from './service';
-import { json } from '@glass-cannon/server-bun';
-import type { SessionUser } from './data';
-import type { RouteContext } from '@glass-cannon/router';
-import { Permissions } from '@/route/permission/permissions';
 import type { Logger } from '@codeduel-backend-crab/logger';
-import { parseCookies } from '../../utils/cookie';
+import type { RouteContext } from '@glass-cannon/router';
+import { middleware, type MiddlewareWrapper } from '@glass-cannon/router/middleware';
+import { json } from '@glass-cannon/server-bun';
+
+import { Permissions } from '@/route/permission/permissions';
+import { parseCookies } from '@/utils/cookie';
+
+import type { SessionUser } from './data';
+import type { AuthService } from './service';
 
 export class AuthMiddleware {
   constructor(private readonly service: AuthService) {}

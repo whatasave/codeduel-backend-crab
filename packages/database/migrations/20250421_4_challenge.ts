@@ -1,6 +1,7 @@
 import { sql, type Kysely } from 'kysely';
-import { USER_TABLE_NAME } from './20250421_1_user.ts';
+
 import { updateTimestampTrigger } from './20250421_0_update_timestamp.ts';
+import { USER_TABLE_NAME } from './20250421_1_user.ts';
 
 export const CHALLENGE_TABLE_NAME = 'challenge';
 

@@ -5,6 +5,11 @@ import {
   type Database,
   type Select,
 } from '@codeduel-backend-crab/database';
+
+import { ChallengeRepository } from '@/route/challenge/repository';
+import type { User } from '@/route/user/data';
+import { UserRepository } from '@/route/user/repository';
+
 import type {
   CreateGame,
   Game,
@@ -13,9 +18,6 @@ import type {
   GameOfUser,
   GameWithUserData,
 } from './data';
-import type { User } from '@/route/user/data';
-import { UserRepository } from '@/route/user/repository';
-import { ChallengeRepository } from '@/route/challenge/repository';
 
 export class GameRepository {
   constructor(private readonly db: Database) {}

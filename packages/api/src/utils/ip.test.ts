@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+
 import { getIp } from './ip';
 
 describe('getIp', () => {

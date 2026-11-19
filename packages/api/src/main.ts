@@ -1,10 +1,11 @@
-import { RootController } from './route/controller';
-import { safeLoadConfig } from './config';
+import { Logger } from '@codeduel-backend-crab/logger';
 import { Router, routes } from '@glass-cannon/router';
 import { BunServer, text } from '@glass-cannon/server-bun';
-import { Logger } from '@codeduel-backend-crab/logger';
-import { setupDatabase } from './database';
+
+import { safeLoadConfig } from './config';
 import { setupCors } from './cors';
+import { setupDatabase } from './database';
+import { RootController } from './route/controller';
 import { setupTypebox } from './typebox';
 
 const { config, error } = safeLoadConfig();

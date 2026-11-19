@@ -1,30 +1,32 @@
 import type { Database } from '@codeduel-backend-crab/database';
+import type { Logger } from '@codeduel-backend-crab/logger';
+import { routes, type NodeBuilder } from '@glass-cannon/router';
+import { json, text } from '@glass-cannon/server-bun';
+import { openapi } from '@glass-cannon/typebox';
+
 import type { Config } from '@/config';
+import { errorHandler } from '@/middleware/errors';
+import { loggerDecorator, logRequests } from '@/middleware/logger';
+import { traceRequests } from '@/middleware/trace';
+
+import { AuthController } from './auth/controller';
+import { AuthMiddleware } from './auth/middleware';
+import { AuthRepository } from './auth/repository';
+import { AuthService } from './auth/service';
+import { ChallengeController } from './challenge/controller';
+import { ChallengeRepository } from './challenge/repository';
+import { ChallengeService } from './challenge/service';
+import { GameController } from './game/controller';
+import { GameRepository } from './game/repository';
+import { GameService } from './game/service';
 import { HealthController } from './health/controller';
 import { HealthService } from './health/service';
+import { PermissionRepository } from './permission/repository';
+import { PermissionService } from './permission/service';
 import { ScalarController } from './scalar/controller';
 import { UserController } from './user/controller';
 import { UserRepository } from './user/repository';
 import { UserService } from './user/service';
-import { ChallengeRepository } from './challenge/repository';
-import { ChallengeService } from './challenge/service';
-import { ChallengeController } from './challenge/controller';
-import { AuthRepository } from './auth/repository';
-import { AuthService } from './auth/service';
-import { AuthController } from './auth/controller';
-import { GameRepository } from './game/repository';
-import { GameService } from './game/service';
-import { GameController } from './game/controller';
-import { routes, type NodeBuilder } from '@glass-cannon/router';
-import { AuthMiddleware } from './auth/middleware';
-import { PermissionRepository } from './permission/repository';
-import { PermissionService } from './permission/service';
-import type { Logger } from '@codeduel-backend-crab/logger';
-import { traceRequests } from '@/middleware/trace';
-import { loggerDecorator, logRequests } from '@/middleware/logger';
-import { errorHandler } from '@/middleware/errors';
-import { openapi } from '@glass-cannon/typebox';
-import { json, text } from '@glass-cannon/server-bun';
 
 export class RootController {
   private readonly logger: Logger;

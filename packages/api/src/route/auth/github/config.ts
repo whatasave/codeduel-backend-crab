@@ -1,4 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
+
 import { CookieOptions } from '@/utils/cookie';
 
 export type Config = Static<typeof Config>;

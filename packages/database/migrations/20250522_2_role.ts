@@ -1,4 +1,5 @@
 import { sql, type Kysely } from 'kysely';
+
 import { updateTimestampTrigger } from './20250421_0_update_timestamp';
 
 export const ROLE_TABLE_NAME = 'role';

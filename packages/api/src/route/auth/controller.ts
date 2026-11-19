@@ -90,10 +90,20 @@ export class AuthController {
           return logout();
         }
 
-        const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken, logger);
+        const payload = await this.service.verifyRefreshToken(refreshToken, logger);
+        const { sub: userId, jti } = payload;
 
-        const session = await this.service.sessionByTokenId(jti);
-        if (!session) {
+        const now = Date.now();
+        const newJti = randomUUIDv7();
+        const rotation = await this.service.rotateRefreshToken(payload, newJti, now, logger);
+        if (rotation.status === 'reused') {
+          logger.warn('refresh.tokenReused', 'refresh token reused, session revoked', {
+            userId,
+            sessionId: rotation.sessionId,
+          });
+          return logout();
+        }
+        if (rotation.status === 'invalid') {
           logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
           return logout();
         }
@@ -109,13 +119,10 @@ export class AuthController {
         const newAccessToken = await this.service.accessToken(
           user,
           permissions.map((p) => p.id),
-          Date.now(),
+          now,
           logger
         );
-        const newJti = randomUUIDv7();
-        const newRefreshToken = await this.service.refreshToken(user, newJti, Date.now(), logger);
-
-        await this.service.updateSession(session.id, newJti, logger);
+        const newRefreshToken = await this.service.refreshToken(user, newJti, now, logger);
 
         logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
 

@@ -17,7 +17,7 @@ describe('Route.Auth.Service', () => {
   const config = {
     jwt: { issuer: 'issuer', audience: 'audience' },
     accessToken: { secret: 'access-token-secret', expiresIn: 3600 },
-    refreshToken: { secret: 'refresh-token-secret', expiresIn: 86400 },
+    refreshToken: { secret: 'refresh-token-secret', expiresIn: 86400, cleanupInterval: 3600 },
     userDefaultRole: 'user',
   } as Config;
 
@@ -196,15 +196,60 @@ describe('Route.Auth.Service', () => {
     expect(spyDeleteSessionTokenId).toHaveBeenCalledTimes(1);
   });
 
-  test('should update session', async () => {
-    const id = 1;
-    const jti = 'jti';
-    const spyUpdateSession = spyOn(repository, 'updateSession').mockResolvedValue();
+  test('should rotate refresh token', async () => {
+    const now = Date.parse('2025-05-12T18:00:00.000Z');
+    const exp = Math.floor(now / 1000) + 60;
+    const token = { iss: 'issuer', aud: 'audience', exp, jti: 'old-jti', sub: 1 };
+    const spyRotate = spyOn(repository, 'rotateRefreshToken').mockResolvedValue({
+      status: 'invalid',
+    });
 
-    await service.updateSession(id, jti);
+    const result = await service.rotateRefreshToken(token, 'new-jti', now);
 
-    expect(spyUpdateSession).toHaveBeenCalledWith(id, jti);
-    expect(spyUpdateSession).toHaveBeenCalledTimes(1);
+    expect(spyRotate).toHaveBeenCalledWith(
+      {
+        tokenId: 'old-jti',
+        expiresAt: '2025-05-12T18:01:00.000Z',
+        newTokenId: 'new-jti',
+        newExpiresAt: '2025-05-13T18:00:00.000Z',
+      },
+      undefined
+    );
+    expect(spyRotate).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ status: 'invalid' });
+  });
+
+  test('should compute refresh token expiration matching the exp claim', async () => {
+    const now = Date.now();
+    const token = await service.refreshToken({ id: 1 } as User, 'jti', now);
+    const { exp } = await service.verifyRefreshToken(token);
+
+    expect(service.refreshTokenExpiresAt(now)).toBe(new Date(exp * 1000).toISOString());
+  });
+
+  test('should delete expired tokens', async () => {
+    const now = Date.parse('2025-05-12T18:00:00.000Z');
+    const spyDeleteExpired = spyOn(repository, 'deleteExpiredTokens').mockResolvedValue({
+      sessions: 2,
+      usedTokens: 3,
+    });
+
+    const result = await service.deleteExpiredTokens(now);
+
+    expect(spyDeleteExpired).toHaveBeenCalledWith('2025-05-12T18:00:00.000Z');
+    expect(result).toEqual({ sessions: 2, usedTokens: 3 });
+  });
+
+  test('should schedule token cleanup and stop it', async () => {
+    const spyDeleteExpired = spyOn(repository, 'deleteExpiredTokens').mockResolvedValue({
+      sessions: 0,
+      usedTokens: 0,
+    });
+
+    const stop = service.scheduleTokenCleanup();
+    stop();
+
+    expect(spyDeleteExpired).toHaveBeenCalledTimes(1);
   });
 
   test('should get session by token id', async () => {
@@ -251,7 +296,10 @@ describe('Route.Auth.Service', () => {
 
     const result = await service.createSession(mockCreateAuthSession);
 
-    expect(spyCreateSession).toHaveBeenCalledWith(mockCreateAuthSession, undefined);
+    expect(spyCreateSession).toHaveBeenCalledWith(
+      { ...mockCreateAuthSession, expiresAt: expect.any(String) as string },
+      undefined
+    );
     expect(spyCreateSession).toHaveBeenCalledTimes(1);
     expect(result).toEqual(mockAuthSession);
   });

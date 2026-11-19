@@ -17,6 +17,8 @@ export const Config = Type.Object({
   refreshToken: Type.Object({
     secret: Type.String(),
     expiresIn: Type.Number(),
+    /** Seconds between two cleanups of expired refresh tokens. */
+    cleanupInterval: Type.Number({ minimum: 1, default: 3600 }),
     cookie: CookieOptions,
   }),
   userDefaultRole: Type.String(),

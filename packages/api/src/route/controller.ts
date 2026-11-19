@@ -92,6 +92,11 @@ export class RootController {
     this.gameController = new GameController(this.gameService, logger.group({ type: 'game' }));
   }
 
+  /** Starts the periodic cleanup of expired refresh tokens. Returns a function that stops it. */
+  startTokenCleanup(): () => void {
+    return this.authService.scheduleTokenCleanup(this.logger.group({ type: 'auth' }));
+  }
+
   setup(): NodeBuilder {
     const node = routes({
       prefix: '/v1',

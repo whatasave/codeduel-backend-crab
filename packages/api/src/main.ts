@@ -42,6 +42,7 @@ logger.info('config.loaded', 'configuration loaded', {
     userDefaultRole: config.auth.userDefaultRole,
     accessTokenExpiresIn: config.auth.accessToken.expiresIn,
     refreshTokenExpiresIn: config.auth.refreshToken.expiresIn,
+    refreshTokenCleanupInterval: config.auth.refreshToken.cleanupInterval,
   },
 });
 
@@ -63,14 +64,16 @@ const { database, closeDatabase } = setupDatabase(
   logger.group({ type: 'database' })
 );
 
+const controller = new RootController(database, logger, config);
+const stopTokenCleanup = controller.startTokenCleanup();
+
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
     logger.info('process.shutdown', `received ${signal}, shutting down`, { signal });
+    stopTokenCleanup();
     void closeDatabase().finally(() => process.exit(0));
   });
 }
-
-const controller = new RootController(database, logger, config);
 
 const appRoutes = routes()
   .apply(setupCors(config.cors))

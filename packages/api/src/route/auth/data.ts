@@ -64,6 +64,7 @@ export const AuthSession = Type.Object({
   ip: Type.Optional(Type.String()),
   userAgent: Type.Optional(Type.String()),
   provider: Type.String(),
+  expiresAt: Type.Optional(Type.String({ format: 'date-time' })),
   createdAt: Type.String({ format: 'date-time' }),
   updatedAt: Type.String({ format: 'date-time' }),
 });
@@ -75,6 +76,32 @@ export const CreateAuthSession = Type.Object({
   ip: AuthSession.properties.ip,
   userAgent: AuthSession.properties.userAgent,
   provider: AuthSession.properties.provider,
+  expiresAt: AuthSession.properties.expiresAt,
+});
+
+export type RotateRefreshToken = Static<typeof RotateRefreshToken>;
+export const RotateRefreshToken = Type.Object({
+  tokenId: Type.String(),
+  expiresAt: Type.String({ format: 'date-time' }),
+  newTokenId: Type.String(),
+  newExpiresAt: Type.String({ format: 'date-time' }),
+});
+
+export type RefreshTokenRotation = Static<typeof RefreshTokenRotation>;
+export const RefreshTokenRotation = Type.Union([
+  Type.Object({ status: Type.Literal('rotated'), session: AuthSession }),
+  Type.Object({
+    status: Type.Literal('reused'),
+    sessionId: AuthSession.properties.id,
+    userId: AuthSession.properties.userId,
+  }),
+  Type.Object({ status: Type.Literal('invalid') }),
+]);
+
+export type ExpiredTokensCleanup = Static<typeof ExpiredTokensCleanup>;
+export const ExpiredTokensCleanup = Type.Object({
+  sessions: Type.Number(),
+  usedTokens: Type.Number(),
 });
 
 export type SessionUser = Static<typeof SessionUser>;

@@ -67,6 +67,7 @@ export function loadConfig(): Config {
       refreshToken: {
         expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
         secret: env.REFRESH_TOKEN_SECRET,
+        cleanupInterval: env.REFRESH_TOKEN_CLEANUP_INTERVAL,
         cookie: {
           name: env.REFRESH_TOKEN_COOKIE_NAME,
           domain: env.REFRESH_TOKEN_COOKIE_DOMAIN,

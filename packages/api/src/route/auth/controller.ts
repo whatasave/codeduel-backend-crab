@@ -10,6 +10,7 @@ import type { UserService } from '@/route/user/service';
 import { createCookie, parseCookies, removeCookie } from '@/utils/cookie';
 
 import type { Config } from './config';
+import type { JwtRefreshToken } from './data';
 import { GithubController } from './github/controller';
 import { GithubService } from './github/service';
 import { GitlabController } from './gitlab/controller';
@@ -95,7 +96,13 @@ export class AuthController {
           return logout();
         }
 
-        const { sub: userId, jti } = await this.service.verifyRefreshToken(refreshToken, logger);
+        let payload: JwtRefreshToken;
+        try {
+          payload = await this.service.verifyRefreshToken(refreshToken, logger);
+        } catch {
+          return logout();
+        }
+        const { sub: userId, jti } = payload;
 
         const session = await this.service.sessionByTokenId(jti);
         if (!session) {

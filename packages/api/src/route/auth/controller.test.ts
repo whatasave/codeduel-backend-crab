@@ -171,6 +171,44 @@ describe('Route.Auth.Controller', () => {
         `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
       );
     });
+
+    test('should logout user due to an invalid refresh token', async () => {
+      spyOn(service, 'verifyRefreshToken').mockRejectedValue(new Error('invalid signature'));
+
+      const response = await router.handle(
+        new Request('http://localhost/refresh', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        })
+      );
+
+      expect(spySessionByTokenId).not.toHaveBeenCalled();
+      expect(spyAccessToken).not.toHaveBeenCalled();
+
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(
+        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+      );
+    });
+
+    test('should logout user when the session does not exist', async () => {
+      spyOn(service, 'sessionByTokenId').mockResolvedValue(undefined);
+
+      const response = await router.handle(
+        new Request('http://localhost/refresh', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        })
+      );
+
+      expect(spyAccessToken).not.toHaveBeenCalled();
+      expect(spyUpdateSession).not.toHaveBeenCalled();
+
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(
+        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+      );
+    });
   });
 
   describe('POST /logout', () => {

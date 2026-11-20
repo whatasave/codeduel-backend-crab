@@ -79,6 +79,19 @@ export function loadConfig(): Config {
           sameSite: env.REFRESH_TOKEN_COOKIE_SAME_SITE,
         },
       },
+      csrfToken: {
+        secret: env.CSRF_TOKEN_SECRET,
+        headerName: env.CSRF_TOKEN_HEADER_NAME,
+        cookie: {
+          name: env.CSRF_TOKEN_COOKIE_NAME,
+          domain: env.CSRF_TOKEN_COOKIE_DOMAIN,
+          path: env.CSRF_TOKEN_COOKIE_PATH ?? '/',
+          maxAge: env.CSRF_TOKEN_COOKIE_MAX_AGE,
+          httpOnly: false,
+          secure: env.CSRF_TOKEN_COOKIE_SECURE,
+          sameSite: env.CSRF_TOKEN_COOKIE_SAME_SITE,
+        },
+      },
       userDefaultRole: env.USER_DEFAULT_ROLE,
       github: {
         clientId: env.GITHUB_CLIENT_ID,
@@ -115,8 +128,9 @@ export function loadConfig(): Config {
     },
   };
 
+  let parsed: Config;
   try {
-    return Value.Parse(Config, config);
+    parsed = Value.Parse(Config, config);
   } catch (error) {
     if (error instanceof AssertError) {
       const errors = Array.from(error.Errors())
@@ -126,6 +140,8 @@ export function loadConfig(): Config {
     }
     throw error;
   }
+
+  return parsed;
 }
 
 export function safeLoadConfig():

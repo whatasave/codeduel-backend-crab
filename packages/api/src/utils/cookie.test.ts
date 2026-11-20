@@ -134,77 +134,6 @@ describe('cookieUtils', () => {
     });
   });
 
-  describe('parseCookie (internal logic, tested as if exported)', () => {
-    const parseCookieDirect = (cookieString: string): RequestCookie => {
-      const cookieTrimmed = cookieString.trim();
-      if (!cookieTrimmed) throw new Error('Invalid cookie string');
-      const parts = cookieTrimmed.split('=');
-      const key = parts[0]?.trim();
-      const value = parts.slice(1).join('=').trim();
-
-      if (!key) throw new Error('Invalid cookie string');
-
-      return {
-        name: decodeURIComponent(key),
-        value: parts.length > 1 ? decodeURIComponent(value) : undefined,
-      };
-    };
-
-    it('should parse a valid cookie string "name=value"', () => {
-      expect(parseCookieDirect('myKey=myValue')).toEqual({ name: 'myKey', value: 'myValue' });
-    });
-
-    it('should parse a cookie string with URI encoded parts', () => {
-      const encodedKey = encodeURIComponent('k e y');
-      const encodedValue = encodeURIComponent('v a l u e');
-      expect(parseCookieDirect(`${encodedKey}=${encodedValue}`)).toEqual({
-        name: 'k e y',
-        value: 'v a l u e',
-      });
-    });
-
-    it('should parse a cookie string "name=" (no value)', () => {
-      expect(parseCookieDirect('myKey=')).toEqual({ name: 'myKey', value: '' });
-    });
-
-    it('should parse a cookie string with only a name (no equals sign)', () => {
-      expect(parseCookieDirect('myKeyOnly')).toEqual({ name: 'myKeyOnly', value: undefined });
-    });
-
-    it('should trim whitespace from cookie string before parsing', () => {
-      expect(parseCookieDirect('  spacedKey=spacedValue  ')).toEqual({
-        name: 'spacedKey',
-        value: 'spacedValue',
-      });
-    });
-
-    it('should handle multiple equals signs in value correctly (based on current implementation)', () => {
-      const cookieString = 'name=value=othervalue';
-      const cookieTrimmed = cookieString.trim();
-      const [keyFromFile, valueFromFile] = cookieTrimmed.split('=').map((p) => p.trim());
-
-      expect(keyFromFile).toBe('name');
-      expect(valueFromFile).toBe('value');
-      if (!keyFromFile) throw new Error('Invalid cookie string');
-      expect({
-        name: decodeURIComponent(keyFromFile),
-        value: valueFromFile ? decodeURIComponent(valueFromFile) : undefined,
-      }).toEqual({ name: 'name', value: 'value' });
-    });
-
-    it('should throw error for empty string', () => {
-      expect(() => parseCookieDirect('')).toThrow('Invalid cookie string');
-    });
-
-    it('should throw error for string with only spaces', () => {
-      expect(() => parseCookieDirect('   ')).toThrow('Invalid cookie string');
-    });
-
-    it('should throw error for cookie string like "=value" (no key)', () => {
-      expect(() => parseCookieDirect('=value')).toThrow('Invalid cookie string');
-    });
-  });
-
   describe('parseCookies', () => {
     it('should return an empty object for null input', () => {
       expect(parseCookies(null)).toEqual({});
@@ -273,24 +202,24 @@ describe('cookieUtils', () => {
       });
     });
 
-    it('should throw an error if a part of the cookie string is malformed (e.g. starts with =)', () => {
-      expect(() => parseCookies('name1=value1;=badcookiepart;name3=value3')).toThrow(
-        'Invalid cookie string'
-      );
+    it('should skip empty segments and parts with no name', () => {
+      expect(parseCookies('name1=value1;=badcookiepart; ;name3=value3;')).toEqual({
+        name1: 'value1',
+        name3: 'value3',
+      });
     });
 
-    it('should throw an error if a cookie part is empty after trim (e.g. ";;") but was not empty before trim (e.g. "; ;")', () => {
-      expect(() => parseCookies('name1=value1; ;name3=value3')).toThrow('Invalid cookie string');
+    it('should preserve raw values with invalid percent encoding', () => {
+      expect(parseCookies('other=%E0%A4%A; session=value')).toEqual({
+        other: '%E0%A4%A',
+        session: 'value',
+      });
     });
 
-    it('should skip empty segments produced by split (e.g. trailing semicolon)', () => {
-      expect(() => parseCookies('name1=value1;')).toThrow('Invalid cookie string');
-    });
-
-    it('should handle complex string with multiple equals signs in values', () => {
-      expect(parseCookies('user=name=foo;data=value=bar')).toEqual({
-        user: 'name',
-        data: 'value',
+    it('should preserve equals signs in values', () => {
+      expect(parseCookies('user=name=foo;data=value==')).toEqual({
+        user: 'name=foo',
+        data: 'value==',
       });
     });
   });

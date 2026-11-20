@@ -26,47 +26,55 @@ export class AuthRepository {
     roleId: Role['id'],
     logger?: Logger
   ): Promise<CreateContext> {
-    const authUser = await this.database.transaction().execute(async (tx) => {
-      const userRepository = new UserRepository(tx);
-      const permissionsRepository = new PermissionRepository(tx);
+    return await this.database
+      .transaction()
+      .execute((tx) => this.createInTransaction(tx, provider, user, roleId, logger));
+  }
 
-      const existingUser = await tx
-        .selectFrom('user')
-        .selectAll()
-        .where('username', '=', user.username)
-        .executeTakeFirst();
-      if (existingUser) throw new UserNameAlreadyExistsError(user.username);
+  private async createInTransaction(
+    tx: Database,
+    provider: Provider,
+    user: CreateUser,
+    roleId: Role['id'],
+    logger?: Logger
+  ): Promise<CreateContext> {
+    const userRepository = new UserRepository(tx);
+    const permissionsRepository = new PermissionRepository(tx);
 
-      logger?.debug('create.persisting', 'persisting new user and auth provider', {
-        provider: provider.name,
-        username: user.username,
-      });
-      const newUser = await userRepository.create(user);
+    const existingUser = await tx
+      .selectFrom('user')
+      .selectAll()
+      .where('username', '=', user.username)
+      .executeTakeFirst();
+    if (existingUser) throw new UserNameAlreadyExistsError(user.username);
 
-      const newAuth = await tx
-        .insertInto('auth')
-        .values({
-          user_id: newUser.id,
-          provider: provider.name,
-          provider_id: provider.userId,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      await permissionsRepository.assignRole(newUser.id, roleId);
-      const permissions = await permissionsRepository.rolePermissions(roleId);
-
-      logger?.info('create.success', 'user and auth provider persisted successfully', {
-        userId: newUser.id,
-      });
-      return {
-        auth: this.selectToAuth(newAuth),
-        user: newUser,
-        permissions,
-      };
+    logger?.debug('create.persisting', 'persisting new user and auth provider', {
+      provider: provider.name,
+      username: user.username,
     });
+    const newUser = await userRepository.create(user);
 
-    return authUser;
+    const newAuth = await tx
+      .insertInto('auth')
+      .values({
+        user_id: newUser.id,
+        provider: provider.name,
+        provider_id: provider.userId,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await permissionsRepository.assignRole(newUser.id, roleId);
+    const permissions = await permissionsRepository.rolePermissions(roleId);
+
+    logger?.info('create.success', 'user and auth provider persisted successfully', {
+      userId: newUser.id,
+    });
+    return {
+      auth: this.selectToAuth(newAuth),
+      user: newUser,
+      permissions,
+    };
   }
 
   async createIfNotExists(
@@ -107,7 +115,7 @@ export class AuthRepository {
         };
       }
 
-      return await this.create(provider, user, roleId, logger);
+      return await this.createInTransaction(tx, provider, user, roleId, logger);
     });
 
     return authUser;
@@ -209,14 +217,15 @@ export class AuthRepository {
   /** Removes refresh tokens expired before `now` (ISO date). */
   async deleteExpiredTokens(now: string): Promise<ExpiredTokensCleanup> {
     return await this.database.transaction().execute(async (tx) => {
-      const usedTokens = await tx
-        .deleteFrom('auth_used_refresh_token')
-        .where('expires_at', '<=', now)
-        .executeTakeFirst();
-
+      // Reuse detection locks the session before deleting its used tokens.
       const sessions = await tx
         .updateTable('auth_session')
         .set({ token_id: null, expires_at: null })
+        .where('expires_at', '<=', now)
+        .executeTakeFirst();
+
+      const usedTokens = await tx
+        .deleteFrom('auth_used_refresh_token')
         .where('expires_at', '<=', now)
         .executeTakeFirst();
 
@@ -232,11 +241,34 @@ export class AuthRepository {
   }
 
   async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
-    await this.database
-      .updateTable('auth_session')
-      .set({ token_id: null, expires_at: null })
-      .where('token_id', '=', tokenId)
-      .executeTakeFirstOrThrow();
+    await this.database.transaction().execute(async (tx) => {
+      const clearToken = tx
+        .updateTable('auth_session')
+        .set({ token_id: null, expires_at: null })
+        .returning('id');
+      const current = await clearToken.where('token_id', '=', tokenId).executeTakeFirst();
+
+      // A concurrent refresh can replace the token while logout waits on the session row.
+      const session =
+        current ??
+        (await clearToken
+          .where(
+            'id',
+            '=',
+            tx
+              .selectFrom('auth_used_refresh_token')
+              .select('session_id')
+              .where('token_id', '=', tokenId)
+          )
+          .executeTakeFirst());
+
+      if (session) {
+        await tx
+          .deleteFrom('auth_used_refresh_token')
+          .where('session_id', '=', session.id)
+          .execute();
+      }
+    });
   }
 
   private selectToSession(authSession: Select<'auth_session'>): AuthSession {

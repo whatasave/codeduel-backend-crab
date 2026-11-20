@@ -23,8 +23,43 @@ export const Config = Type.Object({
     cleanupInterval: Type.Number({ minimum: 1, default: 3600 }),
     cookie: CookieOptions,
   }),
+  csrfToken: Type.Object({
+    secret: Type.String({ minLength: 1 }),
+    headerName: Type.String({ minLength: 1, default: 'X-CSRF-Token' }),
+    cookie: CookieOptions,
+  }),
   userDefaultRole: Type.String(),
 
   github: GithubConfig,
   gitlab: GitlabConfig,
 });
+
+export function validateCookies(config: Config): string[] {
+  const errors: string[] = [];
+
+  if (config.accessToken.cookie.httpOnly !== true) {
+    errors.push('accessToken.cookie: must be HttpOnly');
+  }
+  if (config.refreshToken.cookie.httpOnly !== true) {
+    errors.push('refreshToken.cookie: must be HttpOnly');
+  }
+  if (config.csrfToken.cookie.httpOnly === true) {
+    errors.push('csrfToken.cookie: must not be HttpOnly, the frontend has to read it');
+  }
+  if (config.csrfToken.cookie.path !== '/') {
+    errors.push('csrfToken.cookie: path must be "/" so the frontend can read it');
+  }
+
+  const cookies = {
+    accessToken: config.accessToken.cookie,
+    refreshToken: config.refreshToken.cookie,
+    csrfToken: config.csrfToken.cookie,
+  };
+  for (const [name, cookie] of Object.entries(cookies)) {
+    if (cookie.sameSite === 'None' && cookie.secure !== true) {
+      errors.push(`${name}.cookie: SameSite=None requires Secure`);
+    }
+  }
+
+  return errors;
+}

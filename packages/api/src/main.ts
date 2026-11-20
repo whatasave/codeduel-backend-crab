@@ -5,6 +5,7 @@ import { BunServer, text } from '@glass-cannon/server-bun';
 import { safeLoadConfig } from './config';
 import { setupCors } from './cors';
 import { setupDatabase } from './database';
+import { validateCookies } from './route/auth/config';
 import { RootController } from './route/controller';
 import { setupSignals } from './signal';
 import { setupTypebox } from './typebox';
@@ -21,6 +22,10 @@ if (!config) {
 }
 
 const logger = Logger.create(config.logger);
+
+for (const problem of validateCookies(config.auth)) {
+  logger.warn('config.cookie.unsafe', 'unsafe cookie configuration', { problem });
+}
 
 logger.info('config.loaded', 'configuration loaded', {
   host: config.host,

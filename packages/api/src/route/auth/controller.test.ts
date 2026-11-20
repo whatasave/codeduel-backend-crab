@@ -1,4 +1,14 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, jest, spyOn, test } from 'bun:test';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  spyOn,
+  test,
+  type Mock,
+} from 'bun:test';
 
 import { Logger } from '@codeduel-backend-crab/logger';
 import { Router } from '@glass-cannon/router';
@@ -28,7 +38,49 @@ describe('Route.Auth.Controller', () => {
     refreshToken: {
       cookie: { name: 'refresh-token' },
     },
+    csrfToken: {
+      secret: 'csrf-secret',
+      headerName: 'X-CSRF-Token',
+      cookie: { name: 'csrf-token' },
+    },
   } as Config;
+  const clearedCookies = [
+    `${config.accessToken.cookie.name}=; Max-Age=-1`,
+    `${config.refreshToken.cookie.name}=; Max-Age=-1`,
+    `${config.csrfToken.cookie.name}=; Max-Age=-1`,
+  ].join(', ');
+  const invalidCsrfBody = { error: 'Invalid or missing CSRF token', code: 'INVALID_CSRF_TOKEN' };
+  const mockAccessToken = 'access-token';
+  const mockRefreshToken = 'refresh-token';
+  const mockJti = 'jti1';
+
+  function authRequest(
+    path: string,
+    options: { refreshToken?: string; csrfCookie?: string; csrfHeader?: string } = {}
+  ): Request {
+    const cookies = [`${config.accessToken.cookie.name}=${mockAccessToken}`];
+    if (options.refreshToken !== undefined) {
+      cookies.push(`${config.refreshToken.cookie.name}=${options.refreshToken}`);
+    }
+    if (options.csrfCookie !== undefined) {
+      cookies.push(`${config.csrfToken.cookie.name}=${options.csrfCookie}`);
+    }
+    const headers = new Headers({ cookie: cookies.join('; ') });
+    if (options.csrfHeader !== undefined) {
+      headers.set(config.csrfToken.headerName, options.csrfHeader);
+    }
+    return new Request(`http://localhost${path}`, { method: 'POST', headers });
+  }
+
+  /** Request with refresh token and a valid csrf token for the mocked session. */
+  function validRequest(path: string): Request {
+    const csrfToken = service.csrfToken(mockJti);
+    return authRequest(path, {
+      refreshToken: mockRefreshToken,
+      csrfCookie: csrfToken,
+      csrfHeader: csrfToken,
+    });
+  }
 
   beforeAll(() => {
     const repository = {} as AuthRepository;
@@ -60,12 +112,6 @@ describe('Route.Auth.Controller', () => {
 
   describe('POST /refresh', () => {
     const mockDate = new Date('2023-10-01T12:00:00Z').toISOString();
-    const mockAccessToken = 'access-token';
-    const mockRefreshToken = 'refresh-token';
-    const mockHeaders = {
-      cookie: `${config.accessToken.cookie.name}=${mockAccessToken}; ${config.refreshToken.cookie.name}=${mockRefreshToken}`,
-    };
-    const mockJti1 = 'jti1';
     const mockUser: User = {
       id: 1,
       username: 'username',
@@ -75,7 +121,7 @@ describe('Route.Auth.Controller', () => {
     const mockAuthSession: AuthSession = {
       id: 1,
       userId: mockUser.id,
-      tokenId: mockJti1,
+      tokenId: mockJti,
       provider: 'github',
       createdAt: mockDate,
       updatedAt: mockDate,
@@ -84,17 +130,17 @@ describe('Route.Auth.Controller', () => {
       iss: 'codeduel.it',
       aud: 'codeduel.it',
       exp: 1234567890,
-      jti: mockJti1,
+      jti: mockJti,
       sub: mockUser.id,
     };
 
-    let spyVerifyRefreshToken: ReturnType<typeof spyOn>;
-    let spySessionByTokenId: ReturnType<typeof spyOn>;
-    let spyUserById: ReturnType<typeof spyOn>;
-    let spyAccessToken: ReturnType<typeof spyOn>;
-    let spyRefreshToken: ReturnType<typeof spyOn>;
-    let spyUpdateSession: ReturnType<typeof spyOn>;
-    let spyByUserId: ReturnType<typeof spyOn>;
+    let spyVerifyRefreshToken: Mock<AuthService['verifyRefreshToken']>;
+    let spySessionByTokenId: Mock<AuthService['sessionByTokenId']>;
+    let spyUserById: Mock<UserService['byId']>;
+    let spyAccessToken: Mock<AuthService['accessToken']>;
+    let spyRefreshToken: Mock<AuthService['refreshToken']>;
+    let spyUpdateSession: Mock<AuthService['updateSession']>;
+    let spyByUserId: Mock<PermissionService['byUserId']>;
 
     beforeEach(() => {
       spyVerifyRefreshToken = spyOn(service, 'verifyRefreshToken').mockResolvedValue(
@@ -108,13 +154,8 @@ describe('Route.Auth.Controller', () => {
       spyByUserId = spyOn(permissionService, 'byUserId').mockResolvedValue([]);
     });
 
-    test('should refresh access and refresh token', async () => {
-      const response = await router.handle(
-        new Request('http://localhost/refresh', {
-          method: 'POST',
-          headers: new Headers(mockHeaders),
-        })
-      );
+    test('should refresh access, refresh and csrf token', async () => {
+      const response = await router.handle(validRequest('/refresh'));
 
       expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken, expect.any(Object));
       expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
@@ -125,89 +166,135 @@ describe('Route.Auth.Controller', () => {
       expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub, expect.any(Object));
       expect(spyUserById).toHaveBeenCalledTimes(1);
 
+      expect(spyByUserId).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
+      expect(spyByUserId).toHaveBeenCalledTimes(1);
+
+      const newJti = spyUpdateSession.mock.calls[0]?.[1] ?? '';
+      expect(newJti).not.toEqual(mockJti);
+      expect(spyUpdateSession).toHaveBeenCalledWith(mockAuthSession.id, newJti, expect.any(Object));
+      expect(spyUpdateSession).toHaveBeenCalledTimes(1);
+
+      // Access and refresh token carry the same new session id the csrf token is bound to.
       expect(spyAccessToken).toHaveBeenCalledWith(
         mockUser,
         [],
+        newJti,
         expect.any(Number),
         expect.any(Object)
       );
       expect(spyAccessToken).toHaveBeenCalledTimes(1);
-
       expect(spyRefreshToken).toHaveBeenCalledWith(
         mockUser,
-        expect.any(String),
+        newJti,
         expect.any(Number),
         expect.any(Object)
       );
       expect(spyRefreshToken).toHaveBeenCalledTimes(1);
 
-      expect(spyUpdateSession).toHaveBeenCalledWith(
-        mockAuthSession.id,
-        expect.any(String),
-        expect.any(Object)
-      );
-      expect(spyUpdateSession).toHaveBeenCalledTimes(1);
-
-      expect(spyByUserId).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
-      expect(spyByUserId).toHaveBeenCalledTimes(1);
-
       expect(response.status).toEqual(204);
       expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
+        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}, ${config.csrfToken.cookie.name}=${service.csrfToken(newJti)}`
       );
     });
 
-    test('should logout user due to a failed refresh token', async () => {
+    test('should reject without csrf token before checking the refresh token', async () => {
+      const response = await router.handle(authRequest('/refresh'));
+
+      expect(response.status).toEqual(403);
+      expect(await response.json()).toEqual(invalidCsrfBody);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
+    });
+
+    test('should reject without csrf header', async () => {
       const response = await router.handle(
-        new Request('http://localhost/refresh', {
-          method: 'POST',
-          headers: new Headers({}),
+        authRequest('/refresh', {
+          refreshToken: mockRefreshToken,
+          csrfCookie: service.csrfToken(mockJti),
         })
       );
 
-      expect(response.status).toEqual(204);
+      expect(response.status).toEqual(403);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
+      expect(spyUpdateSession).not.toHaveBeenCalled();
+    });
 
-      expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+    test('should reject without csrf cookie', async () => {
+      const response = await router.handle(
+        authRequest('/refresh', {
+          refreshToken: mockRefreshToken,
+          csrfHeader: service.csrfToken(mockJti),
+        })
       );
+
+      expect(response.status).toEqual(403);
+      expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
+    });
+
+    test('should reject when csrf header and cookie do not match', async () => {
+      const response = await router.handle(
+        authRequest('/refresh', {
+          refreshToken: mockRefreshToken,
+          csrfCookie: service.csrfToken(mockJti),
+          csrfHeader: 'other-token',
+        })
+      );
+
+      expect(response.status).toEqual(403);
+      expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
+    });
+
+    test('should reject a csrf token bound to another session', async () => {
+      const foreignToken = service.csrfToken('another-session');
+      const response = await router.handle(
+        authRequest('/refresh', {
+          refreshToken: mockRefreshToken,
+          csrfCookie: foreignToken,
+          csrfHeader: foreignToken,
+        })
+      );
+
+      expect(response.status).toEqual(403);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
+      expect(spySessionByTokenId).not.toHaveBeenCalled();
+      expect(spyUpdateSession).not.toHaveBeenCalled();
+    });
+
+    test('should logout user due to a missing refresh token', async () => {
+      const csrfToken = service.csrfToken(mockJti);
+      const response = await router.handle(
+        authRequest('/refresh', { csrfCookie: csrfToken, csrfHeader: csrfToken })
+      );
+
+      expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
     });
 
     test('should logout user due to an invalid refresh token', async () => {
       spyOn(service, 'verifyRefreshToken').mockRejectedValue(new Error('invalid signature'));
 
-      const response = await router.handle(
-        new Request('http://localhost/refresh', {
-          method: 'POST',
-          headers: new Headers(mockHeaders),
-        })
-      );
+      const response = await router.handle(validRequest('/refresh'));
 
       expect(spySessionByTokenId).not.toHaveBeenCalled();
       expect(spyAccessToken).not.toHaveBeenCalled();
 
       expect(response.status).toEqual(204);
-      expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
-      );
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
     });
 
     test('should logout user when the session does not exist', async () => {
       spyOn(service, 'sessionByTokenId').mockResolvedValue(undefined);
 
-      const response = await router.handle(
-        new Request('http://localhost/refresh', {
-          method: 'POST',
-          headers: new Headers(mockHeaders),
-        })
-      );
+      const response = await router.handle(validRequest('/refresh'));
 
       expect(spyAccessToken).not.toHaveBeenCalled();
       expect(spyUpdateSession).not.toHaveBeenCalled();
 
       expect(response.status).toEqual(204);
-      expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
-      );
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
     });
   });
 
@@ -216,12 +303,12 @@ describe('Route.Auth.Controller', () => {
       iss: 'codeduel.it',
       aud: 'codeduel.it',
       exp: 1234567890,
-      jti: 'refresh-token-id',
+      jti: mockJti,
       sub: 1,
     };
 
-    let spyVerifyRefreshToken: ReturnType<typeof spyOn>;
-    let spyDeleteSessionTokenId: ReturnType<typeof spyOn>;
+    let spyVerifyRefreshToken: Mock<AuthService['verifyRefreshToken']>;
+    let spyDeleteSessionTokenId: Mock<AuthService['deleteSessionTokenId']>;
 
     beforeEach(() => {
       spyVerifyRefreshToken = spyOn(service, 'verifyRefreshToken').mockResolvedValue(
@@ -230,38 +317,8 @@ describe('Route.Auth.Controller', () => {
       spyDeleteSessionTokenId = spyOn(service, 'deleteSessionTokenId').mockResolvedValue();
     });
 
-    test('should log the user out', async () => {
-      const mockAccessToken = 'access-token';
-      const mockRefreshToken = 'refresh-token';
-      const mockHeaders = {
-        cookie: `${config.accessToken.cookie.name}=${mockAccessToken}; ${config.refreshToken.cookie.name}=${mockRefreshToken}`,
-      };
-      const response = await router.handle(
-        new Request('http://localhost/logout', {
-          method: 'POST',
-          headers: new Headers(mockHeaders),
-        })
-      );
-
-      expect(response.status).toEqual(204);
-      expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
-      );
-    });
-
-    test('should remove the refresh token from session', async () => {
-      const mockAccessToken = 'access-token';
-      const mockRefreshToken = 'refresh-token';
-      const mockHeaders = {
-        cookie: `${config.accessToken.cookie.name}=${mockAccessToken}; ${config.refreshToken.cookie.name}=${mockRefreshToken}`,
-      };
-
-      const response = await router.handle(
-        new Request('http://localhost/logout', {
-          method: 'POST',
-          headers: new Headers(mockHeaders),
-        })
-      );
+    test('should log the user out and remove the session', async () => {
+      const response = await router.handle(validRequest('/logout'));
 
       expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken, expect.any(Object));
       expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
@@ -273,10 +330,44 @@ describe('Route.Auth.Controller', () => {
       expect(spyDeleteSessionTokenId).toHaveBeenCalledTimes(1);
 
       expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
+    });
 
-      expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+    test('should clear cookies when the refresh token is invalid', async () => {
+      spyOn(service, 'verifyRefreshToken').mockRejectedValue(new Error('jwt expired'));
+
+      const response = await router.handle(validRequest('/logout'));
+
+      expect(spyDeleteSessionTokenId).not.toHaveBeenCalled();
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
+    });
+
+    test('should reject a cross-site logout without csrf token', async () => {
+      const response = await router.handle(
+        authRequest('/logout', { refreshToken: mockRefreshToken })
       );
+
+      expect(response.status).toEqual(403);
+      expect(await response.json()).toEqual(invalidCsrfBody);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
+      expect(spyDeleteSessionTokenId).not.toHaveBeenCalled();
+    });
+
+    test('should reject a csrf token bound to another session', async () => {
+      const foreignToken = service.csrfToken('another-session');
+      const response = await router.handle(
+        authRequest('/logout', {
+          refreshToken: mockRefreshToken,
+          csrfCookie: foreignToken,
+          csrfHeader: foreignToken,
+        })
+      );
+
+      expect(response.status).toEqual(403);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(spyDeleteSessionTokenId).not.toHaveBeenCalled();
     });
   });
 });

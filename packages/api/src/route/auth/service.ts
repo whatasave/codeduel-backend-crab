@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
 import type { Logger } from '@codeduel-backend-crab/logger';
 import { randomUUIDv7 } from 'bun';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
@@ -5,7 +7,7 @@ import jwt, { type JwtPayload } from 'jsonwebtoken';
 import type { Role } from '@/route/permission/data';
 import type { PermissionService } from '@/route/permission/service';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '@/route/user/data';
-import type { CookieOptions } from '@/utils/cookie';
+import { createCookie, removeCookie, type CookieOptions, type Cookies } from '@/utils/cookie';
 
 import type { Config } from './config';
 import type { CreateContext, SessionUser } from './data';
@@ -35,6 +37,66 @@ export class AuthService {
 
   get refreshTokenCookieOptions(): CookieOptions {
     return this.config.refreshToken.cookie;
+  }
+
+  get csrfTokenCookieOptions(): CookieOptions {
+    // The frontend must be able to read this cookie to send it back in the header.
+    return { ...this.config.csrfToken.cookie, httpOnly: false };
+  }
+
+  get csrfTokenHeaderName(): string {
+    return this.config.csrfToken.headerName;
+  }
+
+  /**
+   * CSRF token bound to the session id (the refresh token jti, also carried by the access
+   * token as `sid`): it changes on every refresh and a token planted by a third party
+   * cannot match the victim's session.
+   */
+  csrfToken(sessionId: string): string {
+    return createHmac('sha256', this.config.csrfToken.secret).update(sessionId).digest('base64url');
+  }
+
+  /**
+   * Double-submit check: returns the submitted token only when the header and the cookie
+   * are both present and equal.
+   */
+  submittedCsrfToken(headers: Headers, cookies: Cookies): string | undefined {
+    const headerToken = headers.get(this.csrfTokenHeaderName);
+    const cookieToken = cookies[this.csrfTokenCookieOptions.name];
+    if (!headerToken || !cookieToken) return undefined;
+    if (!safeEqual(headerToken, cookieToken)) return undefined;
+    return headerToken;
+  }
+
+  isCsrfTokenBound(sessionId: string, token: string): boolean {
+    return safeEqual(token, this.csrfToken(sessionId));
+  }
+
+  /** Full check: double-submit plus binding to the given session. */
+  verifyCsrfRequest(headers: Headers, cookies: Cookies, sessionId: string): boolean {
+    const token = this.submittedCsrfToken(headers, cookies);
+    return token !== undefined && this.isCsrfTokenBound(sessionId, token);
+  }
+
+  sessionCookies(tokens: {
+    accessToken: string;
+    refreshToken: string;
+    sessionId: string;
+  }): string[] {
+    return [
+      createCookie({ ...this.accessTokenCookieOptions, value: tokens.accessToken }),
+      createCookie({ ...this.refreshTokenCookieOptions, value: tokens.refreshToken }),
+      createCookie({ ...this.csrfTokenCookieOptions, value: this.csrfToken(tokens.sessionId) }),
+    ];
+  }
+
+  clearSessionCookies(): string[] {
+    return [
+      removeCookie(this.accessTokenCookieOptions),
+      removeCookie(this.refreshTokenCookieOptions),
+      removeCookie(this.csrfTokenCookieOptions),
+    ];
   }
 
   async createIfNotExists(
@@ -71,6 +133,7 @@ export class AuthService {
   accessToken(
     user: User,
     permissions: number[],
+    sessionId: string,
     now: number = Date.now(),
     logger?: Logger
   ): Promise<string> {
@@ -84,6 +147,7 @@ export class AuthService {
 
           username: user.username,
           permissions,
+          sid: sessionId,
         } satisfies JwtAccessToken,
         this.config.accessToken.secret,
         { algorithm: 'HS256' },
@@ -159,6 +223,7 @@ export class AuthService {
           if (typeof payload.sub !== 'number') return reject(new Error('Invalid token sub'));
           if (typeof payload.username !== 'string')
             return reject(new Error('Invalid token username'));
+          if (typeof payload.sid !== 'string') return reject(new Error('Invalid token sid'));
 
           resolve({
             iss: payload.iss,
@@ -167,6 +232,7 @@ export class AuthService {
             sub: payload.sub,
             username: payload.username,
             permissions: payload.permissions as number[],
+            sid: payload.sid,
           });
         }
       );
@@ -217,6 +283,7 @@ export class AuthService {
       id: payload.sub,
       username: payload.username,
       permissions,
+      sessionId: payload.sid,
     };
   }
 
@@ -289,4 +356,11 @@ export class AuthService {
     this.userDefaultRoleId = role.id;
     return role.id;
   }
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const bufferA = Buffer.from(a);
+  const bufferB = Buffer.from(b);
+  if (bufferA.length !== bufferB.length) return false;
+  return timingSafeEqual(bufferA, bufferB);
 }

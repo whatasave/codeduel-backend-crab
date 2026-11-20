@@ -1,10 +1,12 @@
 import { afterEach, beforeAll, describe, expect, spyOn, test, jest } from 'bun:test';
 
 import type { Database } from '@codeduel-backend-crab/database';
+import jwt from 'jsonwebtoken';
 
 import type { PermissionRepository } from '@/route/permission/repository';
 import { PermissionService } from '@/route/permission/service';
 import { UserNameAlreadyExistsError, type CreateUser, type User } from '@/route/user/data';
+import type { Cookies } from '@/utils/cookie';
 
 import type { Config } from './config';
 import type { Auth, AuthSession, CreateAuthSession, Provider, State } from './data';
@@ -21,6 +23,11 @@ describe('Route.Auth.Service', () => {
     jwt: { issuer: 'issuer', audience: 'audience' },
     accessToken: { secret: 'access-token-secret', expiresIn: 3600 },
     refreshToken: { secret: 'refresh-token-secret', expiresIn: 86400 },
+    csrfToken: {
+      secret: 'csrf-token-secret',
+      headerName: 'X-CSRF-Token',
+      cookie: { name: 'csrf-token', path: '/', httpOnly: true },
+    },
     userDefaultRole: 'user',
   } as Config;
 
@@ -144,7 +151,7 @@ describe('Route.Auth.Service', () => {
   test('should create access token', async () => {
     const mockUser = { id: 1, username: 'username' } as User;
 
-    const token = await service.accessToken(mockUser, []);
+    const token = await service.accessToken(mockUser, [], 'sid');
     expect(token).toBeString();
     expect(token).toContain('.');
   });
@@ -160,7 +167,7 @@ describe('Route.Auth.Service', () => {
 
   test('should verify access token', async () => {
     const mockUser = { id: 1, username: 'username' } as User;
-    const token = await service.accessToken(mockUser, []);
+    const token = await service.accessToken(mockUser, [], 'sid');
     const decoded = await service.verifyAccessToken(token);
 
     expect(decoded).toBeDefined();
@@ -170,7 +177,27 @@ describe('Route.Auth.Service', () => {
       exp: expect.any(Number) as number,
       sub: mockUser.id,
       username: mockUser.username,
+      sid: 'sid',
     });
+  });
+
+  test('should reject an access token without session id', async () => {
+    const token = jwt.sign(
+      {
+        iss: config.jwt.issuer,
+        aud: config.jwt.audience,
+        exp: Math.floor(Date.now() / 1000) + 60,
+        sub: 1,
+        username: 'username',
+        permissions: [],
+      },
+      config.accessToken.secret,
+      { algorithm: 'HS256' }
+    );
+
+    const error = await service.verifyAccessToken(token).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toEqual('Invalid token sid');
   });
 
   test('should verify refresh token', async () => {
@@ -273,6 +300,62 @@ describe('Route.Auth.Service', () => {
     expect(decodedState).toMatchObject({
       csrfToken: mockState.csrfToken,
       redirect: mockState.redirect,
+    });
+  });
+
+  describe('csrf token', () => {
+    test('should derive a stable token per session', () => {
+      expect(service.csrfToken('jti-1')).toEqual(service.csrfToken('jti-1'));
+      expect(service.csrfToken('jti-1')).not.toEqual(service.csrfToken('jti-2'));
+      expect(service.csrfToken('jti-1')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    });
+
+    test('should depend on the secret', () => {
+      const otherService = new AuthService(repository, permissionService, {
+        ...config,
+        csrfToken: { ...config.csrfToken, secret: 'other-secret' },
+      });
+      expect(otherService.csrfToken('jti-1')).not.toEqual(service.csrfToken('jti-1'));
+    });
+
+    function csrfRequest(header?: string, cookie?: string): [Headers, Cookies] {
+      const headers = new Headers();
+      if (header !== undefined) headers.set('X-CSRF-Token', header);
+      return [headers, cookie !== undefined ? { 'csrf-token': cookie } : {}];
+    }
+
+    test('should accept matching header and cookie bound to the session', () => {
+      const token = service.csrfToken('jti-1');
+      expect(service.submittedCsrfToken(...csrfRequest(token, token))).toEqual(token);
+      expect(service.isCsrfTokenBound('jti-1', token)).toBeTrue();
+      expect(service.verifyCsrfRequest(...csrfRequest(token, token), 'jti-1')).toBeTrue();
+    });
+
+    test('should reject missing or mismatching header and cookie', () => {
+      const token = service.csrfToken('jti-1');
+      expect(service.submittedCsrfToken(...csrfRequest(undefined, token))).toBeUndefined();
+      expect(service.submittedCsrfToken(...csrfRequest(token, undefined))).toBeUndefined();
+      expect(service.submittedCsrfToken(...csrfRequest('', ''))).toBeUndefined();
+      expect(service.submittedCsrfToken(...csrfRequest(token, `${token}x`))).toBeUndefined();
+      expect(service.submittedCsrfToken(...csrfRequest(token, 'short'))).toBeUndefined();
+      expect(service.verifyCsrfRequest(...csrfRequest(undefined, token), 'jti-1')).toBeFalse();
+    });
+
+    test('should reject a token bound to another session', () => {
+      const foreign = service.csrfToken('jti-2');
+      expect(service.isCsrfTokenBound('jti-1', foreign)).toBeFalse();
+      expect(service.isCsrfTokenBound('jti-1', `${foreign}x`)).toBeFalse();
+      expect(service.verifyCsrfRequest(...csrfRequest(foreign, foreign), 'jti-1')).toBeFalse();
+    });
+
+    test('should always expose the csrf cookie to javascript', () => {
+      expect(service.csrfTokenCookieOptions.httpOnly).toBeFalse();
+      const [, , csrfCookie] = service.sessionCookies({
+        accessToken: 'a',
+        refreshToken: 'r',
+        sessionId: 'jti-1',
+      });
+      expect(csrfCookie).toEqual(`csrf-token=${service.csrfToken('jti-1')}; Path=/`);
     });
   });
 });

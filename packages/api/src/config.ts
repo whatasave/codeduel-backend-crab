@@ -4,7 +4,7 @@ import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 
 import { CorsOptions } from './cors';
-import { Config as AuthConfig } from './route/auth/config';
+import { Config as AuthConfig, validateCookies } from './route/auth/config';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -78,6 +78,19 @@ export function loadConfig(): Config {
           sameSite: env.REFRESH_TOKEN_COOKIE_SAME_SITE,
         },
       },
+      csrfToken: {
+        secret: env.CSRF_TOKEN_SECRET,
+        headerName: env.CSRF_TOKEN_HEADER_NAME,
+        cookie: {
+          name: env.CSRF_TOKEN_COOKIE_NAME,
+          domain: env.CSRF_TOKEN_COOKIE_DOMAIN,
+          path: env.CSRF_TOKEN_COOKIE_PATH,
+          maxAge: env.CSRF_TOKEN_COOKIE_MAX_AGE,
+          httpOnly: false,
+          secure: env.CSRF_TOKEN_COOKIE_SECURE,
+          sameSite: env.CSRF_TOKEN_COOKIE_SAME_SITE,
+        },
+      },
       userDefaultRole: env.USER_DEFAULT_ROLE,
       github: {
         clientId: env.GITHUB_CLIENT_ID,
@@ -114,8 +127,9 @@ export function loadConfig(): Config {
     },
   };
 
+  let parsed: Config;
   try {
-    return Value.Parse(Config, config);
+    parsed = Value.Parse(Config, config);
   } catch (error) {
     if (error instanceof AssertError) {
       const errors = Array.from(error.Errors())
@@ -125,6 +139,15 @@ export function loadConfig(): Config {
     }
     throw error;
   }
+
+  const cookieErrors = validateCookies(parsed.auth);
+  if (cookieErrors.length > 0) {
+    throw new Error(
+      `Invalid cookie configuration:\n${cookieErrors.map((e) => `\t${e}`).join('\n')}`
+    );
+  }
+
+  return parsed;
 }
 
 export function safeLoadConfig():

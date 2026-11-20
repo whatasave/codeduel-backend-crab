@@ -36,6 +36,8 @@ export const JwtAccessToken = Type.Object({
 
   username: User.properties.username,
   permissions: Type.Array(Permission.properties.id),
+  /** Session id (refresh token jti), the CSRF token is bound to it. */
+  sid: Type.String(),
 });
 
 export type JwtRefreshToken = Static<typeof JwtRefreshToken>;
@@ -83,6 +85,7 @@ export const SessionUser = Type.Object({
   id: User.properties.id,
   username: User.properties.username,
   permissions: Type.Array(Permission),
+  sessionId: JwtAccessToken.properties.sid,
 });
 
 export type CreateContext = Static<typeof CreateContext>;

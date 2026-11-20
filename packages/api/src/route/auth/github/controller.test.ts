@@ -1,4 +1,14 @@
-import { afterEach, beforeAll, describe, expect, spyOn, test, jest, beforeEach } from 'bun:test';
+import {
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  spyOn,
+  test,
+  jest,
+  beforeEach,
+  type Mock,
+} from 'bun:test';
 
 import { Logger } from '@codeduel-backend-crab/logger';
 import { Router } from '@glass-cannon/router';
@@ -30,6 +40,11 @@ describe('Route.Auth.Github.Controller', () => {
     },
     refreshToken: {
       cookie: { name: 'refresh-token' },
+    },
+    csrfToken: {
+      secret: 'csrf-secret',
+      headerName: 'X-CSRF-Token',
+      cookie: { name: 'csrf-token' },
     },
   } as AuthConfig;
 
@@ -222,9 +237,9 @@ describe('Route.Auth.Github.Controller', () => {
     let spyExchange: ReturnType<typeof spyOn>;
     let spyUserData: ReturnType<typeof spyOn>;
     let spyCreate: ReturnType<typeof spyOn>;
-    let spyAccessToken: ReturnType<typeof spyOn>;
-    let spyRefreshToken: ReturnType<typeof spyOn>;
-    let spyCreateSession: ReturnType<typeof spyOn>;
+    let spyAccessToken: Mock<AuthService['accessToken']>;
+    let spyRefreshToken: Mock<AuthService['refreshToken']>;
+    let spyCreateSession: Mock<GithubService['createSession']>;
 
     beforeEach(() => {
       spyDecodeState = spyOn(authService, 'decodeState').mockReturnValue(mockState);
@@ -271,6 +286,7 @@ describe('Route.Auth.Github.Controller', () => {
       expect(spyAccessToken).toHaveBeenCalledWith(
         mockUser,
         [],
+        expect.any(String),
         expect.any(Number),
         expect.any(Object)
       );
@@ -295,8 +311,11 @@ describe('Route.Auth.Github.Controller', () => {
 
       expect(response.status).toEqual(307);
       expect(response.headers.get('location')).toEqual(mockState.redirect);
+      const jti = spyCreateSession.mock.calls[0]?.[1] ?? '';
+      expect(spyAccessToken.mock.calls[0]?.[2]).toEqual(jti);
+      expect(spyRefreshToken.mock.calls[0]?.[1]).toEqual(jti);
       expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
+        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}, ${config.csrfToken.cookie.name}=${authService.csrfToken(jti)}`
       );
       expect(await response.json()).toEqual(`Redirecting to ${mockState.redirect}`);
     });

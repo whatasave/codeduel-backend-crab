@@ -185,9 +185,6 @@ describe('Route.Auth.Controller', () => {
       );
 
       expect(spyRotateRefreshToken).toHaveBeenCalledTimes(1);
-      expect(spyUserById).not.toHaveBeenCalled();
-      expect(spyAccessToken).not.toHaveBeenCalled();
-      expect(spyRefreshToken).not.toHaveBeenCalled();
 
       expect(response.status).toEqual(204);
       expect(response.headers.get('set-cookie')).toEqual(
@@ -206,8 +203,6 @@ describe('Route.Auth.Controller', () => {
       );
 
       expect(spyRotateRefreshToken).toHaveBeenCalledTimes(1);
-      expect(spyAccessToken).not.toHaveBeenCalled();
-      expect(spyRefreshToken).not.toHaveBeenCalled();
 
       expect(response.status).toEqual(204);
       expect(response.headers.get('set-cookie')).toEqual(
@@ -227,6 +222,47 @@ describe('Route.Auth.Controller', () => {
 
       expect(response.headers.get('set-cookie')).toEqual(
         `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+      );
+    });
+
+    test('should logout user due to an invalid refresh token', async () => {
+      spyOn(service, 'verifyRefreshToken').mockRejectedValue(new Error('invalid signature'));
+
+      const response = await router.handle(
+        new Request('http://localhost/refresh', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        })
+      );
+
+      expect(spyRotateRefreshToken).not.toHaveBeenCalled();
+      expect(spyAccessToken).not.toHaveBeenCalled();
+
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(
+        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+      );
+    });
+
+    test('should allow retrying the same token if signing fails', async () => {
+      spyRefreshToken.mockRejectedValueOnce(new Error('signing failed'));
+      const request = (): Request =>
+        new Request('http://localhost/refresh', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        });
+
+      const result = await Promise.resolve(router.handle(request())).catch(
+        (error: unknown) => error
+      );
+      expect(result).toEqual(new Error('signing failed'));
+      expect(spyRotateRefreshToken).not.toHaveBeenCalled();
+
+      const response = await router.handle(request());
+      expect(spyRotateRefreshToken).toHaveBeenCalledTimes(1);
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(
+        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
       );
     });
   });

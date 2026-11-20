@@ -209,14 +209,15 @@ export class AuthRepository {
   /** Removes refresh tokens expired before `now` (ISO date). */
   async deleteExpiredTokens(now: string): Promise<ExpiredTokensCleanup> {
     return await this.database.transaction().execute(async (tx) => {
-      const usedTokens = await tx
-        .deleteFrom('auth_used_refresh_token')
-        .where('expires_at', '<=', now)
-        .executeTakeFirst();
-
+      // Reuse detection locks the session before deleting its used tokens.
       const sessions = await tx
         .updateTable('auth_session')
         .set({ token_id: null, expires_at: null })
+        .where('expires_at', '<=', now)
+        .executeTakeFirst();
+
+      const usedTokens = await tx
+        .deleteFrom('auth_used_refresh_token')
         .where('expires_at', '<=', now)
         .executeTakeFirst();
 
@@ -232,11 +233,34 @@ export class AuthRepository {
   }
 
   async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
-    await this.database
-      .updateTable('auth_session')
-      .set({ token_id: null, expires_at: null })
-      .where('token_id', '=', tokenId)
-      .executeTakeFirstOrThrow();
+    await this.database.transaction().execute(async (tx) => {
+      const clearToken = tx
+        .updateTable('auth_session')
+        .set({ token_id: null, expires_at: null })
+        .returning('id');
+      const current = await clearToken.where('token_id', '=', tokenId).executeTakeFirst();
+
+      // A concurrent refresh can replace the token while logout waits on the session row.
+      const session =
+        current ??
+        (await clearToken
+          .where(
+            'id',
+            '=',
+            tx
+              .selectFrom('auth_used_refresh_token')
+              .select('session_id')
+              .where('token_id', '=', tokenId)
+          )
+          .executeTakeFirst());
+
+      if (session) {
+        await tx
+          .deleteFrom('auth_used_refresh_token')
+          .where('session_id', '=', session.id)
+          .execute();
+      }
+    });
   }
 
   private selectToSession(authSession: Select<'auth_session'>): AuthSession {

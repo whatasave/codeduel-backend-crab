@@ -12,6 +12,8 @@ import type { CreateContext, SessionUser } from './data';
 import {
   type AuthSession,
   type CreateAuthSession,
+  type ExpiredTokensCleanup,
+  type RefreshTokenRotation,
   stateValidator,
   type JwtAccessToken,
   type JwtRefreshToken,
@@ -100,6 +102,11 @@ export class AuthService {
         }
       );
     });
+  }
+
+  /** Expiration date (ISO) of a refresh token issued at `now`, matching its `exp` claim. */
+  refreshTokenExpiresAt(now: number = Date.now()): string {
+    return this.expToDate(Math.floor(now / 1000) + this.config.refreshToken.expiresIn);
   }
 
   refreshToken(
@@ -237,7 +244,10 @@ export class AuthService {
   }
 
   async createSession(session: CreateAuthSession, logger?: Logger): Promise<AuthSession> {
-    const newSession = await this.repository.createSession(session, logger);
+    const newSession = await this.repository.createSession(
+      { ...session, expiresAt: session.expiresAt ?? this.refreshTokenExpiresAt() },
+      logger
+    );
     logger?.debug('createSession.success', 'new auth session created', {
       userId: session.userId,
       sessionId: newSession.id,
@@ -245,15 +255,51 @@ export class AuthService {
     return newSession;
   }
 
-  async updateSession(
-    id: AuthSession['id'],
-    tokenId: Exclude<AuthSession['tokenId'], undefined>,
+  /**
+   * Invalidates the verified refresh token `token` and binds `newTokenId` (issued at `now`) to its
+   * session. Presenting an already rotated token revokes the whole session.
+   */
+  async rotateRefreshToken(
+    token: JwtRefreshToken,
+    newTokenId: string,
+    now: number = Date.now(),
     logger?: Logger
-  ): Promise<void> {
-    logger?.debug('updateSession.start', 'updating auth session token', {
-      sessionId: id,
-    });
-    await this.repository.updateSession(id, tokenId);
+  ): Promise<RefreshTokenRotation> {
+    logger?.debug('rotateRefreshToken.start', 'rotating refresh token', { userId: token.sub });
+    return await this.repository.rotateRefreshToken(
+      {
+        tokenId: token.jti,
+        expiresAt: this.expToDate(token.exp),
+        newTokenId,
+        newExpiresAt: this.refreshTokenExpiresAt(now),
+      },
+      logger
+    );
+  }
+
+  async deleteExpiredTokens(
+    now: number = Date.now(),
+    logger?: Logger
+  ): Promise<ExpiredTokensCleanup> {
+    const result = await this.repository.deleteExpiredTokens(new Date(now).toISOString());
+    logger?.info('deleteExpiredTokens.success', 'expired refresh tokens cleaned up', result);
+    return result;
+  }
+
+  /** Periodically removes expired refresh tokens. Returns a function that stops the schedule. */
+  scheduleTokenCleanup(logger?: Logger): () => void {
+    const cleanup = (): void => {
+      this.deleteExpiredTokens(Date.now(), logger).catch((error: unknown) => {
+        logger?.error('deleteExpiredTokens.error', 'failed to clean up expired refresh tokens', {
+          error: logger.errorData(error),
+        });
+      });
+    };
+
+    cleanup();
+    const interval = setInterval(cleanup, this.config.refreshToken.cleanupInterval * 1000);
+    interval.unref();
+    return () => clearInterval(interval);
   }
 
   async sessionByTokenId(
@@ -273,6 +319,10 @@ export class AuthService {
   ): Promise<void> {
     logger?.debug('deleteSessionTokenId.start', 'deleting auth session by token id');
     await this.repository.deleteSessionTokenId(tokenId);
+  }
+
+  private expToDate(exp: number): string {
+    return new Date(exp * 1000).toISOString();
   }
 
   private async getUserDefaultRoleId(logger?: Logger): Promise<Role['id']> {

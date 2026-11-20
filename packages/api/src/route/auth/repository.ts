@@ -6,7 +6,16 @@ import { PermissionRepository } from '@/route/permission/repository';
 import { UserNameAlreadyExistsError, type CreateUser } from '@/route/user/data';
 import { UserRepository } from '@/route/user/repository';
 
-import type { Auth, AuthSession, CreateAuthSession, CreateContext, Provider } from './data';
+import type {
+  Auth,
+  AuthSession,
+  CreateAuthSession,
+  CreateContext,
+  ExpiredTokensCleanup,
+  Provider,
+  RefreshTokenRotation,
+  RotateRefreshToken,
+} from './data';
 
 export class AuthRepository {
   constructor(private readonly database: Database) {}
@@ -116,6 +125,7 @@ export class AuthRepository {
         ip: session.ip,
         user_agent: session.userAgent,
         provider: session.provider,
+        expires_at: session.expiresAt,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -135,12 +145,87 @@ export class AuthRepository {
     return session && this.selectToSession(session);
   }
 
-  async updateSession(id: AuthSession['id'], tokenId: AuthSession['tokenId']): Promise<void> {
-    await this.database
-      .updateTable('auth_session')
-      .set({ token_id: tokenId })
-      .where('id', '=', id)
-      .executeTakeFirstOrThrow();
+  /**
+   * Atomically replaces the session refresh token `tokenId` with `newTokenId`, remembering the old one
+   * as used. If `tokenId` was already used, the whole session (token family) is revoked.
+   */
+  async rotateRefreshToken(
+    rotation: RotateRefreshToken,
+    logger?: Logger
+  ): Promise<RefreshTokenRotation> {
+    return await this.database.transaction().execute(async (tx) => {
+      // The conditional update locks the row: a concurrent rotation of the same token waits for this
+      // transaction and then finds no match, falling through to the reuse detection below.
+      const rotated = await tx
+        .updateTable('auth_session')
+        .set({ token_id: rotation.newTokenId, expires_at: rotation.newExpiresAt })
+        .where('token_id', '=', rotation.tokenId)
+        .returningAll()
+        .executeTakeFirst();
+
+      if (rotated) {
+        await tx
+          .insertInto('auth_used_refresh_token')
+          .values({
+            token_id: rotation.tokenId,
+            session_id: rotated.id,
+            expires_at: rotation.expiresAt,
+          })
+          .execute();
+
+        logger?.debug('rotateRefreshToken.rotated', 'refresh token rotated', {
+          sessionId: rotated.id,
+        });
+        return { status: 'rotated', session: this.selectToSession(rotated) };
+      }
+
+      const used = await tx
+        .selectFrom('auth_used_refresh_token')
+        .innerJoin('auth_session', 'auth_session.id', 'auth_used_refresh_token.session_id')
+        .select(['auth_session.id as session_id', 'auth_session.user_id'])
+        .where('auth_used_refresh_token.token_id', '=', rotation.tokenId)
+        .executeTakeFirst();
+
+      if (!used) return { status: 'invalid' };
+
+      await tx
+        .updateTable('auth_session')
+        .set({ token_id: null, expires_at: null })
+        .where('id', '=', used.session_id)
+        .execute();
+      await tx
+        .deleteFrom('auth_used_refresh_token')
+        .where('session_id', '=', used.session_id)
+        .execute();
+
+      logger?.warn('rotateRefreshToken.reused', 'refresh token reuse detected, session revoked', {
+        sessionId: used.session_id,
+        userId: used.user_id,
+      });
+      return { status: 'reused', sessionId: used.session_id, userId: used.user_id };
+    });
+  }
+
+  /** Removes refresh tokens expired before `now` (ISO date). */
+  async deleteExpiredTokens(now: string): Promise<ExpiredTokensCleanup> {
+    return await this.database.transaction().execute(async (tx) => {
+      // Reuse detection locks the session before deleting its used tokens.
+      const sessions = await tx
+        .updateTable('auth_session')
+        .set({ token_id: null, expires_at: null })
+        .where('expires_at', '<=', now)
+        .executeTakeFirst();
+
+      const usedTokens = await tx
+        .deleteFrom('auth_used_refresh_token')
+        .where('expires_at', '<=', now)
+        .executeTakeFirst();
+
+      return {
+        sessions: Number(sessions.numUpdatedRows),
+        usedTokens: Number(usedTokens.numDeletedRows),
+      };
+    });
   }
 
   async deleteSession(id: number): Promise<void> {
@@ -148,11 +233,34 @@ export class AuthRepository {
   }
 
   async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
-    await this.database
-      .updateTable('auth_session')
-      .set({ token_id: null })
-      .where('token_id', '=', tokenId)
-      .executeTakeFirstOrThrow();
+    await this.database.transaction().execute(async (tx) => {
+      const clearToken = tx
+        .updateTable('auth_session')
+        .set({ token_id: null, expires_at: null })
+        .returning('id');
+      const current = await clearToken.where('token_id', '=', tokenId).executeTakeFirst();
+
+      // A concurrent refresh can replace the token while logout waits on the session row.
+      const session =
+        current ??
+        (await clearToken
+          .where(
+            'id',
+            '=',
+            tx
+              .selectFrom('auth_used_refresh_token')
+              .select('session_id')
+              .where('token_id', '=', tokenId)
+          )
+          .executeTakeFirst());
+
+      if (session) {
+        await tx
+          .deleteFrom('auth_used_refresh_token')
+          .where('session_id', '=', session.id)
+          .execute();
+      }
+    });
   }
 
   private selectToSession(authSession: Select<'auth_session'>): AuthSession {
@@ -163,6 +271,7 @@ export class AuthRepository {
       ip: authSession.ip ?? undefined,
       userAgent: authSession.user_agent ?? undefined,
       provider: authSession.provider,
+      expiresAt: authSession.expires_at ?? undefined,
       createdAt: authSession.created_at,
       updatedAt: authSession.updated_at,
     };

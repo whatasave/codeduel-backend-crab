@@ -1,4 +1,14 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, jest, spyOn, test } from 'bun:test';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  spyOn,
+  test,
+  type Mock,
+} from 'bun:test';
 
 import { Logger } from '@codeduel-backend-crab/logger';
 import { Router } from '@glass-cannon/router';
@@ -89,22 +99,23 @@ describe('Route.Auth.Controller', () => {
     };
 
     let spyVerifyRefreshToken: ReturnType<typeof spyOn>;
-    let spySessionByTokenId: ReturnType<typeof spyOn>;
+    let spyRotateRefreshToken: Mock<AuthService['rotateRefreshToken']>;
     let spyUserById: ReturnType<typeof spyOn>;
     let spyAccessToken: ReturnType<typeof spyOn>;
-    let spyRefreshToken: ReturnType<typeof spyOn>;
-    let spyUpdateSession: ReturnType<typeof spyOn>;
+    let spyRefreshToken: Mock<AuthService['refreshToken']>;
     let spyByUserId: ReturnType<typeof spyOn>;
 
     beforeEach(() => {
       spyVerifyRefreshToken = spyOn(service, 'verifyRefreshToken').mockResolvedValue(
         mockJwtRefreshToken
       );
-      spySessionByTokenId = spyOn(service, 'sessionByTokenId').mockResolvedValue(mockAuthSession);
+      spyRotateRefreshToken = spyOn(service, 'rotateRefreshToken').mockResolvedValue({
+        status: 'rotated',
+        session: mockAuthSession,
+      });
       spyUserById = spyOn(userService, 'byId').mockResolvedValue(mockUser);
       spyAccessToken = spyOn(service, 'accessToken').mockResolvedValue(mockAccessToken);
       spyRefreshToken = spyOn(service, 'refreshToken').mockResolvedValue(mockRefreshToken);
-      spyUpdateSession = spyOn(service, 'updateSession').mockResolvedValue();
       spyByUserId = spyOn(permissionService, 'byUserId').mockResolvedValue([]);
     });
 
@@ -119,8 +130,13 @@ describe('Route.Auth.Controller', () => {
       expect(spyVerifyRefreshToken).toHaveBeenCalledWith(mockRefreshToken, expect.any(Object));
       expect(spyVerifyRefreshToken).toHaveBeenCalledTimes(1);
 
-      expect(spySessionByTokenId).toHaveBeenCalledWith(mockJwtRefreshToken.jti);
-      expect(spySessionByTokenId).toHaveBeenCalledTimes(1);
+      expect(spyRotateRefreshToken).toHaveBeenCalledWith(
+        mockJwtRefreshToken,
+        expect.any(String),
+        expect.any(Number),
+        expect.any(Object)
+      );
+      expect(spyRotateRefreshToken).toHaveBeenCalledTimes(1);
 
       expect(spyUserById).toHaveBeenCalledWith(mockJwtRefreshToken.sub, expect.any(Object));
       expect(spyUserById).toHaveBeenCalledTimes(1);
@@ -141,12 +157,9 @@ describe('Route.Auth.Controller', () => {
       );
       expect(spyRefreshToken).toHaveBeenCalledTimes(1);
 
-      expect(spyUpdateSession).toHaveBeenCalledWith(
-        mockAuthSession.id,
-        expect.any(String),
-        expect.any(Object)
-      );
-      expect(spyUpdateSession).toHaveBeenCalledTimes(1);
+      const newJti = spyRotateRefreshToken.mock.calls[0]?.[1];
+      expect(spyRefreshToken.mock.calls[0]?.[1]).toBe(newJti);
+      expect(newJti).not.toBe(mockJwtRefreshToken.jti);
 
       expect(spyByUserId).toHaveBeenCalledWith(mockUser.id, expect.any(Object));
       expect(spyByUserId).toHaveBeenCalledTimes(1);
@@ -154,6 +167,46 @@ describe('Route.Auth.Controller', () => {
       expect(response.status).toEqual(204);
       expect(response.headers.get('set-cookie')).toEqual(
         `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
+      );
+    });
+
+    test('should revoke the session and logout when the refresh token is reused', async () => {
+      spyRotateRefreshToken.mockResolvedValue({
+        status: 'reused',
+        sessionId: mockAuthSession.id,
+        userId: mockUser.id,
+      });
+
+      const response = await router.handle(
+        new Request('http://localhost/refresh', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        })
+      );
+
+      expect(spyRotateRefreshToken).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(
+        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+      );
+    });
+
+    test('should logout when the refresh token has no session', async () => {
+      spyRotateRefreshToken.mockResolvedValue({ status: 'invalid' });
+
+      const response = await router.handle(
+        new Request('http://localhost/refresh', {
+          method: 'POST',
+          headers: new Headers(mockHeaders),
+        })
+      );
+
+      expect(spyRotateRefreshToken).toHaveBeenCalledTimes(1);
+
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(
+        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
       );
     });
 
@@ -182,7 +235,7 @@ describe('Route.Auth.Controller', () => {
         })
       );
 
-      expect(spySessionByTokenId).not.toHaveBeenCalled();
+      expect(spyRotateRefreshToken).not.toHaveBeenCalled();
       expect(spyAccessToken).not.toHaveBeenCalled();
 
       expect(response.status).toEqual(204);
@@ -191,22 +244,25 @@ describe('Route.Auth.Controller', () => {
       );
     });
 
-    test('should logout user when the session does not exist', async () => {
-      spyOn(service, 'sessionByTokenId').mockResolvedValue(undefined);
-
-      const response = await router.handle(
+    test('should allow retrying the same token if signing fails', async () => {
+      spyRefreshToken.mockRejectedValueOnce(new Error('signing failed'));
+      const request = (): Request =>
         new Request('http://localhost/refresh', {
           method: 'POST',
           headers: new Headers(mockHeaders),
-        })
+        });
+
+      const result = await Promise.resolve(router.handle(request())).catch(
+        (error: unknown) => error
       );
+      expect(result).toEqual(new Error('signing failed'));
+      expect(spyRotateRefreshToken).not.toHaveBeenCalled();
 
-      expect(spyAccessToken).not.toHaveBeenCalled();
-      expect(spyUpdateSession).not.toHaveBeenCalled();
-
+      const response = await router.handle(request());
+      expect(spyRotateRefreshToken).toHaveBeenCalledTimes(1);
       expect(response.status).toEqual(204);
       expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=; Max-Age=-1, ${config.refreshToken.cookie.name}=; Max-Age=-1`
+        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}`
       );
     });
   });

@@ -104,12 +104,6 @@ export class AuthController {
         }
         const { sub: userId, jti } = payload;
 
-        const session = await this.service.sessionByTokenId(jti);
-        if (!session) {
-          logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
-          return logout();
-        }
-
         const user = await this.userService.byId(userId, logger);
         if (!user) {
           logger.warn('refresh.userNotFound', 'user not found', { userId });
@@ -118,18 +112,15 @@ export class AuthController {
 
         const permissions = await this.permissionService.byUserId(user.id, logger);
 
+        const now = Date.now();
+        const newJti = randomUUIDv7();
         const newAccessToken = await this.service.accessToken(
           user,
           permissions.map((p) => p.id),
-          Date.now(),
+          now,
           logger
         );
-        const newJti = randomUUIDv7();
-        const newRefreshToken = await this.service.refreshToken(user, newJti, Date.now(), logger);
-
-        await this.service.updateSession(session.id, newJti, logger);
-
-        logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
+        const newRefreshToken = await this.service.refreshToken(user, newJti, now, logger);
 
         const accessTokenCookie = createCookie({
           ...this.service.accessTokenCookieOptions,
@@ -143,6 +134,21 @@ export class AuthController {
         const responseHeaders = new Headers();
         responseHeaders.append('Set-Cookie', accessTokenCookie);
         responseHeaders.append('Set-Cookie', refreshTokenCookie);
+
+        const rotation = await this.service.rotateRefreshToken(payload, newJti, now, logger);
+        if (rotation.status === 'reused') {
+          logger.warn('refresh.tokenReused', 'refresh token reused, session revoked', {
+            userId,
+            sessionId: rotation.sessionId,
+          });
+          return logout();
+        }
+        if (rotation.status === 'invalid') {
+          logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
+          return logout();
+        }
+
+        logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
 
         return {
           status: 204,

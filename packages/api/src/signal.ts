@@ -8,6 +8,7 @@ export function setupSignals(
   server: RunningServer,
   database: Database,
   logger: Logger,
+  onShutdown: () => void = () => {},
   timeoutMs = DEFAULT_SHUTDOWN_TIMEOUT_MS
 ): void {
   let shuttingDown = false;
@@ -28,6 +29,8 @@ export function setupSignals(
         process.exit(1);
       }, timeoutMs);
       timer.unref();
+
+      onShutdown();
 
       void shutdown(server, database, logger).then((ok) => {
         clearTimeout(timer);

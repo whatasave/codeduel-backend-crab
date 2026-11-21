@@ -29,8 +29,11 @@ export const Config = Type.Object({
   }),
   userDefaultRole: Type.String(),
 
-  github: GithubConfig,
-  gitlab: GitlabConfig,
+  providers: Type.Object({
+    stateCookie: CookieOptions,
+    github: GithubConfig,
+    gitlab: GitlabConfig,
+  }),
 });
 
 export function validateCookies(config: Config): string[] {

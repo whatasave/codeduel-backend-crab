@@ -1,69 +1,188 @@
+import { randomBytes } from 'crypto';
+
 import type { Logger } from '@codeduel-backend-crab/logger';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated, type Response } from '@glass-cannon/typebox';
-import { Type, type Static } from '@sinclair/typebox';
+import { Type, type Static, type TLiteral, type TUnion } from '@sinclair/typebox';
 import { randomUUIDv7 } from 'bun';
 
 import { loggerDecorator } from '@/middleware/logger';
 import type { PermissionService } from '@/route/permission/service';
 import type { UserService } from '@/route/user/service';
-import { parseCookies } from '@/utils/cookie';
+import { createCookie, parseCookies } from '@/utils/cookie';
+import { getIp } from '@/utils/ip';
 
 import type { Config } from './config';
 import type { JwtRefreshToken } from './data';
-import { GithubController } from './github/controller';
-import { GithubService } from './github/service';
-import { GitlabController } from './gitlab/controller';
-import { GitlabService } from './gitlab/service';
+import { GithubAuthProvider } from './github/provider';
+import { GitlabAuthProvider } from './gitlab/provider';
+import type { AuthProvider } from './provider';
 import type { AuthService } from './service';
 
 export class AuthController {
-  private readonly githubController: GithubController;
-  private readonly gitlabController: GitlabController;
+  private readonly providers: Record<string, AuthProvider>;
+  private readonly ProviderName: TUnion<TLiteral<string>[]>;
 
   constructor(
     private readonly service: AuthService,
     private readonly userService: UserService,
     private readonly permissionService: PermissionService,
     private readonly logger: Logger,
-    config: Config
+    private readonly config: Config
   ) {
-    this.githubController = new GithubController(
-      new GithubService(this.service, config.github),
-      this.service,
-      logger.group({ type: 'github' })
-    );
-    this.gitlabController = new GitlabController(
-      new GitlabService(this.service, config.gitlab),
-      this.service,
-      logger.group({ type: 'gitlab' })
-    );
+    this.providers = {
+      github: new GithubAuthProvider(config.providers.github),
+      gitlab: new GitlabAuthProvider(config.providers.gitlab),
+    };
+    this.ProviderName = Type.Union(Object.keys(this.providers).map((p) => Type.Literal(p)));
   }
 
   setup(): NodeBuilder {
-    const ownRoutes = routes({ middleware: loggerDecorator(this.logger) })
-      .use(this.validate)
+    return routes({ middleware: loggerDecorator(this.logger) })
+      .use(this.login())
+      .use(this.callback())
       .use(this.refresh)
       .use(this.logout);
-
-    return routes()
-      .use(ownRoutes)
-      .group({ prefix: '/github' }, this.githubController.setup())
-      .group({ prefix: '/gitlab' }, this.gitlabController.setup());
   }
 
-  validate = route(
-    validated({
-      method: 'GET',
-      path: '/validate',
-      schema: {
-        response: {},
-      },
-      handler: async () => {
-        throw new Error('not implemented');
-      },
-    })
-  );
+  login(): NodeBuilder<{ logger: Logger }> {
+    return route<{ logger: Logger }>(
+      validated({
+        method: 'GET',
+        path: '/:provider/login',
+        schema: {
+          params: {
+            provider: this.ProviderName,
+          },
+          query: {
+            redirect: Type.String(),
+          },
+          response: {
+            307: Type.String(),
+          },
+        },
+        handler: async ({ params, query, logger }) => {
+          const { provider } = params;
+          const { redirect } = query;
+          logger.debug('login.start', 'starting login', { provider, redirect });
+
+          const state = this.service.encodeState({
+            csrfToken: randomBytes(32).toString('base64url'),
+            redirect,
+          });
+          const authProvider = this.providers[provider];
+          if (!authProvider) throw new Error(`Invalid provider: ${provider}`);
+          const redirectUrl = authProvider.authorizationUrl(state);
+
+          const stateCookie = createCookie({ ...this.config.providers.stateCookie, value: state });
+
+          return {
+            status: 307,
+            body: `Redirecting to ${redirectUrl}`,
+            headers: {
+              'Set-Cookie': stateCookie,
+              Location: redirectUrl,
+            },
+          };
+        },
+      })
+    );
+  }
+
+  callback(): NodeBuilder<{ logger: Logger }> {
+    return route<{ logger: Logger }>(
+      validated({
+        method: 'GET',
+        path: '/:provider/callback',
+        schema: {
+          params: {
+            provider: this.ProviderName,
+          },
+          response: {
+            307: Type.String(),
+            400: Type.String(),
+          },
+        },
+        handler: async ({ params, request, logger, url }) => {
+          const query = url.searchParams.toJSON();
+          const { provider } = params;
+          const { state } = query;
+
+          const cookies = parseCookies(request.headers.get('cookie'));
+          const cookieState = cookies[this.config.providers.stateCookie.name];
+
+          if (state === undefined || state !== cookieState) {
+            logger.warn('callback.stateMismatch', 'state mismatch or missing', {
+              hasState: Boolean(state),
+              hasCookieState: Boolean(cookieState),
+            });
+            return { status: 400, body: 'Invalid or missing state' };
+          }
+
+          const authProvider = this.providers[provider];
+          if (!authProvider) throw new Error(`Invalid provider: ${provider}`);
+          const { providerId, createUser } = await authProvider.createUser(query);
+          const { user, permissions } = await this.service.createForce(
+            { name: provider, userId: providerId },
+            createUser,
+            logger
+          );
+
+          const { redirect } = this.service.decodeState(state);
+
+          const permissionIds = permissions.map((p) => p.id);
+          const now = Date.now();
+          const tokenId = randomUUIDv7();
+          const ip = getIp(request.headers);
+          const userAgent = request.headers.get('user-agent') ?? undefined;
+          const session = await this.service.createSession(
+            {
+              userId: user.id,
+              provider,
+              ip,
+              userAgent,
+              tokenId,
+            },
+            logger
+          );
+
+          const accessToken = await this.service.accessToken(
+            user,
+            permissionIds,
+            session.id,
+            now,
+            logger
+          );
+          const refreshToken = await this.service.refreshToken(
+            user,
+            session.id,
+            tokenId,
+            now,
+            logger
+          );
+
+          logger.info('callback.success', `successfully logged in via ${provider}`, {
+            userId: user.id,
+          });
+
+          const responseHeaders = cookieHeaders(
+            this.service.sessionCookies({
+              accessToken,
+              refreshToken,
+              sessionId: session.id,
+            })
+          );
+          responseHeaders.append('Location', redirect);
+
+          return {
+            status: 307,
+            body: `Redirecting to ${redirect}`,
+            headers: responseHeaders,
+          };
+        },
+      })
+    );
+  }
 
   refresh = route<{ logger: Logger }>(
     validated({

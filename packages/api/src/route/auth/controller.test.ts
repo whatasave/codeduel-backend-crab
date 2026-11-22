@@ -43,6 +43,19 @@ describe('Route.Auth.Controller', () => {
       headerName: 'X-CSRF-Token',
       cookie: { name: 'csrf-token' },
     },
+    providers: {
+      stateCookie: { name: 'state' },
+      github: {
+        clientId: 'github-client-id',
+        clientSecret: 'github-client-secret',
+        redirectUri: 'http://localhost/v1/auth/github/callback',
+      },
+      gitlab: {
+        applicationId: 'gitlab-app-id',
+        secret: 'gitlab-secret',
+        callbackUri: 'http://localhost/v1/auth/gitlab/callback',
+      },
+    },
   } as Config;
   const clearedCookies = [
     `${config.accessToken.cookie.name}=; Max-Age=-1`,

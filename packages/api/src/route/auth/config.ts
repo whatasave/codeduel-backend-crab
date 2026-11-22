@@ -48,7 +48,7 @@ export function validateCookies(config: Config): string[] {
   if (config.csrfToken.cookie.httpOnly === true) {
     errors.push('csrfToken.cookie: must not be HttpOnly, the frontend has to read it');
   }
-  if (config.csrfToken.cookie.path !== undefined && config.csrfToken.cookie.path !== '/') {
+  if (config.csrfToken.cookie.path !== '/') {
     errors.push('csrfToken.cookie: path must be "/" so the frontend can read it');
   }
 

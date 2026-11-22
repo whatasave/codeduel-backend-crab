@@ -125,6 +125,18 @@ describe('Route.Auth.Middleware', () => {
     expect(spyVerifySession).not.toHaveBeenCalled();
   });
 
+  test('should return 401 with a malformed cookie header', async () => {
+    const response = await router.handle(
+      new Request('http://localhost/auth', {
+        method: 'POST',
+        headers: { cookie: 'foo=%E0%A4%A' },
+      })
+    );
+
+    expect(response.status).toEqual(401);
+    expect(spyVerifySession).not.toHaveBeenCalled();
+  });
+
   test('should return 401 with an invalid access token', async () => {
     spyVerifySession.mockRejectedValue(new Error('invalid signature'));
 

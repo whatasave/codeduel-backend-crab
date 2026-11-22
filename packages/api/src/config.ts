@@ -4,7 +4,7 @@ import { Type, type Static } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 
 import { CorsOptions } from './cors';
-import { Config as AuthConfig, validateCookies } from './route/auth/config';
+import { Config as AuthConfig } from './route/auth/config';
 
 export type Config = Static<typeof Config>;
 export const Config = Type.Object({
@@ -84,7 +84,7 @@ export function loadConfig(): Config {
         cookie: {
           name: env.CSRF_TOKEN_COOKIE_NAME,
           domain: env.CSRF_TOKEN_COOKIE_DOMAIN,
-          path: env.CSRF_TOKEN_COOKIE_PATH,
+          path: env.CSRF_TOKEN_COOKIE_PATH ?? '/',
           maxAge: env.CSRF_TOKEN_COOKIE_MAX_AGE,
           httpOnly: false,
           secure: env.CSRF_TOKEN_COOKIE_SECURE,
@@ -138,13 +138,6 @@ export function loadConfig(): Config {
       throw new Error(`Invalid environment:\n${errors}`);
     }
     throw error;
-  }
-
-  const cookieErrors = validateCookies(parsed.auth);
-  if (cookieErrors.length > 0) {
-    throw new Error(
-      `Invalid cookie configuration:\n${cookieErrors.map((e) => `\t${e}`).join('\n')}`
-    );
   }
 
   return parsed;

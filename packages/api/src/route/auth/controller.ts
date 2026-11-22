@@ -82,7 +82,14 @@ export class AuthController {
           headers: cookieHeaders(this.service.clearSessionCookies()),
         });
 
-        // CSRF first: a cross-site request must not be able to rotate or clear any cookie.
+        // No CSRF cookie at all (session from before CSRF, or the cookie got lost): the client
+        // cannot recover by itself because the session cookies are HttpOnly, so clear them.
+        if (!this.service.hasCsrfCookie(cookies)) {
+          logger.info('refresh.csrfCookieMissing', 'no csrf cookie, clearing session cookies');
+          return logout();
+        }
+
+        // CSRF next: a cross-site request must not be able to rotate or clear any cookie.
         const csrfToken = this.service.submittedCsrfToken(request.headers, cookies);
         if (!csrfToken) {
           logger.warn('refresh.csrfMissing', 'missing or mismatching csrf token');
@@ -163,7 +170,17 @@ export class AuthController {
       handler: async ({ request, logger }) => {
         const cookies = parseCookies(request.headers.get('cookie'));
 
-        // CSRF first: a cross-site request must not be able to log the user out.
+        // No CSRF cookie at all: clear the HttpOnly session cookies so the user is not stuck.
+        // The DB session is left to expire, since this request is not CSRF-verified.
+        if (!this.service.hasCsrfCookie(cookies)) {
+          logger.info('logout.csrfCookieMissing', 'no csrf cookie, clearing session cookies');
+          return {
+            status: 204,
+            headers: cookieHeaders(this.service.clearSessionCookies()),
+          };
+        }
+
+        // CSRF next: a cross-site request with the user's cookies must not log them out.
         const csrfToken = this.service.submittedCsrfToken(request.headers, cookies);
         if (!csrfToken) {
           logger.warn('logout.csrfMissing', 'missing or mismatching csrf token');

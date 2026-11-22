@@ -197,8 +197,10 @@ describe('Route.Auth.Controller', () => {
       );
     });
 
-    test('should reject without csrf token before checking the refresh token', async () => {
-      const response = await router.handle(authRequest('/refresh'));
+    test('should reject without csrf header before checking the refresh token', async () => {
+      const response = await router.handle(
+        authRequest('/refresh', { csrfCookie: service.csrfToken(mockJti) })
+      );
 
       expect(response.status).toEqual(403);
       expect(await response.json()).toEqual(invalidCsrfBody);
@@ -220,7 +222,7 @@ describe('Route.Auth.Controller', () => {
       expect(spyUpdateSession).not.toHaveBeenCalled();
     });
 
-    test('should reject without csrf cookie', async () => {
+    test('should clear session cookies without csrf cookie', async () => {
       const response = await router.handle(
         authRequest('/refresh', {
           refreshToken: mockRefreshToken,
@@ -228,8 +230,10 @@ describe('Route.Auth.Controller', () => {
         })
       );
 
-      expect(response.status).toEqual(403);
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
       expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
+      expect(spyUpdateSession).not.toHaveBeenCalled();
     });
 
     test('should reject when csrf header and cookie do not match', async () => {
@@ -343,9 +347,23 @@ describe('Route.Auth.Controller', () => {
       expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
     });
 
-    test('should reject a cross-site logout without csrf token', async () => {
+    test('should clear cookies without csrf cookie, keeping the session', async () => {
       const response = await router.handle(
         authRequest('/logout', { refreshToken: mockRefreshToken })
+      );
+
+      expect(response.status).toEqual(204);
+      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
+      expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
+      expect(spyDeleteSessionTokenId).not.toHaveBeenCalled();
+    });
+
+    test('should reject a cross-site logout without csrf header', async () => {
+      const response = await router.handle(
+        authRequest('/logout', {
+          refreshToken: mockRefreshToken,
+          csrfCookie: service.csrfToken(mockJti),
+        })
       );
 
       expect(response.status).toEqual(403);

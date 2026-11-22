@@ -56,6 +56,9 @@ describe('Route.Auth.Config', () => {
     expect(validateCookies(withCookie('csrfToken', { httpOnly: true }))).toEqual([
       'csrfToken.cookie: must not be HttpOnly, the frontend has to read it',
     ]);
+    expect(validateCookies(withCookie('csrfToken', { path: undefined }))).toEqual([
+      'csrfToken.cookie: path must be "/" so the frontend can read it',
+    ]);
     expect(validateCookies(withCookie('csrfToken', { path: '/v1/auth' }))).toEqual([
       'csrfToken.cookie: path must be "/" so the frontend can read it',
     ]);

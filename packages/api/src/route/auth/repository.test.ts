@@ -80,6 +80,17 @@ describe('Route.Auth.Repository', () => {
   });
 
   describe('auth', () => {
+    test('should create a new authUser when it does not exist', async () => {
+      const provider: Provider = { name: 'px', userId: 444 };
+      const newUser: CreateUser = { username: 'first-login' };
+      const created = await repository.createIfNotExists(provider, newUser, 1);
+      const existing = await repository.createIfNotExists(provider, newUser, 1);
+
+      expect(created.auth.userId).toEqual(created.user.id);
+      expect(created.user.username).toEqual(newUser.username);
+      expect(existing).toEqual(created);
+    });
+
     test('should create user and auth', async () => {
       const newUser: CreateUser = {
         username: 'newuser',
@@ -111,7 +122,7 @@ describe('Route.Auth.Repository', () => {
       });
     });
 
-    test('should create authUser if it does not exist', async () => {
+    test('should return the existing authUser', async () => {
       const exUser = mockUsers[0];
       const exAuth = mockAuths[0];
 

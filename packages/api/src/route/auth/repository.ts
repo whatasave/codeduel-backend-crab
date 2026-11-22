@@ -17,47 +17,55 @@ export class AuthRepository {
     roleId: Role['id'],
     logger?: Logger
   ): Promise<CreateContext> {
-    const authUser = await this.database.transaction().execute(async (tx) => {
-      const userRepository = new UserRepository(tx);
-      const permissionsRepository = new PermissionRepository(tx);
+    return await this.database
+      .transaction()
+      .execute((tx) => this.createInTransaction(tx, provider, user, roleId, logger));
+  }
 
-      const existingUser = await tx
-        .selectFrom('user')
-        .selectAll()
-        .where('username', '=', user.username)
-        .executeTakeFirst();
-      if (existingUser) throw new UserNameAlreadyExistsError(user.username);
+  private async createInTransaction(
+    tx: Database,
+    provider: Provider,
+    user: CreateUser,
+    roleId: Role['id'],
+    logger?: Logger
+  ): Promise<CreateContext> {
+    const userRepository = new UserRepository(tx);
+    const permissionsRepository = new PermissionRepository(tx);
 
-      logger?.debug('create.persisting', 'persisting new user and auth provider', {
-        provider: provider.name,
-        username: user.username,
-      });
-      const newUser = await userRepository.create(user);
+    const existingUser = await tx
+      .selectFrom('user')
+      .selectAll()
+      .where('username', '=', user.username)
+      .executeTakeFirst();
+    if (existingUser) throw new UserNameAlreadyExistsError(user.username);
 
-      const newAuth = await tx
-        .insertInto('auth')
-        .values({
-          user_id: newUser.id,
-          provider: provider.name,
-          provider_id: provider.userId,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      await permissionsRepository.assignRole(newUser.id, roleId);
-      const permissions = await permissionsRepository.rolePermissions(roleId);
-
-      logger?.info('create.success', 'user and auth provider persisted successfully', {
-        userId: newUser.id,
-      });
-      return {
-        auth: this.selectToAuth(newAuth),
-        user: newUser,
-        permissions,
-      };
+    logger?.debug('create.persisting', 'persisting new user and auth provider', {
+      provider: provider.name,
+      username: user.username,
     });
+    const newUser = await userRepository.create(user);
 
-    return authUser;
+    const newAuth = await tx
+      .insertInto('auth')
+      .values({
+        user_id: newUser.id,
+        provider: provider.name,
+        provider_id: provider.userId,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await permissionsRepository.assignRole(newUser.id, roleId);
+    const permissions = await permissionsRepository.rolePermissions(roleId);
+
+    logger?.info('create.success', 'user and auth provider persisted successfully', {
+      userId: newUser.id,
+    });
+    return {
+      auth: this.selectToAuth(newAuth),
+      user: newUser,
+      permissions,
+    };
   }
 
   async createIfNotExists(
@@ -98,7 +106,7 @@ export class AuthRepository {
         };
       }
 
-      return await this.create(provider, user, roleId, logger);
+      return await this.createInTransaction(tx, provider, user, roleId, logger);
     });
 
     return authUser;

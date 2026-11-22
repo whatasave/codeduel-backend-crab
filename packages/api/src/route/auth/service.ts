@@ -57,6 +57,10 @@ export class AuthService {
     return createHmac('sha256', this.config.csrfToken.secret).update(sessionId).digest('base64url');
   }
 
+  hasCsrfCookie(cookies: Cookies): boolean {
+    return Boolean(cookies[this.csrfTokenCookieOptions.name]);
+  }
+
   /**
    * Double-submit check: returns the submitted token only when the header and the cookie
    * are both present and equal.

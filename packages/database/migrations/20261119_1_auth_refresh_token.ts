@@ -10,7 +10,6 @@ const USED_SESSION_ID_INDEX = `${AUTH_USED_REFRESH_TOKEN_TABLE_NAME}_session_id_
 const USED_EXPIRES_AT_INDEX = `${AUTH_USED_REFRESH_TOKEN_TABLE_NAME}_expires_at_index`;
 
 export async function up(db: Kysely<unknown>): Promise<void> {
-  // Legacy sessions rely on the signed JWT expiration until their next rotation.
   await db.schema
     .alterTable(AUTH_SESSION_TABLE_NAME)
     .addColumn('expires_at', 'timestamptz')

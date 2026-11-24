@@ -161,7 +161,6 @@ export class AuthService {
     });
   }
 
-  /** Expiration date (ISO) of a refresh token issued at `now`, matching its `exp` claim. */
   refreshTokenExpiresAt(now: number = Date.now()): string {
     return this.expToDate(Math.floor(now / 1000) + this.config.refreshToken.expiresIn);
   }
@@ -315,10 +314,6 @@ export class AuthService {
     return newSession;
   }
 
-  /**
-   * Invalidates the verified refresh token `token` and binds `newTokenId` (issued at `now`) to its
-   * session. Presenting an already rotated token revokes the whole session.
-   */
   async rotateRefreshToken(
     token: JwtRefreshToken,
     newTokenId: string,
@@ -346,7 +341,6 @@ export class AuthService {
     return result;
   }
 
-  /** Periodically removes expired refresh tokens. Returns a function that stops the schedule. */
   scheduleTokenCleanup(logger?: Logger): () => void {
     const cleanup = (): void => {
       this.deleteExpiredTokens(Date.now(), logger).catch((error: unknown) => {

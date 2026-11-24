@@ -3,7 +3,6 @@ import type { ColumnType, Selectable, Insertable, Updateable } from 'kysely';
 
 export type AuthUsedRefreshTokenTokenId = string;
 
-/** Represents the table public.auth_used_refresh_token */
 export default interface AuthUsedRefreshTokenTable {
   token_id: ColumnType<AuthUsedRefreshTokenTokenId, AuthUsedRefreshTokenTokenId, AuthUsedRefreshTokenTokenId>;
 

@@ -340,7 +340,6 @@ describe('Route.Auth.Repository', () => {
       expect(await repository.sessionByTokenId('rot-b4')).toBeUndefined();
       expect(await usedTokens(session.id)).toEqual([]);
       expect(await rotate('rot-b3', 'rot-b5')).toEqual({ status: 'invalid' });
-      // Other sessions of the same user are not affected.
       expect(await repository.sessionByTokenId('rot-c1')).toMatchObject({ id: other.id });
     });
 

@@ -153,17 +153,11 @@ export class AuthRepository {
     return session && this.selectToSession(session);
   }
 
-  /**
-   * Atomically replaces the session refresh token `tokenId` with `newTokenId`, remembering the old one
-   * as used. If `tokenId` was already used, the whole session (token family) is revoked.
-   */
   async rotateRefreshToken(
     rotation: RotateRefreshToken,
     logger?: Logger
   ): Promise<RefreshTokenRotation> {
     return await this.database.transaction().execute(async (tx) => {
-      // The conditional update locks the row: a concurrent rotation of the same token waits for this
-      // transaction and then finds no match, falling through to the reuse detection below.
       const rotated = await tx
         .updateTable('auth_session')
         .set({ token_id: rotation.newTokenId, expires_at: rotation.newExpiresAt })
@@ -214,10 +208,8 @@ export class AuthRepository {
     });
   }
 
-  /** Removes refresh tokens expired before `now` (ISO date). */
   async deleteExpiredTokens(now: string): Promise<ExpiredTokensCleanup> {
     return await this.database.transaction().execute(async (tx) => {
-      // Reuse detection locks the session before deleting its used tokens.
       const sessions = await tx
         .updateTable('auth_session')
         .set({ token_id: null, expires_at: null })
@@ -248,7 +240,6 @@ export class AuthRepository {
         .returning('id');
       const current = await clearToken.where('token_id', '=', tokenId).executeTakeFirst();
 
-      // A concurrent refresh can replace the token while logout waits on the session row.
       const session =
         current ??
         (await clearToken

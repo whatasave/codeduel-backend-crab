@@ -49,6 +49,7 @@ logger.info('config.loaded', 'configuration loaded', {
     userDefaultRole: config.auth.userDefaultRole,
     accessTokenExpiresIn: config.auth.accessToken.expiresIn,
     refreshTokenExpiresIn: config.auth.refreshToken.expiresIn,
+    refreshTokenCleanupInterval: config.auth.refreshToken.cleanupInterval,
   },
 });
 
@@ -68,6 +69,7 @@ process.on('uncaughtException', (error) => {
 const database = setupDatabase(config.database, logger.group({ type: 'database' }));
 
 const controller = new RootController(database, logger, config);
+const stopTokenCleanup = controller.startTokenCleanup();
 
 const appRoutes = routes()
   .apply(setupCors(config.cors))
@@ -92,4 +94,4 @@ const running = await server.listen({ host: config.host, port: config.port });
 
 logger.info('listening', `Server is running on ${running.url}`, { url: running.url });
 
-setupSignals(running, database, logger);
+setupSignals(running, database, logger, stopTokenCleanup);

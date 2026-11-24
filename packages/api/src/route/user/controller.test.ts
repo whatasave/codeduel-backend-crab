@@ -123,7 +123,7 @@ describe('Route.User.Controller', () => {
       id: mockUser.id,
       username: mockUser.username,
       permissions: [],
-      sessionId: 'session-id',
+      sessionId: 1,
     });
 
     const response = await router.handle(

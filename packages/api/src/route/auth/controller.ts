@@ -105,17 +105,11 @@ export class AuthController {
         } catch {
           return logout();
         }
-        const { sub: userId, jti } = payload;
+        const { sub: userId, jti, sid } = payload;
 
-        if (!this.service.isCsrfTokenBound(jti, csrfToken)) {
+        if (!this.service.isCsrfTokenBound(sid, csrfToken)) {
           logger.warn('refresh.csrfInvalid', 'csrf token not bound to the session', { userId });
           return invalidCsrf();
-        }
-
-        const session = await this.service.sessionByTokenId(jti);
-        if (!session) {
-          logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
-          return logout();
         }
 
         const user = await this.userService.byId(userId, logger);
@@ -126,29 +120,43 @@ export class AuthController {
 
         const permissions = await this.permissionService.byUserId(user.id, logger);
 
+        const now = Date.now();
         const newJti = randomUUIDv7();
         const newAccessToken = await this.service.accessToken(
           user,
           permissions.map((p) => p.id),
-          newJti,
-          Date.now(),
+          sid,
+          now,
           logger
         );
-        const newRefreshToken = await this.service.refreshToken(user, newJti, Date.now(), logger);
+        const newRefreshToken = await this.service.refreshToken(user, sid, newJti, now, logger);
 
-        await this.service.updateSession(session.id, newJti, logger);
+        const responseHeaders = cookieHeaders(
+          this.service.sessionCookies({
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+            sessionId: sid,
+          })
+        );
+
+        const rotation = await this.service.rotateRefreshToken(payload, newJti, now, logger);
+        if (rotation.status === 'reused') {
+          logger.warn('refresh.tokenReused', 'refresh token reused, session revoked', {
+            userId,
+            sessionId: rotation.sessionId,
+          });
+          return logout();
+        }
+        if (rotation.status === 'invalid') {
+          logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
+          return logout();
+        }
 
         logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
 
         return {
           status: 204,
-          headers: cookieHeaders(
-            this.service.sessionCookies({
-              accessToken: newAccessToken,
-              refreshToken: newRefreshToken,
-              sessionId: newJti,
-            })
-          ),
+          headers: responseHeaders,
         };
       },
     })
@@ -183,15 +191,15 @@ export class AuthController {
           logger.debug('logout.noToken', 'logout without refresh token, clearing cookies only');
         } else {
           try {
-            const { sub: userId, jti } = await this.service.verifyRefreshToken(
+            const { sub: userId, sid } = await this.service.verifyRefreshToken(
               refreshToken,
               logger
             );
-            if (!this.service.isCsrfTokenBound(jti, csrfToken)) {
+            if (!this.service.isCsrfTokenBound(sid, csrfToken)) {
               logger.warn('logout.csrfInvalid', 'csrf token not bound to the session', { userId });
               return invalidCsrf();
             }
-            await this.service.deleteSessionTokenId(jti, logger);
+            await this.service.deleteSession(sid, logger);
             logger.info('logout.success', 'user logged out', { userId });
           } catch (error) {
             logger.warn('logout.verifyError', 'failed to verify refresh token during logout', {

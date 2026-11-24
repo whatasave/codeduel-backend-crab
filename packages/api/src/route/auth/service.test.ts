@@ -22,7 +22,7 @@ describe('Route.Auth.Service', () => {
   const config = {
     jwt: { issuer: 'issuer', audience: 'audience' },
     accessToken: { secret: 'access-token-secret', expiresIn: 3600 },
-    refreshToken: { secret: 'refresh-token-secret', expiresIn: 86400 },
+    refreshToken: { secret: 'refresh-token-secret', expiresIn: 86400, cleanupInterval: 3600 },
     csrfToken: {
       secret: 'csrf-token-secret',
       headerName: 'X-CSRF-Token',
@@ -151,7 +151,7 @@ describe('Route.Auth.Service', () => {
   test('should create access token', async () => {
     const mockUser = { id: 1, username: 'username' } as User;
 
-    const token = await service.accessToken(mockUser, [], 'sid');
+    const token = await service.accessToken(mockUser, [], 42);
     expect(token).toBeString();
     expect(token).toContain('.');
   });
@@ -160,14 +160,14 @@ describe('Route.Auth.Service', () => {
     const mockUser = { id: 1, username: 'username' } as User;
     const jti = 'jti';
 
-    const token = await service.refreshToken(mockUser, jti);
+    const token = await service.refreshToken(mockUser, 42, jti);
     expect(token).toBeString();
     expect(token).toContain('.');
   });
 
   test('should verify access token', async () => {
     const mockUser = { id: 1, username: 'username' } as User;
-    const token = await service.accessToken(mockUser, [], 'sid');
+    const token = await service.accessToken(mockUser, [], 42);
     const decoded = await service.verifyAccessToken(token);
 
     expect(decoded).toBeDefined();
@@ -177,7 +177,7 @@ describe('Route.Auth.Service', () => {
       exp: expect.any(Number) as number,
       sub: mockUser.id,
       username: mockUser.username,
-      sid: 'sid',
+      sid: 42,
     });
   });
 
@@ -203,7 +203,7 @@ describe('Route.Auth.Service', () => {
   test('should verify refresh token', async () => {
     const mockUser = { id: 1, username: 'username' } as User;
     const jti = 'jti';
-    const token = await service.refreshToken(mockUser, jti);
+    const token = await service.refreshToken(mockUser, 42, jti);
     const decoded = await service.verifyRefreshToken(token);
 
     expect(decoded).toBeDefined();
@@ -212,29 +212,81 @@ describe('Route.Auth.Service', () => {
       aud: config.jwt.audience,
       exp: expect.any(Number) as number,
       jti,
+      sid: 42,
       sub: mockUser.id,
     });
   });
 
-  test('should delete session token id', async () => {
-    const jti = 'jti';
-    const spyDeleteSessionTokenId = spyOn(repository, 'deleteSessionTokenId').mockResolvedValue();
+  test('should reject a refresh token without session id', async () => {
+    const token = jwt.sign(
+      {
+        iss: config.jwt.issuer,
+        aud: config.jwt.audience,
+        exp: Math.floor(Date.now() / 1000) + 60,
+        jti: 'jti',
+        sub: 1,
+      },
+      config.refreshToken.secret,
+      { algorithm: 'HS256' }
+    );
 
-    await service.deleteSessionTokenId(jti);
-
-    expect(spyDeleteSessionTokenId).toHaveBeenCalledWith(jti);
-    expect(spyDeleteSessionTokenId).toHaveBeenCalledTimes(1);
+    const error = await service.verifyRefreshToken(token).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toEqual('Invalid token sid');
   });
 
-  test('should update session', async () => {
-    const id = 1;
-    const jti = 'jti';
-    const spyUpdateSession = spyOn(repository, 'updateSession').mockResolvedValue();
+  test('should rotate refresh token', async () => {
+    const now = Date.parse('2025-05-12T18:00:00.000Z');
+    const exp = Math.floor(now / 1000) + 60;
+    const token = { iss: 'issuer', aud: 'audience', exp, jti: 'old-jti', sid: 42, sub: 1 };
+    const spyRotate = spyOn(repository, 'rotateRefreshToken').mockResolvedValue({
+      status: 'invalid',
+    });
 
-    await service.updateSession(id, jti);
+    const result = await service.rotateRefreshToken(token, 'new-jti', now);
 
-    expect(spyUpdateSession).toHaveBeenCalledWith(id, jti);
-    expect(spyUpdateSession).toHaveBeenCalledTimes(1);
+    expect(spyRotate).toHaveBeenCalledWith(
+      {
+        sessionId: 42,
+        tokenId: 'old-jti',
+        newTokenId: 'new-jti',
+        newExpiresAt: '2025-05-13T18:00:00.000Z',
+      },
+      undefined
+    );
+    expect(spyRotate).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ status: 'invalid' });
+  });
+
+  test('should compute refresh token expiration matching the exp claim', async () => {
+    const now = Date.now();
+    const token = await service.refreshToken({ id: 1 } as User, 42, 'jti', now);
+    const { exp } = await service.verifyRefreshToken(token);
+
+    expect(service.refreshTokenExpiresAt(now)).toBe(new Date(exp * 1000).toISOString());
+  });
+
+  test('should delete expired tokens', async () => {
+    const now = Date.parse('2025-05-12T18:00:00.000Z');
+    const spyDeleteExpired = spyOn(repository, 'deleteExpiredTokens').mockResolvedValue({
+      sessions: 2,
+    });
+
+    const result = await service.deleteExpiredTokens(now);
+
+    expect(spyDeleteExpired).toHaveBeenCalledWith('2025-05-12T18:00:00.000Z');
+    expect(result).toEqual({ sessions: 2 });
+  });
+
+  test('should schedule token cleanup and stop it', async () => {
+    const spyDeleteExpired = spyOn(repository, 'deleteExpiredTokens').mockResolvedValue({
+      sessions: 0,
+    });
+
+    const stop = service.scheduleTokenCleanup();
+    stop();
+
+    expect(spyDeleteExpired).toHaveBeenCalledTimes(1);
   });
 
   test('should get session by token id', async () => {
@@ -281,7 +333,10 @@ describe('Route.Auth.Service', () => {
 
     const result = await service.createSession(mockCreateAuthSession);
 
-    expect(spyCreateSession).toHaveBeenCalledWith(mockCreateAuthSession, undefined);
+    expect(spyCreateSession).toHaveBeenCalledWith(
+      { ...mockCreateAuthSession, expiresAt: expect.any(String) as string },
+      undefined
+    );
     expect(spyCreateSession).toHaveBeenCalledTimes(1);
     expect(result).toEqual(mockAuthSession);
   });
@@ -305,9 +360,9 @@ describe('Route.Auth.Service', () => {
 
   describe('csrf token', () => {
     test('should derive a stable token per session', () => {
-      expect(service.csrfToken('jti-1')).toEqual(service.csrfToken('jti-1'));
-      expect(service.csrfToken('jti-1')).not.toEqual(service.csrfToken('jti-2'));
-      expect(service.csrfToken('jti-1')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(service.csrfToken(1)).toEqual(service.csrfToken(1));
+      expect(service.csrfToken(1)).not.toEqual(service.csrfToken(2));
+      expect(service.csrfToken(1)).toMatch(/^[A-Za-z0-9_-]{43}$/);
     });
 
     test('should depend on the secret', () => {
@@ -315,7 +370,7 @@ describe('Route.Auth.Service', () => {
         ...config,
         csrfToken: { ...config.csrfToken, secret: 'other-secret' },
       });
-      expect(otherService.csrfToken('jti-1')).not.toEqual(service.csrfToken('jti-1'));
+      expect(otherService.csrfToken(1)).not.toEqual(service.csrfToken(1));
     });
 
     function csrfRequest(header?: string, cookie?: string): [Headers, Cookies] {
@@ -325,27 +380,27 @@ describe('Route.Auth.Service', () => {
     }
 
     test('should accept matching header and cookie bound to the session', () => {
-      const token = service.csrfToken('jti-1');
+      const token = service.csrfToken(1);
       expect(service.submittedCsrfToken(...csrfRequest(token, token))).toEqual(token);
-      expect(service.isCsrfTokenBound('jti-1', token)).toBeTrue();
-      expect(service.verifyCsrfRequest(...csrfRequest(token, token), 'jti-1')).toBeTrue();
+      expect(service.isCsrfTokenBound(1, token)).toBeTrue();
+      expect(service.verifyCsrfRequest(...csrfRequest(token, token), 1)).toBeTrue();
     });
 
     test('should reject missing or mismatching header and cookie', () => {
-      const token = service.csrfToken('jti-1');
+      const token = service.csrfToken(1);
       expect(service.submittedCsrfToken(...csrfRequest(undefined, token))).toBeUndefined();
       expect(service.submittedCsrfToken(...csrfRequest(token, undefined))).toBeUndefined();
       expect(service.submittedCsrfToken(...csrfRequest('', ''))).toBeUndefined();
       expect(service.submittedCsrfToken(...csrfRequest(token, `${token}x`))).toBeUndefined();
       expect(service.submittedCsrfToken(...csrfRequest(token, 'short'))).toBeUndefined();
-      expect(service.verifyCsrfRequest(...csrfRequest(undefined, token), 'jti-1')).toBeFalse();
+      expect(service.verifyCsrfRequest(...csrfRequest(undefined, token), 1)).toBeFalse();
     });
 
     test('should reject a token bound to another session', () => {
-      const foreign = service.csrfToken('jti-2');
-      expect(service.isCsrfTokenBound('jti-1', foreign)).toBeFalse();
-      expect(service.isCsrfTokenBound('jti-1', `${foreign}x`)).toBeFalse();
-      expect(service.verifyCsrfRequest(...csrfRequest(foreign, foreign), 'jti-1')).toBeFalse();
+      const foreign = service.csrfToken(2);
+      expect(service.isCsrfTokenBound(1, foreign)).toBeFalse();
+      expect(service.isCsrfTokenBound(1, `${foreign}x`)).toBeFalse();
+      expect(service.verifyCsrfRequest(...csrfRequest(foreign, foreign), 1)).toBeFalse();
     });
 
     test('should always expose the csrf cookie to javascript', () => {
@@ -353,9 +408,9 @@ describe('Route.Auth.Service', () => {
       const [, , csrfCookie] = service.sessionCookies({
         accessToken: 'a',
         refreshToken: 'r',
-        sessionId: 'jti-1',
+        sessionId: 1,
       });
-      expect(csrfCookie).toEqual(`csrf-token=${service.csrfToken('jti-1')}; Path=/`);
+      expect(csrfCookie).toEqual(`csrf-token=${service.csrfToken(1)}; Path=/`);
     });
   });
 });

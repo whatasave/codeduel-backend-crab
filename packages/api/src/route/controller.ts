@@ -94,6 +94,10 @@ export class RootController {
     this.gameController = new GameController(this.gameService, logger.group({ type: 'game' }));
   }
 
+  startTokenCleanup(): () => void {
+    return this.authService.scheduleTokenCleanup(this.logger.group({ type: 'auth' }));
+  }
+
   setup(): NodeBuilder {
     const node = routes({
       prefix: '/v1',

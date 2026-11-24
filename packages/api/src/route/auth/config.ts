@@ -19,6 +19,7 @@ export const Config = Type.Object({
   refreshToken: Type.Object({
     secret: Type.String(),
     expiresIn: Type.Number(),
+    cleanupInterval: Type.Number({ minimum: 1, default: 3600 }),
     cookie: CookieOptions,
   }),
   csrfToken: Type.Object({

@@ -14,7 +14,7 @@ import { Logger } from '@codeduel-backend-crab/logger';
 import { Router } from '@glass-cannon/router';
 
 import type { Config as AuthConfig } from '@/route/auth/config';
-import type { Auth } from '@/route/auth/data';
+import type { Auth, AuthSession } from '@/route/auth/data';
 import type { AuthRepository } from '@/route/auth/repository';
 import { AuthService } from '@/route/auth/service';
 import type { PermissionRepository } from '@/route/permission/repository';
@@ -233,6 +233,14 @@ describe('Route.Auth.Gitlab.Controller', () => {
       createdAt: mockDate,
       updatedAt: mockDate,
     };
+    const mockSession: AuthSession = {
+      id: 7,
+      userId: mockUser.id,
+      tokenId: 'token-id',
+      provider: 'gitlab',
+      createdAt: mockDate,
+      updatedAt: mockDate,
+    };
     const mockAccessToken = 'access-token';
     const mockRefreshToken = 'refresh-token';
     const mockStateString = 'state';
@@ -260,7 +268,7 @@ describe('Route.Auth.Gitlab.Controller', () => {
       });
       spyAccessToken = spyOn(authService, 'accessToken').mockResolvedValue(mockAccessToken);
       spyRefreshToken = spyOn(authService, 'refreshToken').mockResolvedValue(mockRefreshToken);
-      spyCreateSession = spyOn(service, 'createSession').mockResolvedValue();
+      spyCreateSession = spyOn(service, 'createSession').mockResolvedValue(mockSession);
     });
 
     afterEach(() => {
@@ -294,7 +302,7 @@ describe('Route.Auth.Gitlab.Controller', () => {
       expect(spyAccessToken).toHaveBeenCalledWith(
         mockUser,
         [],
-        expect.any(String),
+        mockSession.id,
         expect.any(Number),
         expect.any(Object)
       );
@@ -302,6 +310,7 @@ describe('Route.Auth.Gitlab.Controller', () => {
 
       expect(spyRefreshToken).toHaveBeenCalledWith(
         mockUser,
+        mockSession.id,
         expect.any(String),
         expect.any(Number),
         expect.any(Object)
@@ -320,10 +329,9 @@ describe('Route.Auth.Gitlab.Controller', () => {
       expect(response.status).toEqual(307);
       expect(response.headers.get('location')).toEqual(mockState.redirect);
       const jti = spyCreateSession.mock.calls[0]?.[1] ?? '';
-      expect(spyAccessToken.mock.calls[0]?.[2]).toEqual(jti);
-      expect(spyRefreshToken.mock.calls[0]?.[1]).toEqual(jti);
+      expect(spyRefreshToken.mock.calls[0]?.[2]).toEqual(jti);
       expect(response.headers.get('set-cookie')).toEqual(
-        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}, ${config.csrfToken.cookie.name}=${authService.csrfToken(jti)}`
+        `${config.accessToken.cookie.name}=${mockAccessToken}, ${config.refreshToken.cookie.name}=${mockRefreshToken}, ${config.csrfToken.cookie.name}=${authService.csrfToken(mockSession.id)}`
       );
       expect(await response.json()).toEqual(`Redirecting to ${mockState.redirect}`);
     });

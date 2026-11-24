@@ -20,6 +20,8 @@ export default interface AuthSessionTable {
   created_at: ColumnType<string, string | undefined, string>;
 
   updated_at: ColumnType<string, string | undefined, string>;
+
+  expires_at: ColumnType<string | null, string | null, string | null>;
 }
 
 export type AuthSession = Selectable<AuthSessionTable>;

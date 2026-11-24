@@ -6,7 +6,16 @@ import { PermissionRepository } from '@/route/permission/repository';
 import { UserNameAlreadyExistsError, type CreateUser } from '@/route/user/data';
 import { UserRepository } from '@/route/user/repository';
 
-import type { Auth, AuthSession, CreateAuthSession, CreateContext, Provider } from './data';
+import type {
+  Auth,
+  AuthSession,
+  CreateAuthSession,
+  CreateContext,
+  ExpiredTokensCleanup,
+  Provider,
+  RefreshTokenRotation,
+  RotateRefreshToken,
+} from './data';
 
 export class AuthRepository {
   constructor(private readonly database: Database) {}
@@ -124,6 +133,7 @@ export class AuthRepository {
         ip: session.ip,
         user_agent: session.userAgent,
         provider: session.provider,
+        expires_at: session.expiresAt,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -143,24 +153,55 @@ export class AuthRepository {
     return session && this.selectToSession(session);
   }
 
-  async updateSession(id: AuthSession['id'], tokenId: AuthSession['tokenId']): Promise<void> {
-    await this.database
-      .updateTable('auth_session')
-      .set({ token_id: tokenId })
-      .where('id', '=', id)
-      .executeTakeFirstOrThrow();
+  async rotateRefreshToken(
+    rotation: RotateRefreshToken,
+    logger?: Logger
+  ): Promise<RefreshTokenRotation> {
+    return await this.database.transaction().execute(async (tx) => {
+      const rotated = await tx
+        .updateTable('auth_session')
+        .set({ token_id: rotation.newTokenId, expires_at: rotation.newExpiresAt })
+        .where('id', '=', rotation.sessionId)
+        .where('token_id', '=', rotation.tokenId)
+        .returningAll()
+        .executeTakeFirst();
+
+      if (rotated) {
+        logger?.debug('rotateRefreshToken.rotated', 'refresh token rotated', {
+          sessionId: rotated.id,
+        });
+        return { status: 'rotated', session: this.selectToSession(rotated) };
+      }
+
+      const revoked = await tx
+        .deleteFrom('auth_session')
+        .where('id', '=', rotation.sessionId)
+        .returning(['id', 'user_id'])
+        .executeTakeFirst();
+
+      if (!revoked) return { status: 'invalid' };
+
+      logger?.warn('rotateRefreshToken.reused', 'refresh token reuse detected, session revoked', {
+        sessionId: revoked.id,
+        userId: revoked.user_id,
+      });
+      return { status: 'reused', sessionId: revoked.id, userId: revoked.user_id };
+    });
   }
 
-  async deleteSession(id: number): Promise<void> {
-    await this.database.deleteFrom('auth_session').where('id', '=', id).executeTakeFirstOrThrow();
+  async deleteExpiredTokens(now: string): Promise<ExpiredTokensCleanup> {
+    const sessions = await this.database
+      .deleteFrom('auth_session')
+      .where('expires_at', '<=', now)
+      .executeTakeFirst();
+
+    return {
+      sessions: Number(sessions.numDeletedRows),
+    };
   }
 
-  async deleteSessionTokenId(tokenId: Exclude<AuthSession['tokenId'], undefined>): Promise<void> {
-    await this.database
-      .updateTable('auth_session')
-      .set({ token_id: null })
-      .where('token_id', '=', tokenId)
-      .executeTakeFirstOrThrow();
+  async deleteSession(id: AuthSession['id']): Promise<void> {
+    await this.database.deleteFrom('auth_session').where('id', '=', id).execute();
   }
 
   private selectToSession(authSession: Select<'auth_session'>): AuthSession {
@@ -171,6 +212,7 @@ export class AuthRepository {
       ip: authSession.ip ?? undefined,
       userAgent: authSession.user_agent ?? undefined,
       provider: authSession.provider,
+      expiresAt: authSession.expires_at ?? undefined,
       createdAt: authSession.created_at,
       updatedAt: authSession.updated_at,
     };

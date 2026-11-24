@@ -47,28 +47,23 @@ export function createCookie(cookie: ResponseCookie): string {
   return [base, ...opts].join('; ');
 }
 
-function parseCookie(cookieString: string): RequestCookie {
-  const cookieTrimmed = cookieString.trim();
-  if (!cookieTrimmed) throw new Error('Invalid cookie string');
-  const [key, value] = cookieTrimmed.split('=').map((p) => p.trim());
-  if (!key) throw new Error('Invalid cookie string');
-
-  return {
-    name: decodeURIComponent(key),
-    value: value ? decodeURIComponent(value) : undefined,
-  };
+function decodeCookiePart(part: string): string {
+  try {
+    return decodeURIComponent(part);
+  } catch {
+    return part;
+  }
 }
 
 export function parseCookies(cookiesString: string | null): Cookies {
-  const cookies: Cookies = {};
-  const trimmedCookiesString = cookiesString?.trim();
-  if (!trimmedCookiesString || trimmedCookiesString.length === 0) return cookies;
-
-  for (const cookieString of trimmedCookiesString.trim().split(';')) {
-    const cookie = parseCookie(cookieString);
-    cookies[cookie.name] = cookie.value ?? '';
+  const cookies: Cookies = Object.create(null) as Cookies;
+  for (const part of cookiesString?.split(';') ?? []) {
+    const separator = part.indexOf('=');
+    const name = (separator === -1 ? part : part.slice(0, separator)).trim();
+    if (!name) continue;
+    const value = separator === -1 ? '' : part.slice(separator + 1).trim();
+    cookies[decodeCookiePart(name)] = decodeCookiePart(value);
   }
-
   return cookies;
 }
 

@@ -1,13 +1,13 @@
 import type { Logger } from '@codeduel-backend-crab/logger';
 import { route, routes, type NodeBuilder } from '@glass-cannon/router';
 import { validated, type Response } from '@glass-cannon/typebox';
-import { Type } from '@sinclair/typebox';
+import { Type, type Static } from '@sinclair/typebox';
 import { randomUUIDv7 } from 'bun';
 
 import { loggerDecorator } from '@/middleware/logger';
 import type { PermissionService } from '@/route/permission/service';
 import type { UserService } from '@/route/user/service';
-import { createCookie, parseCookies, removeCookie } from '@/utils/cookie';
+import { parseCookies } from '@/utils/cookie';
 
 import type { Config } from './config';
 import type { JwtRefreshToken } from './data';
@@ -72,23 +72,26 @@ export class AuthController {
       schema: {
         response: {
           204: Type.Undefined(),
+          403: InvalidCsrfResponse,
         },
       },
       handler: async ({ request, logger }) => {
         const cookies = parseCookies(request.headers.get('cookie'));
-        const logout = (): Response<204, undefined> => {
-          const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
-          const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
+        const logout = (): Response<204, undefined> => ({
+          status: 204,
+          headers: cookieHeaders(this.service.clearSessionCookies()),
+        });
 
-          const headers = new Headers();
-          headers.append('Set-Cookie', accessTokenCookie);
-          headers.append('Set-Cookie', refreshTokenCookie);
+        if (!this.service.hasCsrfCookie(cookies)) {
+          logger.warn('refresh.csrfCookieMissing', 'no csrf cookie');
+          return invalidCsrf();
+        }
 
-          return {
-            status: 204,
-            headers,
-          };
-        };
+        const csrfToken = this.service.submittedCsrfToken(request.headers, cookies);
+        if (!csrfToken) {
+          logger.warn('refresh.csrfMissing', 'missing or mismatching csrf token');
+          return invalidCsrf();
+        }
 
         const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
         if (!refreshToken) {
@@ -104,6 +107,11 @@ export class AuthController {
         }
         const { sub: userId, jti } = payload;
 
+        if (!this.service.isCsrfTokenBound(jti, csrfToken)) {
+          logger.warn('refresh.csrfInvalid', 'csrf token not bound to the session', { userId });
+          return invalidCsrf();
+        }
+
         const session = await this.service.sessionByTokenId(jti);
         if (!session) {
           logger.warn('refresh.sessionNotFound', 'session not found', { jti, userId });
@@ -118,35 +126,29 @@ export class AuthController {
 
         const permissions = await this.permissionService.byUserId(user.id, logger);
 
+        const newJti = randomUUIDv7();
         const newAccessToken = await this.service.accessToken(
           user,
           permissions.map((p) => p.id),
+          newJti,
           Date.now(),
           logger
         );
-        const newJti = randomUUIDv7();
         const newRefreshToken = await this.service.refreshToken(user, newJti, Date.now(), logger);
 
         await this.service.updateSession(session.id, newJti, logger);
 
         logger.info('refresh.success', 'refreshed tokens', { userId: user.id });
 
-        const accessTokenCookie = createCookie({
-          ...this.service.accessTokenCookieOptions,
-          value: newAccessToken,
-        });
-        const refreshTokenCookie = createCookie({
-          ...this.service.refreshTokenCookieOptions,
-          value: newRefreshToken,
-        });
-
-        const responseHeaders = new Headers();
-        responseHeaders.append('Set-Cookie', accessTokenCookie);
-        responseHeaders.append('Set-Cookie', refreshTokenCookie);
-
         return {
           status: 204,
-          headers: responseHeaders,
+          headers: cookieHeaders(
+            this.service.sessionCookies({
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken,
+              sessionId: newJti,
+            })
+          ),
         };
       },
     })
@@ -159,12 +161,24 @@ export class AuthController {
       schema: {
         response: {
           204: Type.Undefined(),
+          403: InvalidCsrfResponse,
         },
       },
       handler: async ({ request, logger }) => {
         const cookies = parseCookies(request.headers.get('cookie'));
-        const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
 
+        if (!this.service.hasCsrfCookie(cookies)) {
+          logger.warn('logout.csrfCookieMissing', 'no csrf cookie');
+          return invalidCsrf();
+        }
+
+        const csrfToken = this.service.submittedCsrfToken(request.headers, cookies);
+        if (!csrfToken) {
+          logger.warn('logout.csrfMissing', 'missing or mismatching csrf token');
+          return invalidCsrf();
+        }
+
+        const refreshToken = cookies[this.service.refreshTokenCookieOptions.name];
         if (!refreshToken) {
           logger.debug('logout.noToken', 'logout without refresh token, clearing cookies only');
         } else {
@@ -173,6 +187,10 @@ export class AuthController {
               refreshToken,
               logger
             );
+            if (!this.service.isCsrfTokenBound(jti, csrfToken)) {
+              logger.warn('logout.csrfInvalid', 'csrf token not bound to the session', { userId });
+              return invalidCsrf();
+            }
             await this.service.deleteSessionTokenId(jti, logger);
             logger.info('logout.success', 'user logged out', { userId });
           } catch (error) {
@@ -182,18 +200,29 @@ export class AuthController {
           }
         }
 
-        const accessTokenCookie = removeCookie(this.service.accessTokenCookieOptions);
-        const refreshTokenCookie = removeCookie(this.service.refreshTokenCookieOptions);
-
-        const responseHeaders = new Headers();
-        responseHeaders.append('Set-Cookie', accessTokenCookie);
-        responseHeaders.append('Set-Cookie', refreshTokenCookie);
-
         return {
           status: 204,
-          headers: responseHeaders,
+          headers: cookieHeaders(this.service.clearSessionCookies()),
         };
       },
     })
   );
+}
+
+const InvalidCsrfResponse = Type.Object({
+  error: Type.String(),
+  code: Type.Literal('INVALID_CSRF_TOKEN'),
+});
+
+function invalidCsrf(): Response<403, Static<typeof InvalidCsrfResponse>> {
+  return {
+    status: 403,
+    body: { error: 'Invalid or missing CSRF token', code: 'INVALID_CSRF_TOKEN' },
+  };
+}
+
+function cookieHeaders(cookies: string[]): Headers {
+  const headers = new Headers();
+  for (const cookie of cookies) headers.append('Set-Cookie', cookie);
+  return headers;
 }

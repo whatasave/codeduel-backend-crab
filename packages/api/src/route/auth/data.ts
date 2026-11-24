@@ -53,8 +53,6 @@ export type State = Static<typeof State>;
 export const State = Type.Object({
   csrfToken: Type.String(),
   redirect: Type.String(),
-  ip: Type.Optional(Type.String()),
-  userAgent: Type.Optional(Type.String()),
 });
 
 export const stateValidator = TypeCompiler.Compile(State);

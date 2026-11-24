@@ -1,36 +1,52 @@
 import type { Logger } from '@codeduel-backend-crab/logger';
 
-import type { User } from '@/route/user/data';
-import type { CookieOptions } from '@/utils/cookie';
+import type { CreateUser } from '@/route/user/data';
 
-import type { AuthSession, CreateAuthSession, CreateContext } from '../data';
-import type { AuthService } from '../service';
+import type { AuthProvider } from '../provider';
 import type { Config } from './config';
 import type { GithubAccessToken, GithubUserData } from './data';
 
-export class GithubService {
-  private static readonly PROVIDER: string = 'github';
+export class GithubAuthProvider implements AuthProvider {
+  constructor(private readonly config: Config) {}
 
-  constructor(
-    private readonly authService: AuthService,
-    private readonly config: Config
-  ) {}
+  authorizationUrl(state: string, callbackUri: string): string {
+    const url = new URL('https://github.com/login/oauth/authorize');
 
-  get stateCookieOptions(): CookieOptions {
-    return this.config.stateCookie;
+    url.search = new URLSearchParams({
+      client_id: this.config.clientId,
+      redirect_uri: callbackUri,
+      scope: 'read:user,user:email',
+      state,
+      allow_signup: 'false',
+    }).toString();
+
+    return url.toString();
   }
 
-  async create(githubUser: GithubUserData, logger?: Logger): Promise<CreateContext> {
-    logger?.debug('create.start', 'creating github user', { githubId: githubUser.id });
-    return await this.authService.createForce(
-      { name: GithubService.PROVIDER, userId: githubUser.id },
-      {
+  async createUser(
+    query: Record<string, string>,
+    _callbackUri: string,
+    logger?: Logger
+  ): Promise<{ providerId: number; createUser: CreateUser }> {
+    const { code, state } = query;
+    if (!code || !state) {
+      logger?.warn('createUser.missingParams', 'Missing code or state in query parameters', {
+        query,
+      });
+      throw new Error('Missing code or state in query parameters');
+    }
+
+    const token = await this.exchangeCodeForToken(code, state);
+    const githubUser = await this.userData(token.access_token);
+
+    return {
+      providerId: githubUser.id,
+      createUser: {
         username: githubUser.login,
         name: githubUser.name ?? githubUser.login,
         avatar: githubUser.avatar_url,
       },
-      logger
-    );
+    };
   }
 
   async exchangeCodeForToken(
@@ -39,6 +55,7 @@ export class GithubService {
     logger?: Logger
   ): Promise<GithubAccessToken> {
     logger?.debug('exchangeCodeForToken.start', 'exchanging code for token');
+
     const response = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -53,22 +70,26 @@ export class GithubService {
         state,
       }),
     });
+
     if (!response.ok) {
       logger?.warn('exchangeCodeForToken.failed', 'GitHub token exchange failed', {
         status: response.status,
       });
     }
+
     const token = (await response.json()) as GithubAccessToken;
     if (!token.access_token) {
       logger?.warn('exchangeCodeForToken.missingToken', 'GitHub did not return an access token', {
         status: response.status,
       });
     }
+
     return token;
   }
 
   async userData(accessToken: string, logger?: Logger): Promise<GithubUserData> {
     logger?.debug('userData.start', 'fetching user data from github');
+
     const response = await fetch('https://api.github.com/user', {
       method: 'GET',
       headers: {
@@ -77,43 +98,13 @@ export class GithubService {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+
     if (!response.ok) {
       logger?.warn('userData.failed', 'cannot fetch user data from GitHub', {
         status: response.status,
       });
     }
+
     return (await response.json()) as GithubUserData;
-  }
-
-  authorizationUrl(state: string): string {
-    const url = new URL('https://github.com/login/oauth/authorize');
-
-    url.search = new URLSearchParams({
-      client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
-      scope: 'read:user,user:email',
-      state,
-      allow_signup: 'false',
-    }).toString();
-
-    return url.toString();
-  }
-
-  async createSession(
-    userId: User['id'],
-    tokenId: CreateAuthSession['tokenId'],
-    ip: CreateAuthSession['ip'],
-    userAgent: CreateAuthSession['userAgent'],
-    logger?: Logger
-  ): Promise<AuthSession> {
-    const sessions: CreateAuthSession = {
-      userId,
-      tokenId,
-      ip,
-      userAgent,
-      provider: GithubService.PROVIDER,
-    };
-
-    return await this.authService.createSession(sessions, logger);
   }
 }

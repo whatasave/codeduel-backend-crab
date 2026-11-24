@@ -30,6 +30,7 @@ for (const problem of validateCookies(config.auth)) {
 logger.info('config.loaded', 'configuration loaded', {
   host: config.host,
   port: config.port,
+  baseUrl: config.baseUrl,
   descriptiveErrors: config.descriptiveErrors,
   logLevel: config.logger.level,
   cors: config.cors

@@ -89,7 +89,8 @@ export class RootController {
       this.userService,
       this.permissionService,
       authLogger,
-      config.auth
+      config.auth,
+      `${config.baseUrl}v1/auth/`
     );
     this.gameController = new GameController(this.gameService, logger.group({ type: 'game' }));
   }

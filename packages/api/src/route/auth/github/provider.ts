@@ -9,12 +9,12 @@ import type { GithubAccessToken, GithubUserData } from './data';
 export class GithubAuthProvider implements AuthProvider {
   constructor(private readonly config: Config) {}
 
-  authorizationUrl(state: string): string {
+  authorizationUrl(state: string, callbackUri: string): string {
     const url = new URL('https://github.com/login/oauth/authorize');
 
     url.search = new URLSearchParams({
       client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
+      redirect_uri: callbackUri,
       scope: 'read:user,user:email',
       state,
       allow_signup: 'false',
@@ -25,6 +25,7 @@ export class GithubAuthProvider implements AuthProvider {
 
   async createUser(
     query: Record<string, string>,
+    _callbackUri: string,
     logger?: Logger
   ): Promise<{ providerId: number; createUser: CreateUser }> {
     const { code, state } = query;

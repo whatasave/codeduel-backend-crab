@@ -9,12 +9,12 @@ import type { GitlabAccessToken, GitlabUserData } from './data';
 export class GitlabAuthProvider implements AuthProvider {
   constructor(private readonly config: Config) {}
 
-  authorizationUrl(state: string): string {
+  authorizationUrl(state: string, callbackUri: string): string {
     const url = new URL('https://gitlab.com/oauth/authorize');
 
     url.search = new URLSearchParams({
       client_id: this.config.applicationId,
-      redirect_uri: this.config.callbackUri,
+      redirect_uri: callbackUri,
       response_type: 'code', // Tells GitLab you want to use the Authorization Code flow
       state,
       scope: 'api read_user profile',
@@ -25,6 +25,7 @@ export class GitlabAuthProvider implements AuthProvider {
 
   async createUser(
     query: Record<string, string>,
+    callbackUri: string,
     logger?: Logger
   ): Promise<{ providerId: number; createUser: CreateUser }> {
     const { code } = query;
@@ -35,7 +36,7 @@ export class GitlabAuthProvider implements AuthProvider {
       throw new Error('Missing code in query parameters');
     }
 
-    const token = await this.exchangeCodeForToken(code, logger);
+    const token = await this.exchangeCodeForToken(code, callbackUri, logger);
     const gitlabUser = await this.userData(token.access_token, logger);
 
     return {
@@ -48,7 +49,11 @@ export class GitlabAuthProvider implements AuthProvider {
     };
   }
 
-  async exchangeCodeForToken(code: string, logger?: Logger): Promise<GitlabAccessToken> {
+  async exchangeCodeForToken(
+    code: string,
+    callbackUri: string,
+    logger?: Logger
+  ): Promise<GitlabAccessToken> {
     logger?.debug('exchangeCodeForToken.start', 'exchanging code for token');
 
     const response = await fetch('https://gitlab.com/oauth/token', {
@@ -63,7 +68,7 @@ export class GitlabAuthProvider implements AuthProvider {
         client_secret: this.config.secret,
         code,
         grant_type: 'authorization_code',
-        redirect_uri: this.config.callbackUri,
+        redirect_uri: callbackUri,
       }),
     });
 

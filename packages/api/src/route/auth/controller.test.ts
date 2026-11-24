@@ -48,12 +48,10 @@ describe('Route.Auth.Controller', () => {
       github: {
         clientId: 'github-client-id',
         clientSecret: 'github-client-secret',
-        redirectUri: 'http://localhost/v1/auth/github/callback',
       },
       gitlab: {
         applicationId: 'gitlab-app-id',
         secret: 'gitlab-secret',
-        callbackUri: 'http://localhost/v1/auth/gitlab/callback',
       },
     },
   } as Config;
@@ -103,7 +101,14 @@ describe('Route.Auth.Controller', () => {
     userService = new UserService(userRepository);
     permissionService = new PermissionService(permissionRepository);
     service = new AuthService(repository, permissionService, config);
-    controller = new AuthController(service, userService, permissionService, logger, config);
+    controller = new AuthController(
+      service,
+      userService,
+      permissionService,
+      logger,
+      config,
+      'http://localhost/v1/auth/'
+    );
     router = Router.from(controller.setup());
   });
 
@@ -121,6 +126,35 @@ describe('Route.Auth.Controller', () => {
     //
     // expect(response.status).toEqual(500);
     // expect(await responseBodyToJson(response.body)).toEqual({ error: 'Path not implemented' });
+  });
+
+  describe('GET /:provider/login', () => {
+    test.each([['github'], ['gitlab']])(
+      'should redirect and derive state cookie path for %s',
+      async (provider) => {
+        const encodedState = 'encoded-state';
+        const expectedCallbackUri = `http://localhost/v1/auth/${provider}/callback`;
+        const expectedCallbackPath = `/v1/auth/${provider}/callback`;
+        const spyEncodeState = spyOn(service, 'encodeState').mockReturnValue(encodedState);
+
+        const response = await router.handle(
+          new Request(`http://localhost/${provider}/login?redirect=https://example.com`)
+        );
+
+        expect(spyEncodeState).toHaveBeenCalledWith({
+          csrfToken: expect.any(String) as string,
+          redirect: 'https://example.com',
+        });
+        expect(response.status).toEqual(307);
+        expect(response.headers.get('set-cookie')).toEqual(
+          `${config.providers.stateCookie.name}=${encodedState}; Path=${expectedCallbackPath}`
+        );
+
+        const location = new URL(response.headers.get('location') ?? '');
+        expect(location.searchParams.get('state')).toEqual(encodedState);
+        expect(location.searchParams.get('redirect_uri')).toEqual(expectedCallbackUri);
+      }
+    );
   });
 
   describe('POST /refresh', () => {

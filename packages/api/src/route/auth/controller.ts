@@ -28,13 +28,18 @@ export class AuthController {
     private readonly userService: UserService,
     private readonly permissionService: PermissionService,
     private readonly logger: Logger,
-    private readonly config: Config
+    private readonly config: Config,
+    private readonly baseUrl: `${string}/`
   ) {
     this.providers = {
       github: new GithubAuthProvider(config.providers.github),
       gitlab: new GitlabAuthProvider(config.providers.gitlab),
     };
     this.ProviderName = Type.Union(Object.keys(this.providers).map((p) => Type.Literal(p)));
+  }
+
+  private callbackUri(provider: string): string {
+    return new URL(`${provider}/callback`, this.baseUrl).toString();
   }
 
   setup(): NodeBuilder {
@@ -72,9 +77,14 @@ export class AuthController {
           });
           const authProvider = this.providers[provider];
           if (!authProvider) throw new Error(`Invalid provider: ${provider}`);
-          const redirectUrl = authProvider.authorizationUrl(state);
+          const callbackUri = this.callbackUri(provider);
+          const redirectUrl = authProvider.authorizationUrl(state, callbackUri, logger);
 
-          const stateCookie = createCookie({ ...this.config.providers.stateCookie, value: state });
+          const stateCookie = createCookie({
+            ...this.config.providers.stateCookie,
+            path: new URL(callbackUri).pathname,
+            value: state,
+          });
 
           return {
             status: 307,
@@ -121,7 +131,11 @@ export class AuthController {
 
           const authProvider = this.providers[provider];
           if (!authProvider) throw new Error(`Invalid provider: ${provider}`);
-          const { providerId, createUser } = await authProvider.createUser(query);
+          const { providerId, createUser } = await authProvider.createUser(
+            query,
+            this.callbackUri(provider),
+            logger
+          );
           const { user, permissions } = await this.service.createForce(
             { name: provider, userId: providerId },
             createUser,

@@ -30,7 +30,7 @@ export const Config = Type.Object({
   userDefaultRole: Type.String(),
 
   providers: Type.Object({
-    stateCookie: CookieOptions,
+    stateCookie: Type.Omit(CookieOptions, ['path']),
     github: GithubConfig,
     gitlab: GitlabConfig,
   }),

@@ -1,15 +1,18 @@
 import { Config as DatabaseConfig } from '@codeduel-backend-crab/database';
 import { Config as LoggerConfig } from '@codeduel-backend-crab/logger';
-import { Type, type Static } from '@sinclair/typebox';
+import { Type, type StaticDecode } from '@sinclair/typebox';
 import { Value, AssertError } from '@sinclair/typebox/value';
 
 import { CorsOptions } from './cors';
 import { Config as AuthConfig } from './route/auth/config';
 
-export type Config = Static<typeof Config>;
+export type Config = StaticDecode<typeof Config>;
 export const Config = Type.Object({
   host: Type.String({ default: 'localhost' }),
   port: Type.Number({ minimum: 0, maximum: 65535, default: 0 }),
+  baseUrl: Type.Transform(Type.String({ minLength: 1 }))
+    .Decode((url): `${string}/` => (url.endsWith('/') ? (url as `${string}/`) : `${url}/`))
+    .Encode((url) => url),
   descriptiveErrors: Type.Boolean(),
   cors: Type.Optional(CorsOptions),
   database: DatabaseConfig,
@@ -23,6 +26,7 @@ export function loadConfig(): Config {
   const config = {
     host: env.HOST,
     port: env.PORT,
+    baseUrl: env.BASE_URL,
     descriptiveErrors: env.DESCRIPTIVE_ERRORS,
     cors: env.CORS_ALLOWED_ORIGINS && {
       allowedOrigins:
@@ -97,7 +101,6 @@ export function loadConfig(): Config {
         stateCookie: {
           name: env.STATE_COOKIE_NAME,
           domain: env.STATE_COOKIE_DOMAIN,
-          path: env.STATE_COOKIE_PATH,
           maxAge: env.STATE_COOKIE_MAX_AGE,
           httpOnly: env.STATE_COOKIE_HTTP_ONLY,
           secure: env.STATE_COOKIE_SECURE,
@@ -106,12 +109,10 @@ export function loadConfig(): Config {
         github: {
           clientId: env.GITHUB_CLIENT_ID,
           clientSecret: env.GITHUB_CLIENT_SECRET,
-          redirectUri: env.GITHUB_REDIRECT_URI,
         },
         gitlab: {
           applicationId: env.GITLAB_APPLICATION_ID,
           secret: env.GITLAB_SECRET,
-          callbackUri: env.GITLAB_CALLBACK_URI,
         },
       },
     },

@@ -49,8 +49,10 @@ export class AuthService {
     return this.config.csrfToken.headerName;
   }
 
-  csrfToken(sessionId: string): string {
-    return createHmac('sha256', this.config.csrfToken.secret).update(sessionId).digest('base64url');
+  csrfToken(sessionId: AuthSession['id']): string {
+    return createHmac('sha256', this.config.csrfToken.secret)
+      .update(String(sessionId))
+      .digest('base64url');
   }
 
   hasCsrfCookie(cookies: Cookies): boolean {
@@ -65,11 +67,11 @@ export class AuthService {
     return headerToken;
   }
 
-  isCsrfTokenBound(sessionId: string, token: string): boolean {
+  isCsrfTokenBound(sessionId: AuthSession['id'], token: string): boolean {
     return safeEqual(token, this.csrfToken(sessionId));
   }
 
-  verifyCsrfRequest(headers: Headers, cookies: Cookies, sessionId: string): boolean {
+  verifyCsrfRequest(headers: Headers, cookies: Cookies, sessionId: AuthSession['id']): boolean {
     const token = this.submittedCsrfToken(headers, cookies);
     return token !== undefined && this.isCsrfTokenBound(sessionId, token);
   }
@@ -77,7 +79,7 @@ export class AuthService {
   sessionCookies(tokens: {
     accessToken: string;
     refreshToken: string;
-    sessionId: string;
+    sessionId: AuthSession['id'];
   }): string[] {
     return [
       createCookie({ ...this.accessTokenCookieOptions, value: tokens.accessToken }),
@@ -128,7 +130,7 @@ export class AuthService {
   accessToken(
     user: User,
     permissions: number[],
-    sessionId: string,
+    sessionId: AuthSession['id'],
     now: number = Date.now(),
     logger?: Logger
   ): Promise<string> {
@@ -167,6 +169,7 @@ export class AuthService {
 
   refreshToken(
     user: User,
+    sessionId: AuthSession['id'],
     jti: string = randomUUIDv7('base64url'),
     now: number = Date.now(),
     logger?: Logger
@@ -178,6 +181,7 @@ export class AuthService {
           aud: this.config.jwt.audience,
           exp: Math.floor(now / 1000) + this.config.refreshToken.expiresIn,
           jti,
+          sid: sessionId,
           sub: user.id,
         } satisfies JwtRefreshToken,
         this.config.refreshToken.secret,
@@ -222,7 +226,7 @@ export class AuthService {
           if (typeof payload.sub !== 'number') return reject(new Error('Invalid token sub'));
           if (typeof payload.username !== 'string')
             return reject(new Error('Invalid token username'));
-          if (typeof payload.sid !== 'string') return reject(new Error('Invalid token sid'));
+          if (typeof payload.sid !== 'number') return reject(new Error('Invalid token sid'));
 
           resolve({
             iss: payload.iss,
@@ -261,6 +265,7 @@ export class AuthService {
             return reject(new Error('Invalid token audience'));
           if (typeof payload.exp !== 'number') return reject(new Error('Invalid token exp'));
           if (typeof payload.jti !== 'string') return reject(new Error('Invalid token jti'));
+          if (typeof payload.sid !== 'number') return reject(new Error('Invalid token sid'));
           if (typeof payload.sub !== 'number') return reject(new Error('Invalid token sub'));
 
           resolve({
@@ -268,6 +273,7 @@ export class AuthService {
             aud: payload.aud,
             exp: payload.exp,
             jti: payload.jti,
+            sid: payload.sid,
             sub: payload.sub,
           });
         }
@@ -323,8 +329,8 @@ export class AuthService {
     logger?.debug('rotateRefreshToken.start', 'rotating refresh token', { userId: token.sub });
     return await this.repository.rotateRefreshToken(
       {
+        sessionId: token.sid,
         tokenId: token.jti,
-        expiresAt: this.expToDate(token.exp),
         newTokenId,
         newExpiresAt: this.refreshTokenExpiresAt(now),
       },
@@ -365,14 +371,6 @@ export class AuthService {
   async deleteSession(id: AuthSession['id'], logger?: Logger): Promise<void> {
     logger?.debug('deleteSession.start', 'deleting auth session', { sessionId: id });
     return await this.repository.deleteSession(id);
-  }
-
-  async deleteSessionTokenId(
-    tokenId: Exclude<AuthSession['tokenId'], undefined>,
-    logger?: Logger
-  ): Promise<void> {
-    logger?.debug('deleteSessionTokenId.start', 'deleting auth session by token id');
-    await this.repository.deleteSessionTokenId(tokenId);
   }
 
   private expToDate(exp: number): string {

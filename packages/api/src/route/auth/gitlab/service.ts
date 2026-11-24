@@ -1,6 +1,6 @@
 import type { Logger } from '@codeduel-backend-crab/logger';
 
-import type { CreateAuthSession, CreateContext } from '@/route/auth/data';
+import type { AuthSession, CreateAuthSession, CreateContext } from '@/route/auth/data';
 import type { AuthService } from '@/route/auth/service';
 import type { User } from '@/route/user/data';
 import type { CookieOptions } from '@/utils/cookie';
@@ -103,7 +103,7 @@ export class GitlabService {
     ip: CreateAuthSession['ip'],
     userAgent: CreateAuthSession['userAgent'],
     logger?: Logger
-  ): Promise<void> {
+  ): Promise<AuthSession> {
     const sessions: CreateAuthSession = {
       userId,
       tokenId,
@@ -112,6 +112,6 @@ export class GitlabService {
       provider: GitlabService.PROVIDER,
     };
 
-    await this.authService.createSession(sessions, logger);
+    return await this.authService.createSession(sessions, logger);
   }
 }

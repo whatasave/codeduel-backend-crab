@@ -217,8 +217,8 @@ describe('Route.Auth.Repository', () => {
 
       if (!session) throw new Error('Session not found');
       const result = await repository.rotateRefreshToken({
+        sessionId: session.id,
         tokenId: newSession.tokenId,
-        expiresAt: futureDate,
         newTokenId,
         newExpiresAt: futureDate,
       });
@@ -276,23 +276,16 @@ describe('Route.Auth.Repository', () => {
         expiresAt,
       });
     const rotate = (
+      sessionId: number,
       tokenId: string,
       newTokenId: string
     ): ReturnType<AuthRepository['rotateRefreshToken']> =>
       repository.rotateRefreshToken({
+        sessionId,
         tokenId,
-        expiresAt: futureDate,
         newTokenId,
         newExpiresAt: futureDate,
       });
-    const usedTokens = (sessionId: number): Promise<string[]> =>
-      db
-        .selectFrom('auth_used_refresh_token')
-        .select('token_id')
-        .where('session_id', '=', sessionId)
-        .orderBy('used_at')
-        .execute()
-        .then((rows) => rows.map((row) => row.token_id));
 
     test('should store expiration on session creation', async () => {
       const session = await createSession('rot-exp-a');
@@ -307,51 +300,53 @@ describe('Route.Auth.Repository', () => {
       });
 
       await repository.deleteExpiredTokens(new Date().toISOString());
-      const result = await rotate('rot-legacy', 'rot-legacy-new');
+      const result = await rotate(session.id, 'rot-legacy', 'rot-legacy-new');
 
       expect(result).toMatchObject({ status: 'rotated', session: { id: session.id } });
       const current = await repository.sessionByTokenId('rot-legacy-new');
       expect(Date.parse(current?.expiresAt ?? '')).toBe(Date.parse(futureDate));
     });
 
-    test('should invalidate the used token and remember it', async () => {
+    test('should invalidate the used token on rotation', async () => {
       const session = await createSession('rot-a1');
 
-      const first = await rotate('rot-a1', 'rot-a2');
-      const second = await rotate('rot-a2', 'rot-a3');
+      const first = await rotate(session.id, 'rot-a1', 'rot-a2');
+      const second = await rotate(session.id, 'rot-a2', 'rot-a3');
 
       expect(first).toMatchObject({ status: 'rotated', session: { id: session.id } });
       expect(second).toMatchObject({ status: 'rotated', session: { tokenId: 'rot-a3' } });
-      expect(await usedTokens(session.id)).toEqual(['rot-a1', 'rot-a2']);
       expect(await repository.sessionByTokenId('rot-a1')).toBeUndefined();
+      expect(await repository.sessionByTokenId('rot-a2')).toBeUndefined();
       expect(await repository.sessionByTokenId('rot-a3')).toMatchObject({ id: session.id });
     });
 
     test('should revoke the whole session when a used token is presented again', async () => {
       const session = await createSession('rot-b1');
       const other = await createSession('rot-c1');
-      await rotate('rot-b1', 'rot-b2');
-      await rotate('rot-b2', 'rot-b3');
+      await rotate(session.id, 'rot-b1', 'rot-b2');
+      await rotate(session.id, 'rot-b2', 'rot-b3');
 
-      const result = await rotate('rot-b1', 'rot-b4');
+      const result = await rotate(session.id, 'rot-b1', 'rot-b4');
 
       expect(result).toEqual({ status: 'reused', sessionId: session.id, userId: exUser.id });
       expect(await repository.sessionByTokenId('rot-b3')).toBeUndefined();
       expect(await repository.sessionByTokenId('rot-b4')).toBeUndefined();
-      expect(await usedTokens(session.id)).toEqual([]);
-      expect(await rotate('rot-b3', 'rot-b5')).toEqual({ status: 'invalid' });
+      expect(await rotate(session.id, 'rot-b3', 'rot-b5')).toEqual({ status: 'invalid' });
       expect(await repository.sessionByTokenId('rot-c1')).toMatchObject({ id: other.id });
     });
 
-    test('should return invalid for unknown tokens', async () => {
-      expect(await rotate('rot-unknown', 'rot-unknown-2')).toEqual({ status: 'invalid' });
+    test('should return invalid for unknown sessions', async () => {
+      expect(await rotate(999_999, 'rot-unknown', 'rot-unknown-2')).toEqual({ status: 'invalid' });
       expect(await repository.sessionByTokenId('rot-unknown-2')).toBeUndefined();
     });
 
     test('should rotate only once when the same token is used concurrently', async () => {
-      await createSession('rot-d1');
+      const session = await createSession('rot-d1');
 
-      const results = await Promise.all([rotate('rot-d1', 'rot-d2'), rotate('rot-d1', 'rot-d3')]);
+      const results = await Promise.all([
+        rotate(session.id, 'rot-d1', 'rot-d2'),
+        rotate(session.id, 'rot-d1', 'rot-d3'),
+      ]);
       const statuses = results.map((r) => r.status).sort();
 
       expect(statuses).toEqual(['reused', 'rotated']);
@@ -359,49 +354,39 @@ describe('Route.Auth.Repository', () => {
       expect(await repository.sessionByTokenId('rot-d3')).toBeUndefined();
     });
 
-    test('should clear the session token and expiration on logout', async () => {
-      await createSession('rot-e1');
-      await repository.deleteSessionTokenId('rot-e1');
+    test('should delete the session on logout', async () => {
+      const session = await createSession('rot-e1');
+      await repository.deleteSession(session.id);
 
       expect(await repository.sessionByTokenId('rot-e1')).toBeUndefined();
-      expect(await rotate('rot-e1', 'rot-e2')).toEqual({ status: 'invalid' });
+      expect(await rotate(session.id, 'rot-e1', 'rot-e2')).toEqual({ status: 'invalid' });
     });
 
-    test('should revoke the session on logout if refresh has already rotated the token', async () => {
+    test('should delete the session on logout if refresh has already rotated the token', async () => {
       const session = await createSession('rot-logout');
-      await rotate('rot-logout', 'rot-logout-new');
+      await rotate(session.id, 'rot-logout', 'rot-logout-new');
 
-      await repository.deleteSessionTokenId('rot-logout');
+      await repository.deleteSession(session.id);
 
       expect(await repository.sessionByTokenId('rot-logout-new')).toBeUndefined();
-      expect(await usedTokens(session.id)).toEqual([]);
     });
 
-    test('should delete expired tokens', async () => {
+    test('should delete expired sessions', async () => {
       const expired = await createSession('rot-f1', pastDate);
       const valid = await createSession('rot-g1');
-      await db
-        .insertInto('auth_used_refresh_token')
-        .values([
-          { token_id: 'rot-g0-expired', session_id: valid.id, expires_at: pastDate },
-          { token_id: 'rot-g0-valid', session_id: valid.id, expires_at: futureDate },
-        ])
-        .execute();
 
       const result = await repository.deleteExpiredTokens(new Date().toISOString());
 
       expect(result.sessions).toBeGreaterThanOrEqual(1);
-      expect(result.usedTokens).toBeGreaterThanOrEqual(1);
       expect(await repository.sessionByTokenId('rot-f1')).toBeUndefined();
       expect(
         await db
           .selectFrom('auth_session')
-          .select(['token_id', 'expires_at'])
+          .select('id')
           .where('id', '=', expired.id)
           .executeTakeFirst()
-      ).toEqual({ token_id: null, expires_at: null });
+      ).toBeUndefined();
       expect(await repository.sessionByTokenId('rot-g1')).toMatchObject({ id: valid.id });
-      expect(await usedTokens(valid.id)).toEqual(['rot-g0-valid']);
     });
   });
 });

@@ -3,7 +3,7 @@ import type { Logger } from '@codeduel-backend-crab/logger';
 import type { User } from '@/route/user/data';
 import type { CookieOptions } from '@/utils/cookie';
 
-import type { CreateAuthSession, CreateContext } from '../data';
+import type { AuthSession, CreateAuthSession, CreateContext } from '../data';
 import type { AuthService } from '../service';
 import type { Config } from './config';
 import type { GithubAccessToken, GithubUserData } from './data';
@@ -105,7 +105,7 @@ export class GithubService {
     ip: CreateAuthSession['ip'],
     userAgent: CreateAuthSession['userAgent'],
     logger?: Logger
-  ): Promise<void> {
+  ): Promise<AuthSession> {
     const sessions: CreateAuthSession = {
       userId,
       tokenId,
@@ -114,6 +114,6 @@ export class GithubService {
       provider: GithubService.PROVIDER,
     };
 
-    await this.authService.createSession(sessions, logger);
+    return await this.authService.createSession(sessions, logger);
   }
 }

@@ -105,9 +105,9 @@ export class AuthController {
         } catch {
           return logout();
         }
-        const { sub: userId, jti } = payload;
+        const { sub: userId, jti, sid } = payload;
 
-        if (!this.service.isCsrfTokenBound(jti, csrfToken)) {
+        if (!this.service.isCsrfTokenBound(sid, csrfToken)) {
           logger.warn('refresh.csrfInvalid', 'csrf token not bound to the session', { userId });
           return invalidCsrf();
         }
@@ -125,17 +125,17 @@ export class AuthController {
         const newAccessToken = await this.service.accessToken(
           user,
           permissions.map((p) => p.id),
-          newJti,
+          sid,
           now,
           logger
         );
-        const newRefreshToken = await this.service.refreshToken(user, newJti, now, logger);
+        const newRefreshToken = await this.service.refreshToken(user, sid, newJti, now, logger);
 
         const responseHeaders = cookieHeaders(
           this.service.sessionCookies({
             accessToken: newAccessToken,
             refreshToken: newRefreshToken,
-            sessionId: newJti,
+            sessionId: sid,
           })
         );
 
@@ -191,15 +191,15 @@ export class AuthController {
           logger.debug('logout.noToken', 'logout without refresh token, clearing cookies only');
         } else {
           try {
-            const { sub: userId, jti } = await this.service.verifyRefreshToken(
+            const { sub: userId, sid } = await this.service.verifyRefreshToken(
               refreshToken,
               logger
             );
-            if (!this.service.isCsrfTokenBound(jti, csrfToken)) {
+            if (!this.service.isCsrfTokenBound(sid, csrfToken)) {
               logger.warn('logout.csrfInvalid', 'csrf token not bound to the session', { userId });
               return invalidCsrf();
             }
-            await this.service.deleteSessionTokenId(jti, logger);
+            await this.service.deleteSession(sid, logger);
             logger.info('logout.success', 'user logged out', { userId });
           } catch (error) {
             logger.warn('logout.verifyError', 'failed to verify refresh token during logout', {

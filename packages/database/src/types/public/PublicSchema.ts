@@ -1,7 +1,6 @@
 import type { default as UserRoleTable } from './UserRole';
 import type { default as AuthSessionTable } from './AuthSession';
 import type { default as TestCaseTable } from './TestCase';
-import type { default as AuthUsedRefreshTokenTable } from './AuthUsedRefreshToken';
 import type { default as ChallengeTable } from './Challenge';
 import type { default as UserTable } from './User';
 import type { default as UserPermissionTable } from './UserPermission';
@@ -18,8 +17,6 @@ export default interface PublicSchema {
   auth_session: AuthSessionTable;
 
   test_case: TestCaseTable;
-
-  auth_used_refresh_token: AuthUsedRefreshTokenTable;
 
   challenge: ChallengeTable;
 

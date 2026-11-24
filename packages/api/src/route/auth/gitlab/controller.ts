@@ -93,17 +93,23 @@ export class GitlabController {
         const gitlabUser = await this.service.userData(token.access_token, logger);
         const { user, permissions } = await this.service.create(gitlabUser, logger);
 
+        const now = Date.now();
         const jti = randomUUIDv7();
+        const session = await this.service.createSession(user.id, jti, ip, userAgent, logger);
         const accessToken = await this.authService.accessToken(
           user,
           permissions.map((p) => p.id),
-          jti,
-          Date.now(),
+          session.id,
+          now,
           logger
         );
-        const refreshToken = await this.authService.refreshToken(user, jti, Date.now(), logger);
-
-        await this.service.createSession(user.id, jti, ip, userAgent, logger);
+        const refreshToken = await this.authService.refreshToken(
+          user,
+          session.id,
+          jti,
+          now,
+          logger
+        );
 
         logger.info('callback.success', 'successfully logged in via gitlab', {
           userId: user.id,
@@ -113,7 +119,7 @@ export class GitlabController {
         for (const cookie of this.authService.sessionCookies({
           accessToken,
           refreshToken,
-          sessionId: jti,
+          sessionId: session.id,
         })) {
           responseHeaders.append('Set-Cookie', cookie);
         }

@@ -51,7 +51,7 @@ describe('Route.Auth.Middleware', () => {
     id: 1,
     username: 'username',
     permissions: [writePermission],
-    sessionId: 'session-1',
+    sessionId: 1,
   };
 
   beforeAll(() => {
@@ -114,7 +114,7 @@ describe('Route.Auth.Middleware', () => {
     return new Request(`http://localhost${path}`, { method, headers });
   }
 
-  function withCsrf(method: string, path: string, token = service.csrfToken('session-1')): Request {
+  function withCsrf(method: string, path: string, token = service.csrfToken(1)): Request {
     return request(method, path, { accessToken: 'token', csrfCookie: token, csrfHeader: token });
   }
 
@@ -171,7 +171,7 @@ describe('Route.Auth.Middleware', () => {
   }
 
   test('should reject a csrf header without cookie', async () => {
-    const token = service.csrfToken('session-1');
+    const token = service.csrfToken(1);
     const response = await router.handle(
       request('POST', '/auth', { accessToken: 'token', csrfHeader: token })
     );
@@ -183,7 +183,7 @@ describe('Route.Auth.Middleware', () => {
     const response = await router.handle(
       request('POST', '/auth', {
         accessToken: 'token',
-        csrfCookie: service.csrfToken('session-1'),
+        csrfCookie: service.csrfToken(1),
         csrfHeader: 'other',
       })
     );
@@ -192,7 +192,7 @@ describe('Route.Auth.Middleware', () => {
   });
 
   test('should reject a csrf token bound to another session', async () => {
-    const response = await router.handle(withCsrf('POST', '/auth', service.csrfToken('session-2')));
+    const response = await router.handle(withCsrf('POST', '/auth', service.csrfToken(2)));
 
     expect(response.status).toEqual(403);
   });

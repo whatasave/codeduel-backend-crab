@@ -222,7 +222,7 @@ describe('Route.Auth.Controller', () => {
       expect(spyUpdateSession).not.toHaveBeenCalled();
     });
 
-    test('should clear session cookies without csrf cookie', async () => {
+    test('should reject without csrf cookie, leaving cookies untouched', async () => {
       const response = await router.handle(
         authRequest('/refresh', {
           refreshToken: mockRefreshToken,
@@ -230,8 +230,9 @@ describe('Route.Auth.Controller', () => {
         })
       );
 
-      expect(response.status).toEqual(204);
-      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
+      expect(response.status).toEqual(403);
+      expect(await response.json()).toEqual(invalidCsrfBody);
+      expect(response.headers.get('set-cookie')).toBeNull();
       expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
       expect(spyUpdateSession).not.toHaveBeenCalled();
     });
@@ -347,13 +348,14 @@ describe('Route.Auth.Controller', () => {
       expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
     });
 
-    test('should clear cookies without csrf cookie, keeping the session', async () => {
+    test('should reject without csrf cookie, leaving cookies and session untouched', async () => {
       const response = await router.handle(
         authRequest('/logout', { refreshToken: mockRefreshToken })
       );
 
-      expect(response.status).toEqual(204);
-      expect(response.headers.get('set-cookie')).toEqual(clearedCookies);
+      expect(response.status).toEqual(403);
+      expect(await response.json()).toEqual(invalidCsrfBody);
+      expect(response.headers.get('set-cookie')).toBeNull();
       expect(spyVerifyRefreshToken).not.toHaveBeenCalled();
       expect(spyDeleteSessionTokenId).not.toHaveBeenCalled();
     });

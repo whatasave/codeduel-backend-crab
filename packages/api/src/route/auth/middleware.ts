@@ -9,7 +9,6 @@ import { parseCookies } from '@/utils/cookie';
 import type { SessionUser } from './data';
 import type { AuthService } from './service';
 
-/** Methods that must not change state, so they do not need a CSRF token. */
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 type AuthResult = { user: SessionUser; response?: never } | { user?: never; response: Response };
@@ -39,7 +38,6 @@ export class AuthMiddleware {
   > {
     return middleware(async (next, context) => {
       const { logger } = context;
-      // When requireAuth already ran, the session and the CSRF token are already verified.
       const auth: AuthResult = context.user
         ? { user: context.user }
         : await this.authenticate(context);

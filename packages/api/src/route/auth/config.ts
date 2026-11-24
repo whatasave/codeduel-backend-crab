@@ -32,10 +32,6 @@ export const Config = Type.Object({
   gitlab: GitlabConfig,
 });
 
-/**
- * Checks that the auth cookies have safe attributes.
- * Returns the list of problems, empty when the configuration is safe.
- */
 export function validateCookies(config: Config): string[] {
   const errors: string[] = [];
 

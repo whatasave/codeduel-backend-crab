@@ -72,7 +72,6 @@ describe('Route.Auth.Controller', () => {
     return new Request(`http://localhost${path}`, { method: 'POST', headers });
   }
 
-  /** Request with refresh token and a valid csrf token for the mocked session. */
   function validRequest(path: string): Request {
     const csrfToken = service.csrfToken(mockJti);
     return authRequest(path, {
@@ -174,7 +173,6 @@ describe('Route.Auth.Controller', () => {
       expect(spyUpdateSession).toHaveBeenCalledWith(mockAuthSession.id, newJti, expect.any(Object));
       expect(spyUpdateSession).toHaveBeenCalledTimes(1);
 
-      // Access and refresh token carry the same new session id the csrf token is bound to.
       expect(spyAccessToken).toHaveBeenCalledWith(
         mockUser,
         [],

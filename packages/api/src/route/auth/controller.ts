@@ -82,14 +82,11 @@ export class AuthController {
           headers: cookieHeaders(this.service.clearSessionCookies()),
         });
 
-        // No CSRF cookie at all: reject without touching cookies. A cross-site form POST arrives
-        // without SameSite cookies, and clearing them here would let any site log the user out.
         if (!this.service.hasCsrfCookie(cookies)) {
           logger.warn('refresh.csrfCookieMissing', 'no csrf cookie');
           return invalidCsrf();
         }
 
-        // CSRF next: a cross-site request must not be able to rotate or clear any cookie.
         const csrfToken = this.service.submittedCsrfToken(request.headers, cookies);
         if (!csrfToken) {
           logger.warn('refresh.csrfMissing', 'missing or mismatching csrf token');
@@ -170,14 +167,11 @@ export class AuthController {
       handler: async ({ request, logger }) => {
         const cookies = parseCookies(request.headers.get('cookie'));
 
-        // No CSRF cookie at all: reject without touching cookies. A cross-site form POST arrives
-        // without SameSite cookies, and clearing them here would let any site log the user out.
         if (!this.service.hasCsrfCookie(cookies)) {
           logger.warn('logout.csrfCookieMissing', 'no csrf cookie');
           return invalidCsrf();
         }
 
-        // CSRF next: a cross-site request with the user's cookies must not log them out.
         const csrfToken = this.service.submittedCsrfToken(request.headers, cookies);
         if (!csrfToken) {
           logger.warn('logout.csrfMissing', 'missing or mismatching csrf token');

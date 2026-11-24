@@ -40,7 +40,6 @@ export class AuthService {
   }
 
   get csrfTokenCookieOptions(): CookieOptions {
-    // The frontend must be able to read this cookie to send it back in the header.
     return { ...this.config.csrfToken.cookie, httpOnly: false };
   }
 
@@ -48,11 +47,6 @@ export class AuthService {
     return this.config.csrfToken.headerName;
   }
 
-  /**
-   * CSRF token bound to the session id (the refresh token jti, also carried by the access
-   * token as `sid`): it changes on every refresh and a token planted by a third party
-   * cannot match the victim's session.
-   */
   csrfToken(sessionId: string): string {
     return createHmac('sha256', this.config.csrfToken.secret).update(sessionId).digest('base64url');
   }
@@ -61,10 +55,6 @@ export class AuthService {
     return Boolean(cookies[this.csrfTokenCookieOptions.name]);
   }
 
-  /**
-   * Double-submit check: returns the submitted token only when the header and the cookie
-   * are both present and equal.
-   */
   submittedCsrfToken(headers: Headers, cookies: Cookies): string | undefined {
     const headerToken = headers.get(this.csrfTokenHeaderName);
     const cookieToken = cookies[this.csrfTokenCookieOptions.name];
@@ -77,7 +67,6 @@ export class AuthService {
     return safeEqual(token, this.csrfToken(sessionId));
   }
 
-  /** Full check: double-submit plus binding to the given session. */
   verifyCsrfRequest(headers: Headers, cookies: Cookies, sessionId: string): boolean {
     const token = this.submittedCsrfToken(headers, cookies);
     return token !== undefined && this.isCsrfTokenBound(sessionId, token);

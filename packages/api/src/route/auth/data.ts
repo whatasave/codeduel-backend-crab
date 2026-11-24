@@ -36,7 +36,6 @@ export const JwtAccessToken = Type.Object({
 
   username: User.properties.username,
   permissions: Type.Array(Permission.properties.id),
-  /** Session id (refresh token jti), the CSRF token is bound to it. */
   sid: Type.String(),
 });
 
